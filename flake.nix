@@ -51,8 +51,13 @@
         }
       );
       packages = eachSystem (
-        { ... }:
+        { pkgs, ... }:
         {
+          machine =
+            (pkgs.callPackage ./target/machine {
+              nixpkgs = inputs.nixpkgs;
+              microvm = inputs.microvm;
+            }).config.microvm.declaredRunner;
         }
       );
       apps = eachSystem (
