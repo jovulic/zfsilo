@@ -13,33 +13,10 @@
     { ... }@inputs:
     let
       inherit (inputs) nixpkgs;
-      inherit (inputs.nixpkgs) lib;
-      systems = [
-        "aarch64-linux"
-        "aarch64-darwin"
-        "x86_64-darwin"
-        "x86_64-linux"
-      ];
-      eachSystem =
-        f:
-        lib.genAttrs systems (
-          system:
-          f {
-            pkgs = import nixpkgs {
-              inherit system;
-              config.allowUnfree = true;
-            };
-            inherit system;
-          }
-        );
-      commitHashShort =
-        if (builtins.hasAttr "shortRev" inputs.self) then
-          inputs.self.shortRev
-        else
-          inputs.self.dirtyShortRev;
+      utils = import ./utils.nix { inherit nixpkgs; };
     in
     {
-      devShells = eachSystem (
+      devShells = utils.eachSystem (
         { pkgs, ... }:
         {
           default = pkgs.mkShell {
@@ -50,17 +27,33 @@
           };
         }
       );
-      packages = eachSystem (
+      packages = utils.eachSystem (
         { pkgs, ... }:
         {
-          machine =
-            (pkgs.callPackage ./target/machine {
+          dev =
+            (pkgs.callPackage ./dev/flake.nix {
               nixpkgs = inputs.nixpkgs;
               microvm = inputs.microvm;
             }).config.microvm.declaredRunner;
         }
       );
-      apps = eachSystem (
+      nixosConfigurations =
+        let
+          system = "x86_64-linux";
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
+          dev = pkgs.callPackage ./dev {
+            inherit nixpkgs;
+            inherit system;
+            microvm = inputs.microvm;
+          };
+        in
+        {
+          inherit dev;
+        };
+      apps = utils.eachSystem (
         { pkgs, ... }:
         let
           createApp = text: {
@@ -74,7 +67,9 @@
           };
         in
         {
-          default = createApp '''';
+          dev = createApp ''
+            nix run .#nixosConfigurations.dev.host.config.microvm.declaredRunner
+          '';
         }
       );
     };
