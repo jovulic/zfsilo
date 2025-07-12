@@ -14,6 +14,12 @@
     let
       inherit (inputs) nixpkgs;
       utils = import ./utils.nix { inherit nixpkgs; };
+      version = nixpkgs.lib.strings.removeSuffix "\n" (builtins.readFile ./version.txt);
+      commitHashShort =
+        if (builtins.hasAttr "shortRev" inputs.self) then
+          inputs.self.shortRev
+        else
+          inputs.self.dirtyShortRev;
     in
     {
       devShells = utils.eachSystem (
@@ -23,6 +29,7 @@
             packages = [
               pkgs.git
               pkgs.bash
+              pkgs.go
             ];
           };
         }
@@ -30,11 +37,9 @@
       packages = utils.eachSystem (
         { pkgs, ... }:
         {
-          dev =
-            (pkgs.callPackage ./dev/flake.nix {
-              nixpkgs = inputs.nixpkgs;
-              microvm = inputs.microvm;
-            }).config.microvm.declaredRunner;
+          app = pkgs.callPackage ./app {
+            inherit version commitHashShort;
+          };
         }
       );
       nixosConfigurations =
@@ -54,7 +59,7 @@
           inherit dev;
         };
       apps = utils.eachSystem (
-        { pkgs, ... }:
+        { pkgs, system, ... }:
         let
           createApp = text: {
             type = "app";
@@ -67,6 +72,9 @@
           };
         in
         {
+          app = createApp ''
+            nix run .#packages.${system}.app
+          '';
           dev = createApp ''
             nix run .#nixosConfigurations.dev.host.config.microvm.declaredRunner
           '';
