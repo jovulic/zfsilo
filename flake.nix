@@ -29,6 +29,7 @@
             packages = [
               pkgs.git
               pkgs.bash
+              pkgs.just
               pkgs.go
             ];
           };
