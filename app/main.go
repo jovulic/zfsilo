@@ -102,7 +102,7 @@ func mapLogMode(mode string) (LogMode, error) {
 	case "JSON":
 		return LogModeJSON, nil
 	case "TEXT":
-		return LogModeJSON, nil
+		return LogModeText, nil
 	default:
 		return 0, fmt.Errorf("unsupported log mode %s", mode)
 	}
