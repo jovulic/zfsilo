@@ -21,13 +21,13 @@ var (
 
 var CLI struct {
 	Start struct {
-		Config string `name:"config" help:"Path to config file. A value of \"-\" will cause it to read from stdin." type:"path" required:""`
+		Config string `help:"Path to config file. A value of \"-\" will cause it to read from stdin." name:"config" required:"" type:"path"`
 	} `cmd:"" help:"Start zfsilo."`
 }
 
 type Config struct {
 	Log struct {
-		Mode  string `json:"mode" mod:"default=JSON" validate:"oneof=JSON TEXT"`
+		Mode  string `json:"mode"  mod:"default=JSON" validate:"oneof=JSON TEXT"`
 		Level string `json:"level" mod:"default=INFO" validate:"oneof=DEBUG INFO WARN ERROR"`
 	} `json:"log"`
 }
@@ -108,20 +108,20 @@ func mapLogMode(mode string) (LogMode, error) {
 	}
 }
 
-func buildLogger(mode LogMode, level slog.Level) (*slog.Logger, error) {
+func buildLogger(mode LogMode, level slog.Level) *slog.Logger {
 	switch mode {
 	case LogModeJSON:
 		handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 			Level: level,
 		})
-		return slog.New(handler), nil
+		return slog.New(handler)
 	case LogModeText:
 		handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			Level: level,
 		})
-		return slog.New(handler), nil
+		return slog.New(handler)
 	default:
-		return nil, fmt.Errorf("unsupported log mode %d", mode)
+		panic("unreachable")
 	}
 }
 
@@ -148,10 +148,7 @@ func main() {
 		if err != nil {
 			kongCtx.FatalIfErrorf(fmt.Errorf("failed to parse log level: %w", err))
 		}
-		log, err := buildLogger(logMode, logLevel)
-		if err != nil {
-			kongCtx.FatalIfErrorf(fmt.Errorf("failed to build logger: %w", err))
-		}
+		log := buildLogger(logMode, logLevel)
 
 		// ctx := context.WithValue(context.Background(), slog.String("user_id", "42"))
 		// logger.WithContext(ctx).Info("action performed")
