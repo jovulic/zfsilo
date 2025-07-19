@@ -12,6 +12,7 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/go-playground/mold/v4/modifiers"
 	"github.com/go-playground/validator/v10"
+	slogctx "github.com/veqryn/slog-context"
 )
 
 var Version string
@@ -108,14 +109,20 @@ func mapLogMode(mode string) (LogMode, error) {
 func buildLogger(mode LogMode, level slog.Level) *slog.Logger {
 	switch mode {
 	case LogModeJSON:
-		handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			Level: level,
-		})
+		handler := slogctx.NewHandler(
+			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+				Level: level,
+			}),
+			nil,
+		)
 		return slog.New(handler)
 	case LogModeText:
-		handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			Level: level,
-		})
+		handler := slogctx.NewHandler(
+			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+				Level: level,
+			}),
+			nil,
+		)
 		return slog.New(handler)
 	default:
 		panic("unreachable")
@@ -146,9 +153,9 @@ func main() {
 			kongCtx.FatalIfErrorf(fmt.Errorf("failed to parse log level: %w", err))
 		}
 		log := buildLogger(logMode, logLevel)
-
-		// ctx := context.WithValue(context.Background(), slog.String("user_id", "42"))
-		// logger.WithContext(ctx).Info("action performed")
-		log.Info("application ready", "config", config)
+		slog.SetDefault(log)
+		ctx = slogctx.NewCtx(ctx, log)
+		ctx = slogctx.With(ctx, slog.String("version", Version))
+		slogctx.Info(ctx, "application ready", slog.Any("config", config))
 	}
 }
