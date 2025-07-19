@@ -74,7 +74,8 @@
         in
         {
           app = createApp ''
-            nix run .#packages.${system}.app
+            # shellcheck disable=SC2068
+            nix run .#packages.${system}.app -- $@
           '';
           dev = createApp ''
             nix run .#nixosConfigurations.dev.host.config.microvm.declaredRunner
