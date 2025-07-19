@@ -14,10 +14,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-var (
-	Version   string
-	BuildTime string
-)
+var Version string
 
 var CLI struct {
 	Start struct {
