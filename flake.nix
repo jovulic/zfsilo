@@ -33,6 +33,9 @@
                 pkgs.just
                 pkgs.go
               ]
+              ++ (pkgs.callPackage ./api {
+                inherit version commitHashShort;
+              }).shell.packages
               ++ (pkgs.callPackage ./app {
                 inherit version commitHashShort;
               }).shell.packages;
@@ -42,6 +45,10 @@
       packages = utils.eachSystem (
         { pkgs, ... }:
         {
+          api =
+            (pkgs.callPackage ./api {
+              inherit version commitHashShort;
+            }).package;
           app =
             (pkgs.callPackage ./app {
               inherit version commitHashShort;
