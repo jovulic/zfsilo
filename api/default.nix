@@ -8,6 +8,8 @@
   shell = {
     packages = [
       pkgs.buf
+      pkgs.protoc-gen-go
+      pkgs.protoc-gen-connect-go
     ];
   };
   package =
@@ -25,6 +27,8 @@
       ];
       buildInputs = [
         pkgs.buf
+        pkgs.protoc-gen-go
+        pkgs.protoc-gen-connect-go
       ];
       buildPhase = ''
         set -x
