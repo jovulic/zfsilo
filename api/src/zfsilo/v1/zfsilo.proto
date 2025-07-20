@@ -2,12 +2,17 @@ syntax = "proto3";
 
 package zfsilo.v1;
 
+import "buf/validate/validate.proto";
+
 service GreeterService {
   rpc SayHello(SayHelloRequest) returns (SayHelloResponse);
 }
 
 message SayHelloRequest {
-  string name = 1;
+  string name = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.max_len = 64
+  ];
 }
 
 message SayHelloResponse {

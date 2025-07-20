@@ -7,6 +7,7 @@
 package zfsilov1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -113,9 +114,10 @@ var File_zfsilo_v1_zfsilo_proto protoreflect.FileDescriptor
 
 const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\n" +
-	"\x16zfsilo/v1/zfsilo.proto\x12\tzfsilo.v1\"%\n" +
-	"\x0fSayHelloRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\",\n" +
+	"\x16zfsilo/v1/zfsilo.proto\x12\tzfsilo.v1\x1a\x1bbuf/validate/validate.proto\"1\n" +
+	"\x0fSayHelloRequest\x12\x1e\n" +
+	"\x04name\x18\x01 \x01(\tB\n" +
+	"\xbaH\a\xc8\x01\x01r\x02\x18@R\x04name\",\n" +
 	"\x10SayHelloResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage2U\n" +
 	"\x0eGreeterService\x12C\n" +
