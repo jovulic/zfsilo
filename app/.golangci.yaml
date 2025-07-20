@@ -11,3 +11,4 @@ linters:
     - nlreturn
     - godox
     - lll
+    - prealloc
