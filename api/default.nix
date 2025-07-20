@@ -29,7 +29,7 @@
       buildPhase = ''
         set -x
         export HOME=$TMP
-        mkdir gen
+        mkdir -p gen
         buf build -o gen/zfsilo.bin
         buf generate
         set +x
