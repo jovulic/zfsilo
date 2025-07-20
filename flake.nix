@@ -26,21 +26,26 @@
         { pkgs, ... }:
         {
           default = pkgs.mkShell {
-            packages = [
-              pkgs.git
-              pkgs.bash
-              pkgs.just
-              pkgs.go
-            ];
+            packages =
+              [
+                pkgs.git
+                pkgs.bash
+                pkgs.just
+                pkgs.go
+              ]
+              ++ (pkgs.callPackage ./app {
+                inherit version commitHashShort;
+              }).shell.packages;
           };
         }
       );
       packages = utils.eachSystem (
         { pkgs, ... }:
         {
-          app = pkgs.callPackage ./app {
-            inherit version commitHashShort;
-          };
+          app =
+            (pkgs.callPackage ./app {
+              inherit version commitHashShort;
+            }).package;
         }
       );
       nixosConfigurations =
