@@ -8,10 +8,13 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"syscall"
+	"time"
 
 	"github.com/alecthomas/kong"
 	"github.com/go-playground/mold/v4/modifiers"
 	"github.com/go-playground/validator/v10"
+	"github.com/skovtunenko/graterm"
 	slogctx "github.com/veqryn/slog-context"
 )
 
@@ -21,6 +24,32 @@ var CLI struct {
 	Start struct {
 		Config string `help:"Path to config file. A value of \"-\" will cause it to read from stdin." name:"config" required:"" type:"path"`
 	} `cmd:"" help:"Start zfsilo."`
+}
+
+type SecretValueList []SecretValue
+
+func (l SecretValueList) Value() []string {
+	var rets []string
+	for _, e := range l {
+		// We convert to a []byte first to prevent clearing the value in the conv.
+		ret := string([]byte(e))
+		rets = append(rets, ret)
+	}
+	return rets
+}
+
+type SecretValue string
+
+func (v SecretValue) Value() string {
+	return string([]byte(v))
+}
+
+func (SecretValue) String() string {
+	return "REDACTED"
+}
+
+func (SecretValue) MarshalJSON() ([]byte, error) {
+	return json.Marshal("REDACTED")
 }
 
 type Config struct {
@@ -157,5 +186,14 @@ func main() {
 		ctx = slogctx.NewCtx(ctx, log)
 		ctx = slogctx.With(ctx, slog.String("version", Version))
 		slogctx.Info(ctx, "application ready", slog.Any("config", config))
+
+		var term *graterm.Terminator
+		term, ctx = graterm.NewWithSignals(ctx, syscall.SIGINT, syscall.SIGTERM)
+
+		if err := term.Wait(ctx, time.Minute); err != nil {
+			slogctx.Error(ctx, "failed to gracefully terminate application", slog.Any("error", err))
+			os.Exit(1)
+		}
+		slogctx.Info(ctx, "successfully terminated the application")
 	}
 }
