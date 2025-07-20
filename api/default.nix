@@ -4,12 +4,28 @@
   commitHashShort,
   ...
 }:
+let
+  protoc-gen-go-aip =
+    with pkgs;
+    buildGoModule {
+      pname = "protoc-gen-go-aip";
+      version = "main";
+      src = fetchgit {
+        url = "https://github.com/einride/aip-go.git";
+        rev = "v0.73.0";
+        sha256 = "sha256-Rsq5pKDZX/6xtc1kD6LqH5Qz9Grcqp+2rcnrFYsQe90=";
+      };
+      vendorHash = "sha256-NMhkjYvQLMSk8shtLUCZT1mtkAoY4C7yCp8uG9xzzi8=";
+    };
+in
 {
+
   shell = {
     packages = [
       pkgs.buf
       pkgs.protoc-gen-go
       pkgs.protoc-gen-connect-go
+      protoc-gen-go-aip
     ];
   };
   package =
@@ -29,6 +45,7 @@
         pkgs.buf
         pkgs.protoc-gen-go
         pkgs.protoc-gen-connect-go
+        protoc-gen-go-aip
       ];
       buildPhase = ''
         set -x
