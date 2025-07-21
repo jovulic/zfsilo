@@ -12,4 +12,3 @@ linters:
     - godox
     - lll
     - prealloc
-    - shadow
