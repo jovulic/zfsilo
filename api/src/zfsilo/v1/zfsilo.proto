@@ -9,7 +9,7 @@ option (gnostic.openapi.v3.document) = {
   info: {
     title: "ZFSilo"
     version: "0.1.0"
-    description: "A ZFS-based network storage layer over iSCSI with CSI integration."
+    description: "A ZFS-based network storage layer over iSCSI."
     contact: {
       name: "Josip Vulic"
       url: "https://github.com/jovulic/zfsilo"
