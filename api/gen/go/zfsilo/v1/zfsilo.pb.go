@@ -8,7 +8,7 @@ package zfsilov1
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	_ "github.com/jovulic/zfsilo/api/gen/gnostic/openapi/v3"
+	_ "github.com/google/gnostic/openapiv3"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -123,15 +123,15 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\amessage\x18\x01 \x01(\tR\amessage2i\n" +
 	"\x0eGreeterService\x12W\n" +
 	"\bSayHello\x12\x1a.zfsilo.v1.SayHelloRequest\x1a\x1b.zfsilo.v1.SayHelloResponse\"\x12\xbaG\f\x1a\n" +
-	"Say hello!\x90\x02\x01B\x9c\x03\xbaG\x81\x02\x12\xdc\x01\n" +
-	"\x06ZFSilo\x12BA ZFS-based network storage layer over iSCSI with CSI integration.\"C\n" +
+	"Say hello!\x90\x02\x01B\x8a\x03\xbaG\xec\x01\x12\xc7\x01\n" +
+	"\x06ZFSilo\x12-A ZFS-based network storage layer over iSCSI.\"C\n" +
 	"\vJosip Vulic\x12!https://github.com/jovulic/zfsilo\x1a\x11jovulic@gmail.com*B\n" +
 	"\vMIT License\x123https://github.com/jovulic/zfsilo/blob/main/LICENSE2\x050.1.0* :\x1e\n" +
 	"\x1c\n" +
 	"\tBasicAuth\x12\x0f\n" +
 	"\r\n" +
 	"\x04http*\x05basic\n" +
-	"\rcom.zfsilo.v1B\vZfsiloProtoP\x01Z4github.com/jovulic/zfsilo/api/gen/zfsilo/v1;zfsilov1\xa2\x02\x03ZXX\xaa\x02\tZfsilo.V1\xca\x02\tZfsilo\\V1\xe2\x02\x15Zfsilo\\V1\\GPBMetadata\xea\x02\n" +
+	"\rcom.zfsilo.v1B\vZfsiloProtoP\x01Z7github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1;zfsilov1\xa2\x02\x03ZXX\xaa\x02\tZfsilo.V1\xca\x02\tZfsilo\\V1\xe2\x02\x15Zfsilo\\V1\\GPBMetadata\xea\x02\n" +
 	"Zfsilo::V1b\x06proto3"
 
 var (

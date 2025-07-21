@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: ZFSilo
-  description: A ZFS-based network storage layer over iSCSI with CSI integration.
+  description: A ZFS-based network storage layer over iSCSI.
   contact:
     name: Josip Vulic
     url: https://github.com/jovulic/zfsilo
