@@ -6,7 +6,8 @@ require (
 	github.com/alecthomas/kong v1.12.0
 	github.com/go-playground/mold/v4 v4.5.1
 	github.com/go-playground/validator/v10 v10.27.0
-	github.com/jovulic/zfsilo/lib v0.0.0-20250719193452-030d4393b953
+	github.com/skovtunenko/graterm v1.2.0
+	github.com/veqryn/slog-context v0.8.0
 )
 
 require (
@@ -19,8 +20,6 @@ require (
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/segmentio/go-camelcase v0.0.0-20160726192923-7085f1e3c734 // indirect
 	github.com/segmentio/go-snakecase v1.2.0 // indirect
-	github.com/skovtunenko/graterm v1.2.0 // indirect
-	github.com/veqryn/slog-context v0.8.0 // indirect
 	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
