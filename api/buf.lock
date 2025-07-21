@@ -4,3 +4,6 @@ deps:
   - name: buf.build/bufbuild/protovalidate
     commit: 6c6e0d3c608e4549802254a2eee81bc8
     digest: b5:a7ca081f38656fc0f5aaa685cc111d3342876723851b47ca6b80cbb810cbb2380f8c444115c495ada58fa1f85eff44e68dc54a445761c195acdb5e8d9af675b6
+  - name: buf.build/gnostic/gnostic
+    commit: 087bc8072ce44e339f213209e4d57bf0
+    digest: b5:c4eebcd04bc2fdd5dd0b8d695eb419682a650b600cdb56ff2ed61208a24603e0eb1b8ae0d467925c69a24bde6d322f3c4112bd2b8efdd682d8c3128384cdac9a

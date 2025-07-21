@@ -57,6 +57,7 @@ func NewGreeterServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			httpClient,
 			baseURL+GreeterServiceSayHelloProcedure,
 			connect.WithSchema(greeterServiceMethods.ByName("SayHello")),
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -88,6 +89,7 @@ func NewGreeterServiceHandler(svc GreeterServiceHandler, opts ...connect.Handler
 		GreeterServiceSayHelloProcedure,
 		svc.SayHello,
 		connect.WithSchema(greeterServiceMethods.ByName("SayHello")),
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/zfsilo.v1.GreeterService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

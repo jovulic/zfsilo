@@ -5,18 +5,26 @@
   ...
 }:
 let
-  protoc-gen-go-aip =
-    with pkgs;
-    buildGoModule {
-      pname = "protoc-gen-go-aip";
-      version = "main";
-      src = fetchgit {
-        url = "https://github.com/einride/aip-go.git";
-        rev = "v0.73.0";
-        sha256 = "sha256-Rsq5pKDZX/6xtc1kD6LqH5Qz9Grcqp+2rcnrFYsQe90=";
-      };
-      vendorHash = "sha256-NMhkjYvQLMSk8shtLUCZT1mtkAoY4C7yCp8uG9xzzi8=";
+  protoc-gen-go-aip = pkgs.buildGoModule rec {
+    pname = "protoc-gen-go-aip";
+    version = "v0.73.0";
+    src = pkgs.fetchgit {
+      url = "https://github.com/einride/aip-go.git";
+      rev = version;
+      sha256 = "sha256-Rsq5pKDZX/6xtc1kD6LqH5Qz9Grcqp+2rcnrFYsQe90=";
     };
+    vendorHash = "sha256-NMhkjYvQLMSk8shtLUCZT1mtkAoY4C7yCp8uG9xzzi8=";
+  };
+  protoc-gen-connect-openapi = pkgs.buildGoModule rec {
+    pname = "protoc-gen-connect-openapi";
+    version = "v0.19.0";
+    src = pkgs.fetchgit {
+      url = "https://github.com/sudorandom/protoc-gen-connect-openapi.git";
+      rev = version;
+      sha256 = "sha256-YMLPzrmp6xtWJY+iSyl9bTLn08auOlfEM7hs7V0Du7M=";
+    };
+    vendorHash = "sha256-auKQToKsNoCXrBxRK4jaozZTqC8cIsj1TSibvAhH64Q=";
+  };
 in
 {
 
@@ -26,6 +34,7 @@ in
       pkgs.protoc-gen-go
       pkgs.protoc-gen-connect-go
       protoc-gen-go-aip
+      protoc-gen-connect-openapi
     ];
   };
   package =
@@ -46,6 +55,7 @@ in
         pkgs.protoc-gen-go
         pkgs.protoc-gen-connect-go
         protoc-gen-go-aip
+        protoc-gen-connect-openapi
       ];
       buildPhase = ''
         set -x
