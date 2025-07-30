@@ -1,2 +1,5 @@
 run:
   go run -ldflags "-X 'main.Version=local'" . start --config ./config.json 
+
+wire:
+  wire
