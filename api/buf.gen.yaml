@@ -9,8 +9,6 @@ managed:
   disable:
     - file_option: go_package
       module: buf.build/bufbuild/protovalidate
-    - file_option: go_package
-      module: buf.build/gnostic/gnostic
 plugins:
   - local: protoc-gen-go
     out: gen/go

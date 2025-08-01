@@ -1,0 +1,1619 @@
+openapi: 3.1.0
+info:
+  title: gnostic.openapi.v3
+paths: {}
+components:
+  schemas:
+    gnostic.openapi.v3.AdditionalPropertiesItem:
+      type: object
+      oneOf:
+        - properties:
+            boolean:
+              type: boolean
+              title: boolean
+          title: boolean
+          required:
+            - boolean
+        - properties:
+            schemaOrReference:
+              title: schema_or_reference
+              $ref: '#/components/schemas/gnostic.openapi.v3.SchemaOrReference'
+          title: schema_or_reference
+          required:
+            - schemaOrReference
+      title: AdditionalPropertiesItem
+      additionalProperties: false
+    gnostic.openapi.v3.Any:
+      type: object
+      properties:
+        value:
+          title: value
+          $ref: '#/components/schemas/google.protobuf.Any'
+        yaml:
+          type: string
+          title: yaml
+      title: Any
+      additionalProperties: false
+    gnostic.openapi.v3.AnyOrExpression:
+      type: object
+      oneOf:
+        - properties:
+            any:
+              title: any
+              $ref: '#/components/schemas/gnostic.openapi.v3.Any'
+          title: any
+          required:
+            - any
+        - properties:
+            expression:
+              title: expression
+              $ref: '#/components/schemas/gnostic.openapi.v3.Expression'
+          title: expression
+          required:
+            - expression
+      title: AnyOrExpression
+      additionalProperties: false
+    gnostic.openapi.v3.Callback:
+      type: object
+      properties:
+        path:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedPathItem'
+          title: path
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Callback
+      additionalProperties: false
+      description: A map of possible out-of band callbacks related to the parent operation. Each value in the map is a Path Item Object that describes a set of requests that may be initiated by the API provider and the expected responses. The key value used to identify the callback object is an expression, evaluated at runtime, that identifies a URL to use for the callback operation.
+    gnostic.openapi.v3.CallbackOrReference:
+      type: object
+      oneOf:
+        - properties:
+            callback:
+              title: callback
+              $ref: '#/components/schemas/gnostic.openapi.v3.Callback'
+          title: callback
+          required:
+            - callback
+        - properties:
+            reference:
+              title: reference
+              $ref: '#/components/schemas/gnostic.openapi.v3.Reference'
+          title: reference
+          required:
+            - reference
+      title: CallbackOrReference
+      additionalProperties: false
+    gnostic.openapi.v3.CallbacksOrReferences:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedCallbackOrReference'
+          title: additional_properties
+      title: CallbacksOrReferences
+      additionalProperties: false
+    gnostic.openapi.v3.Components:
+      type: object
+      properties:
+        schemas:
+          title: schemas
+          $ref: '#/components/schemas/gnostic.openapi.v3.SchemasOrReferences'
+        responses:
+          title: responses
+          $ref: '#/components/schemas/gnostic.openapi.v3.ResponsesOrReferences'
+        parameters:
+          title: parameters
+          $ref: '#/components/schemas/gnostic.openapi.v3.ParametersOrReferences'
+        examples:
+          title: examples
+          $ref: '#/components/schemas/gnostic.openapi.v3.ExamplesOrReferences'
+        requestBodies:
+          title: request_bodies
+          $ref: '#/components/schemas/gnostic.openapi.v3.RequestBodiesOrReferences'
+        headers:
+          title: headers
+          $ref: '#/components/schemas/gnostic.openapi.v3.HeadersOrReferences'
+        securitySchemes:
+          title: security_schemes
+          $ref: '#/components/schemas/gnostic.openapi.v3.SecuritySchemesOrReferences'
+        links:
+          title: links
+          $ref: '#/components/schemas/gnostic.openapi.v3.LinksOrReferences'
+        callbacks:
+          title: callbacks
+          $ref: '#/components/schemas/gnostic.openapi.v3.CallbacksOrReferences'
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Components
+      additionalProperties: false
+      description: Holds a set of reusable objects for different aspects of the OAS. All objects defined within the components object will have no effect on the API unless they are explicitly referenced from properties outside the components object.
+    gnostic.openapi.v3.Contact:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+        url:
+          type: string
+          title: url
+        email:
+          type: string
+          title: email
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Contact
+      additionalProperties: false
+      description: Contact information for the exposed API.
+    gnostic.openapi.v3.DefaultType:
+      type: object
+      oneOf:
+        - properties:
+            boolean:
+              type: boolean
+              title: boolean
+          title: boolean
+          required:
+            - boolean
+        - properties:
+            number:
+              type: number
+              title: number
+              format: double
+          title: number
+          required:
+            - number
+        - properties:
+            string:
+              type: string
+              title: string
+          title: string
+          required:
+            - string
+      title: DefaultType
+      additionalProperties: false
+    gnostic.openapi.v3.Discriminator:
+      type: object
+      properties:
+        propertyName:
+          type: string
+          title: property_name
+        mapping:
+          title: mapping
+          $ref: '#/components/schemas/gnostic.openapi.v3.Strings'
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Discriminator
+      additionalProperties: false
+      description: When request bodies or response payloads may be one of a number of different schemas, a `discriminator` object can be used to aid in serialization, deserialization, and validation.  The discriminator is a specific object in a schema which is used to inform the consumer of the specification of an alternative schema based on the value associated with it.  When using the discriminator, _inline_ schemas will not be considered.
+    gnostic.openapi.v3.Document:
+      type: object
+      properties:
+        openapi:
+          type: string
+          title: openapi
+        info:
+          title: info
+          $ref: '#/components/schemas/gnostic.openapi.v3.Info'
+        servers:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.Server'
+          title: servers
+        paths:
+          title: paths
+          $ref: '#/components/schemas/gnostic.openapi.v3.Paths'
+        components:
+          title: components
+          $ref: '#/components/schemas/gnostic.openapi.v3.Components'
+        security:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.SecurityRequirement'
+          title: security
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.Tag'
+          title: tags
+        externalDocs:
+          title: external_docs
+          $ref: '#/components/schemas/gnostic.openapi.v3.ExternalDocs'
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Document
+      additionalProperties: false
+    gnostic.openapi.v3.Encoding:
+      type: object
+      properties:
+        contentType:
+          type: string
+          title: content_type
+        headers:
+          title: headers
+          $ref: '#/components/schemas/gnostic.openapi.v3.HeadersOrReferences'
+        style:
+          type: string
+          title: style
+        explode:
+          type: boolean
+          title: explode
+        allowReserved:
+          type: boolean
+          title: allow_reserved
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Encoding
+      additionalProperties: false
+      description: A single encoding definition applied to a single schema property.
+    gnostic.openapi.v3.Encodings:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedEncoding'
+          title: additional_properties
+      title: Encodings
+      additionalProperties: false
+    gnostic.openapi.v3.Example:
+      type: object
+      properties:
+        summary:
+          type: string
+          title: summary
+        description:
+          type: string
+          title: description
+        value:
+          title: value
+          $ref: '#/components/schemas/gnostic.openapi.v3.Any'
+        externalValue:
+          type: string
+          title: external_value
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Example
+      additionalProperties: false
+    gnostic.openapi.v3.ExampleOrReference:
+      type: object
+      oneOf:
+        - properties:
+            example:
+              title: example
+              $ref: '#/components/schemas/gnostic.openapi.v3.Example'
+          title: example
+          required:
+            - example
+        - properties:
+            reference:
+              title: reference
+              $ref: '#/components/schemas/gnostic.openapi.v3.Reference'
+          title: reference
+          required:
+            - reference
+      title: ExampleOrReference
+      additionalProperties: false
+    gnostic.openapi.v3.ExamplesOrReferences:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedExampleOrReference'
+          title: additional_properties
+      title: ExamplesOrReferences
+      additionalProperties: false
+    gnostic.openapi.v3.Expression:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: additional_properties
+      title: Expression
+      additionalProperties: false
+    gnostic.openapi.v3.ExternalDocs:
+      type: object
+      properties:
+        description:
+          type: string
+          title: description
+        url:
+          type: string
+          title: url
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: ExternalDocs
+      additionalProperties: false
+      description: Allows referencing an external resource for extended documentation.
+    gnostic.openapi.v3.Header:
+      type: object
+      properties:
+        description:
+          type: string
+          title: description
+        required:
+          type: boolean
+          title: required
+        deprecated:
+          type: boolean
+          title: deprecated
+        allowEmptyValue:
+          type: boolean
+          title: allow_empty_value
+        style:
+          type: string
+          title: style
+        explode:
+          type: boolean
+          title: explode
+        allowReserved:
+          type: boolean
+          title: allow_reserved
+        schema:
+          title: schema
+          $ref: '#/components/schemas/gnostic.openapi.v3.SchemaOrReference'
+        example:
+          title: example
+          $ref: '#/components/schemas/gnostic.openapi.v3.Any'
+        examples:
+          title: examples
+          $ref: '#/components/schemas/gnostic.openapi.v3.ExamplesOrReferences'
+        content:
+          title: content
+          $ref: '#/components/schemas/gnostic.openapi.v3.MediaTypes'
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Header
+      additionalProperties: false
+      description: 'The Header Object follows the structure of the Parameter Object with the following changes:  1. `name` MUST NOT be specified, it is given in the corresponding `headers` map. 1. `in` MUST NOT be specified, it is implicitly in `header`. 1. All traits that are affected by the location MUST be applicable to a location of `header` (for example, `style`).'
+    gnostic.openapi.v3.HeaderOrReference:
+      type: object
+      oneOf:
+        - properties:
+            header:
+              title: header
+              $ref: '#/components/schemas/gnostic.openapi.v3.Header'
+          title: header
+          required:
+            - header
+        - properties:
+            reference:
+              title: reference
+              $ref: '#/components/schemas/gnostic.openapi.v3.Reference'
+          title: reference
+          required:
+            - reference
+      title: HeaderOrReference
+      additionalProperties: false
+    gnostic.openapi.v3.HeadersOrReferences:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedHeaderOrReference'
+          title: additional_properties
+      title: HeadersOrReferences
+      additionalProperties: false
+    gnostic.openapi.v3.Info:
+      type: object
+      properties:
+        title:
+          type: string
+          title: title
+        description:
+          type: string
+          title: description
+        termsOfService:
+          type: string
+          title: terms_of_service
+        contact:
+          title: contact
+          $ref: '#/components/schemas/gnostic.openapi.v3.Contact'
+        license:
+          title: license
+          $ref: '#/components/schemas/gnostic.openapi.v3.License'
+        version:
+          type: string
+          title: version
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+        summary:
+          type: string
+          title: summary
+      title: Info
+      additionalProperties: false
+      description: The object provides metadata about the API. The metadata MAY be used by the clients if needed, and MAY be presented in editing or documentation generation tools for convenience.
+    gnostic.openapi.v3.ItemsItem:
+      type: object
+      properties:
+        schemaOrReference:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.SchemaOrReference'
+          title: schema_or_reference
+      title: ItemsItem
+      additionalProperties: false
+    gnostic.openapi.v3.License:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+        url:
+          type: string
+          title: url
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: License
+      additionalProperties: false
+      description: License information for the exposed API.
+    gnostic.openapi.v3.Link:
+      type: object
+      properties:
+        operationRef:
+          type: string
+          title: operation_ref
+        operationId:
+          type: string
+          title: operation_id
+        parameters:
+          title: parameters
+          $ref: '#/components/schemas/gnostic.openapi.v3.AnyOrExpression'
+        requestBody:
+          title: request_body
+          $ref: '#/components/schemas/gnostic.openapi.v3.AnyOrExpression'
+        description:
+          type: string
+          title: description
+        server:
+          title: server
+          $ref: '#/components/schemas/gnostic.openapi.v3.Server'
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Link
+      additionalProperties: false
+      description: The `Link object` represents a possible design-time link for a response. The presence of a link does not guarantee the caller's ability to successfully invoke it, rather it provides a known relationship and traversal mechanism between responses and other operations.  Unlike _dynamic_ links (i.e. links provided **in** the response payload), the OAS linking mechanism does not require link information in the runtime response.  For computing links, and providing instructions to execute them, a runtime expression is used for accessing values in an operation and using them as parameters while invoking the linked operation.
+    gnostic.openapi.v3.LinkOrReference:
+      type: object
+      oneOf:
+        - properties:
+            link:
+              title: link
+              $ref: '#/components/schemas/gnostic.openapi.v3.Link'
+          title: link
+          required:
+            - link
+        - properties:
+            reference:
+              title: reference
+              $ref: '#/components/schemas/gnostic.openapi.v3.Reference'
+          title: reference
+          required:
+            - reference
+      title: LinkOrReference
+      additionalProperties: false
+    gnostic.openapi.v3.LinksOrReferences:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedLinkOrReference'
+          title: additional_properties
+      title: LinksOrReferences
+      additionalProperties: false
+    gnostic.openapi.v3.MediaType:
+      type: object
+      properties:
+        schema:
+          title: schema
+          $ref: '#/components/schemas/gnostic.openapi.v3.SchemaOrReference'
+        example:
+          title: example
+          $ref: '#/components/schemas/gnostic.openapi.v3.Any'
+        examples:
+          title: examples
+          $ref: '#/components/schemas/gnostic.openapi.v3.ExamplesOrReferences'
+        encoding:
+          title: encoding
+          $ref: '#/components/schemas/gnostic.openapi.v3.Encodings'
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: MediaType
+      additionalProperties: false
+      description: Each Media Type Object provides schema and examples for the media type identified by its key.
+    gnostic.openapi.v3.MediaTypes:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedMediaType'
+          title: additional_properties
+      title: MediaTypes
+      additionalProperties: false
+    gnostic.openapi.v3.NamedAny:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          title: value
+          description: Mapped value
+          $ref: '#/components/schemas/gnostic.openapi.v3.Any'
+      title: NamedAny
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of Any as ordered (name,value) pairs.
+    gnostic.openapi.v3.NamedCallbackOrReference:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          title: value
+          description: Mapped value
+          $ref: '#/components/schemas/gnostic.openapi.v3.CallbackOrReference'
+      title: NamedCallbackOrReference
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of CallbackOrReference as ordered (name,value) pairs.
+    gnostic.openapi.v3.NamedEncoding:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          title: value
+          description: Mapped value
+          $ref: '#/components/schemas/gnostic.openapi.v3.Encoding'
+      title: NamedEncoding
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of Encoding as ordered (name,value) pairs.
+    gnostic.openapi.v3.NamedExampleOrReference:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          title: value
+          description: Mapped value
+          $ref: '#/components/schemas/gnostic.openapi.v3.ExampleOrReference'
+      title: NamedExampleOrReference
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of ExampleOrReference as ordered (name,value) pairs.
+    gnostic.openapi.v3.NamedHeaderOrReference:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          title: value
+          description: Mapped value
+          $ref: '#/components/schemas/gnostic.openapi.v3.HeaderOrReference'
+      title: NamedHeaderOrReference
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of HeaderOrReference as ordered (name,value) pairs.
+    gnostic.openapi.v3.NamedLinkOrReference:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          title: value
+          description: Mapped value
+          $ref: '#/components/schemas/gnostic.openapi.v3.LinkOrReference'
+      title: NamedLinkOrReference
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of LinkOrReference as ordered (name,value) pairs.
+    gnostic.openapi.v3.NamedMediaType:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          title: value
+          description: Mapped value
+          $ref: '#/components/schemas/gnostic.openapi.v3.MediaType'
+      title: NamedMediaType
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of MediaType as ordered (name,value) pairs.
+    gnostic.openapi.v3.NamedParameterOrReference:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          title: value
+          description: Mapped value
+          $ref: '#/components/schemas/gnostic.openapi.v3.ParameterOrReference'
+      title: NamedParameterOrReference
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of ParameterOrReference as ordered (name,value) pairs.
+    gnostic.openapi.v3.NamedPathItem:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          title: value
+          description: Mapped value
+          $ref: '#/components/schemas/gnostic.openapi.v3.PathItem'
+      title: NamedPathItem
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of PathItem as ordered (name,value) pairs.
+    gnostic.openapi.v3.NamedRequestBodyOrReference:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          title: value
+          description: Mapped value
+          $ref: '#/components/schemas/gnostic.openapi.v3.RequestBodyOrReference'
+      title: NamedRequestBodyOrReference
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of RequestBodyOrReference as ordered (name,value) pairs.
+    gnostic.openapi.v3.NamedResponseOrReference:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          title: value
+          description: Mapped value
+          $ref: '#/components/schemas/gnostic.openapi.v3.ResponseOrReference'
+      title: NamedResponseOrReference
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of ResponseOrReference as ordered (name,value) pairs.
+    gnostic.openapi.v3.NamedSchemaOrReference:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          title: value
+          description: Mapped value
+          $ref: '#/components/schemas/gnostic.openapi.v3.SchemaOrReference'
+      title: NamedSchemaOrReference
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of SchemaOrReference as ordered (name,value) pairs.
+    gnostic.openapi.v3.NamedSecuritySchemeOrReference:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          title: value
+          description: Mapped value
+          $ref: '#/components/schemas/gnostic.openapi.v3.SecuritySchemeOrReference'
+      title: NamedSecuritySchemeOrReference
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of SecuritySchemeOrReference as ordered (name,value) pairs.
+    gnostic.openapi.v3.NamedServerVariable:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          title: value
+          description: Mapped value
+          $ref: '#/components/schemas/gnostic.openapi.v3.ServerVariable'
+      title: NamedServerVariable
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of ServerVariable as ordered (name,value) pairs.
+    gnostic.openapi.v3.NamedString:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          type: string
+          title: value
+          description: Mapped value
+      title: NamedString
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of string as ordered (name,value) pairs.
+    gnostic.openapi.v3.NamedStringArray:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+          description: Map key
+        value:
+          title: value
+          description: Mapped value
+          $ref: '#/components/schemas/gnostic.openapi.v3.StringArray'
+      title: NamedStringArray
+      additionalProperties: false
+      description: Automatically-generated message used to represent maps of StringArray as ordered (name,value) pairs.
+    gnostic.openapi.v3.OauthFlow:
+      type: object
+      properties:
+        authorizationUrl:
+          type: string
+          title: authorization_url
+        tokenUrl:
+          type: string
+          title: token_url
+        refreshUrl:
+          type: string
+          title: refresh_url
+        scopes:
+          title: scopes
+          $ref: '#/components/schemas/gnostic.openapi.v3.Strings'
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: OauthFlow
+      additionalProperties: false
+      description: Configuration details for a supported OAuth Flow
+    gnostic.openapi.v3.OauthFlows:
+      type: object
+      properties:
+        implicit:
+          title: implicit
+          $ref: '#/components/schemas/gnostic.openapi.v3.OauthFlow'
+        password:
+          title: password
+          $ref: '#/components/schemas/gnostic.openapi.v3.OauthFlow'
+        clientCredentials:
+          title: client_credentials
+          $ref: '#/components/schemas/gnostic.openapi.v3.OauthFlow'
+        authorizationCode:
+          title: authorization_code
+          $ref: '#/components/schemas/gnostic.openapi.v3.OauthFlow'
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: OauthFlows
+      additionalProperties: false
+      description: Allows configuration of the supported OAuth Flows.
+    gnostic.openapi.v3.Object:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: additional_properties
+      title: Object
+      additionalProperties: false
+    gnostic.openapi.v3.Operation:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+          title: tags
+        summary:
+          type: string
+          title: summary
+        description:
+          type: string
+          title: description
+        externalDocs:
+          title: external_docs
+          $ref: '#/components/schemas/gnostic.openapi.v3.ExternalDocs'
+        operationId:
+          type: string
+          title: operation_id
+        parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.ParameterOrReference'
+          title: parameters
+        requestBody:
+          title: request_body
+          $ref: '#/components/schemas/gnostic.openapi.v3.RequestBodyOrReference'
+        responses:
+          title: responses
+          $ref: '#/components/schemas/gnostic.openapi.v3.Responses'
+        callbacks:
+          title: callbacks
+          $ref: '#/components/schemas/gnostic.openapi.v3.CallbacksOrReferences'
+        deprecated:
+          type: boolean
+          title: deprecated
+        security:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.SecurityRequirement'
+          title: security
+        servers:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.Server'
+          title: servers
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Operation
+      additionalProperties: false
+      description: Describes a single API operation on a path.
+    gnostic.openapi.v3.Parameter:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+        in:
+          type: string
+          title: in
+        description:
+          type: string
+          title: description
+        required:
+          type: boolean
+          title: required
+        deprecated:
+          type: boolean
+          title: deprecated
+        allowEmptyValue:
+          type: boolean
+          title: allow_empty_value
+        style:
+          type: string
+          title: style
+        explode:
+          type: boolean
+          title: explode
+        allowReserved:
+          type: boolean
+          title: allow_reserved
+        schema:
+          title: schema
+          $ref: '#/components/schemas/gnostic.openapi.v3.SchemaOrReference'
+        example:
+          title: example
+          $ref: '#/components/schemas/gnostic.openapi.v3.Any'
+        examples:
+          title: examples
+          $ref: '#/components/schemas/gnostic.openapi.v3.ExamplesOrReferences'
+        content:
+          title: content
+          $ref: '#/components/schemas/gnostic.openapi.v3.MediaTypes'
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Parameter
+      additionalProperties: false
+      description: Describes a single operation parameter.  A unique parameter is defined by a combination of a name and location.
+    gnostic.openapi.v3.ParameterOrReference:
+      type: object
+      oneOf:
+        - properties:
+            parameter:
+              title: parameter
+              $ref: '#/components/schemas/gnostic.openapi.v3.Parameter'
+          title: parameter
+          required:
+            - parameter
+        - properties:
+            reference:
+              title: reference
+              $ref: '#/components/schemas/gnostic.openapi.v3.Reference'
+          title: reference
+          required:
+            - reference
+      title: ParameterOrReference
+      additionalProperties: false
+    gnostic.openapi.v3.ParametersOrReferences:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedParameterOrReference'
+          title: additional_properties
+      title: ParametersOrReferences
+      additionalProperties: false
+    gnostic.openapi.v3.PathItem:
+      type: object
+      properties:
+        Ref:
+          type: string
+          title: _ref
+        summary:
+          type: string
+          title: summary
+        description:
+          type: string
+          title: description
+        get:
+          title: get
+          $ref: '#/components/schemas/gnostic.openapi.v3.Operation'
+        put:
+          title: put
+          $ref: '#/components/schemas/gnostic.openapi.v3.Operation'
+        post:
+          title: post
+          $ref: '#/components/schemas/gnostic.openapi.v3.Operation'
+        delete:
+          title: delete
+          $ref: '#/components/schemas/gnostic.openapi.v3.Operation'
+        options:
+          title: options
+          $ref: '#/components/schemas/gnostic.openapi.v3.Operation'
+        head:
+          title: head
+          $ref: '#/components/schemas/gnostic.openapi.v3.Operation'
+        patch:
+          title: patch
+          $ref: '#/components/schemas/gnostic.openapi.v3.Operation'
+        trace:
+          title: trace
+          $ref: '#/components/schemas/gnostic.openapi.v3.Operation'
+        servers:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.Server'
+          title: servers
+        parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.ParameterOrReference'
+          title: parameters
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: PathItem
+      additionalProperties: false
+      description: Describes the operations available on a single path. A Path Item MAY be empty, due to ACL constraints. The path itself is still exposed to the documentation viewer but they will not know which operations and parameters are available.
+    gnostic.openapi.v3.Paths:
+      type: object
+      properties:
+        path:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedPathItem'
+          title: path
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Paths
+      additionalProperties: false
+      description: Holds the relative paths to the individual endpoints and their operations. The path is appended to the URL from the `Server Object` in order to construct the full URL.  The Paths MAY be empty, due to ACL constraints.
+    gnostic.openapi.v3.Properties:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedSchemaOrReference'
+          title: additional_properties
+      title: Properties
+      additionalProperties: false
+    gnostic.openapi.v3.Reference:
+      type: object
+      properties:
+        Ref:
+          type: string
+          title: _ref
+        summary:
+          type: string
+          title: summary
+        description:
+          type: string
+          title: description
+      title: Reference
+      additionalProperties: false
+      description: A simple object to allow referencing other components in the specification, internally and externally.  The Reference Object is defined by JSON Reference and follows the same structure, behavior and rules.   For this specification, reference resolution is accomplished as defined by the JSON Reference specification and not by the JSON Schema specification.
+    gnostic.openapi.v3.RequestBodiesOrReferences:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedRequestBodyOrReference'
+          title: additional_properties
+      title: RequestBodiesOrReferences
+      additionalProperties: false
+    gnostic.openapi.v3.RequestBody:
+      type: object
+      properties:
+        description:
+          type: string
+          title: description
+        content:
+          title: content
+          $ref: '#/components/schemas/gnostic.openapi.v3.MediaTypes'
+        required:
+          type: boolean
+          title: required
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: RequestBody
+      additionalProperties: false
+      description: Describes a single request body.
+    gnostic.openapi.v3.RequestBodyOrReference:
+      type: object
+      oneOf:
+        - properties:
+            reference:
+              title: reference
+              $ref: '#/components/schemas/gnostic.openapi.v3.Reference'
+          title: reference
+          required:
+            - reference
+        - properties:
+            requestBody:
+              title: request_body
+              $ref: '#/components/schemas/gnostic.openapi.v3.RequestBody'
+          title: request_body
+          required:
+            - requestBody
+      title: RequestBodyOrReference
+      additionalProperties: false
+    gnostic.openapi.v3.Response:
+      type: object
+      properties:
+        description:
+          type: string
+          title: description
+        headers:
+          title: headers
+          $ref: '#/components/schemas/gnostic.openapi.v3.HeadersOrReferences'
+        content:
+          title: content
+          $ref: '#/components/schemas/gnostic.openapi.v3.MediaTypes'
+        links:
+          title: links
+          $ref: '#/components/schemas/gnostic.openapi.v3.LinksOrReferences'
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Response
+      additionalProperties: false
+      description: Describes a single response from an API Operation, including design-time, static  `links` to operations based on the response.
+    gnostic.openapi.v3.ResponseOrReference:
+      type: object
+      oneOf:
+        - properties:
+            reference:
+              title: reference
+              $ref: '#/components/schemas/gnostic.openapi.v3.Reference'
+          title: reference
+          required:
+            - reference
+        - properties:
+            response:
+              title: response
+              $ref: '#/components/schemas/gnostic.openapi.v3.Response'
+          title: response
+          required:
+            - response
+      title: ResponseOrReference
+      additionalProperties: false
+    gnostic.openapi.v3.Responses:
+      type: object
+      properties:
+        default:
+          title: default
+          $ref: '#/components/schemas/gnostic.openapi.v3.ResponseOrReference'
+        responseOrReference:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedResponseOrReference'
+          title: response_or_reference
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Responses
+      additionalProperties: false
+      description: A container for the expected responses of an operation. The container maps a HTTP response code to the expected response.  The documentation is not necessarily expected to cover all possible HTTP response codes because they may not be known in advance. However, documentation is expected to cover a successful operation response and any known errors.  The `default` MAY be used as a default response object for all HTTP codes  that are not covered individually by the specification.  The `Responses Object` MUST contain at least one response code, and it  SHOULD be the response for a successful operation call.
+    gnostic.openapi.v3.ResponsesOrReferences:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedResponseOrReference'
+          title: additional_properties
+      title: ResponsesOrReferences
+      additionalProperties: false
+    gnostic.openapi.v3.Schema:
+      type: object
+      properties:
+        nullable:
+          type: boolean
+          title: nullable
+        discriminator:
+          title: discriminator
+          $ref: '#/components/schemas/gnostic.openapi.v3.Discriminator'
+        readOnly:
+          type: boolean
+          title: read_only
+        writeOnly:
+          type: boolean
+          title: write_only
+        xml:
+          title: xml
+          $ref: '#/components/schemas/gnostic.openapi.v3.Xml'
+        externalDocs:
+          title: external_docs
+          $ref: '#/components/schemas/gnostic.openapi.v3.ExternalDocs'
+        example:
+          title: example
+          $ref: '#/components/schemas/gnostic.openapi.v3.Any'
+        deprecated:
+          type: boolean
+          title: deprecated
+        title:
+          type: string
+          title: title
+        multipleOf:
+          type: number
+          title: multiple_of
+          format: double
+        maximum:
+          type: number
+          title: maximum
+          format: double
+        exclusiveMaximum:
+          type: boolean
+          title: exclusive_maximum
+        minimum:
+          type: number
+          title: minimum
+          format: double
+        exclusiveMinimum:
+          type: boolean
+          title: exclusive_minimum
+        maxLength:
+          type:
+            - integer
+            - string
+          title: max_length
+          format: int64
+        minLength:
+          type:
+            - integer
+            - string
+          title: min_length
+          format: int64
+        pattern:
+          type: string
+          title: pattern
+        maxItems:
+          type:
+            - integer
+            - string
+          title: max_items
+          format: int64
+        minItems:
+          type:
+            - integer
+            - string
+          title: min_items
+          format: int64
+        uniqueItems:
+          type: boolean
+          title: unique_items
+        maxProperties:
+          type:
+            - integer
+            - string
+          title: max_properties
+          format: int64
+        minProperties:
+          type:
+            - integer
+            - string
+          title: min_properties
+          format: int64
+        required:
+          type: array
+          items:
+            type: string
+          title: required
+        enum:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.Any'
+          title: enum
+        type:
+          type: string
+          title: type
+        allOf:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.SchemaOrReference'
+          title: all_of
+        oneOf:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.SchemaOrReference'
+          title: one_of
+        anyOf:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.SchemaOrReference'
+          title: any_of
+        not:
+          title: not
+          $ref: '#/components/schemas/gnostic.openapi.v3.Schema'
+        items:
+          title: items
+          $ref: '#/components/schemas/gnostic.openapi.v3.ItemsItem'
+        properties:
+          title: properties
+          $ref: '#/components/schemas/gnostic.openapi.v3.Properties'
+        additionalProperties:
+          title: additional_properties
+          $ref: '#/components/schemas/gnostic.openapi.v3.AdditionalPropertiesItem'
+        default:
+          title: default
+          $ref: '#/components/schemas/gnostic.openapi.v3.DefaultType'
+        description:
+          type: string
+          title: description
+        format:
+          type: string
+          title: format
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Schema
+      additionalProperties: false
+      description: The Schema Object allows the definition of input and output data types. These types can be objects, but also primitives and arrays. This object is an extended subset of the JSON Schema Specification Wright Draft 00.  For more information about the properties, see JSON Schema Core and JSON Schema Validation. Unless stated otherwise, the property definitions follow the JSON Schema.
+    gnostic.openapi.v3.SchemaOrReference:
+      type: object
+      oneOf:
+        - properties:
+            reference:
+              title: reference
+              $ref: '#/components/schemas/gnostic.openapi.v3.Reference'
+          title: reference
+          required:
+            - reference
+        - properties:
+            schema:
+              title: schema
+              $ref: '#/components/schemas/gnostic.openapi.v3.Schema'
+          title: schema
+          required:
+            - schema
+      title: SchemaOrReference
+      additionalProperties: false
+    gnostic.openapi.v3.SchemasOrReferences:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedSchemaOrReference'
+          title: additional_properties
+      title: SchemasOrReferences
+      additionalProperties: false
+    gnostic.openapi.v3.SecurityRequirement:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedStringArray'
+          title: additional_properties
+      title: SecurityRequirement
+      additionalProperties: false
+      description: Lists the required security schemes to execute this operation. The name used for each property MUST correspond to a security scheme declared in the Security Schemes under the Components Object.  Security Requirement Objects that contain multiple schemes require that all schemes MUST be satisfied for a request to be authorized. This enables support for scenarios where multiple query parameters or HTTP headers are required to convey security information.  When a list of Security Requirement Objects is defined on the OpenAPI Object or Operation Object, only one of the Security Requirement Objects in the list needs to be satisfied to authorize the request.
+    gnostic.openapi.v3.SecurityScheme:
+      type: object
+      properties:
+        type:
+          type: string
+          title: type
+        description:
+          type: string
+          title: description
+        name:
+          type: string
+          title: name
+        in:
+          type: string
+          title: in
+        scheme:
+          type: string
+          title: scheme
+        bearerFormat:
+          type: string
+          title: bearer_format
+        flows:
+          title: flows
+          $ref: '#/components/schemas/gnostic.openapi.v3.OauthFlows'
+        openIdConnectUrl:
+          type: string
+          title: open_id_connect_url
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: SecurityScheme
+      additionalProperties: false
+      description: Defines a security scheme that can be used by the operations. Supported schemes are HTTP authentication, an API key (either as a header, a cookie parameter or as a query parameter), mutual TLS (use of a client certificate), OAuth2's common flows (implicit, password, application and access code) as defined in RFC6749, and OpenID Connect.   Please note that currently (2019) the implicit flow is about to be deprecated OAuth 2.0 Security Best Current Practice. Recommended for most use case is Authorization Code Grant flow with PKCE.
+    gnostic.openapi.v3.SecuritySchemeOrReference:
+      type: object
+      oneOf:
+        - properties:
+            reference:
+              title: reference
+              $ref: '#/components/schemas/gnostic.openapi.v3.Reference'
+          title: reference
+          required:
+            - reference
+        - properties:
+            securityScheme:
+              title: security_scheme
+              $ref: '#/components/schemas/gnostic.openapi.v3.SecurityScheme'
+          title: security_scheme
+          required:
+            - securityScheme
+      title: SecuritySchemeOrReference
+      additionalProperties: false
+    gnostic.openapi.v3.SecuritySchemesOrReferences:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedSecuritySchemeOrReference'
+          title: additional_properties
+      title: SecuritySchemesOrReferences
+      additionalProperties: false
+    gnostic.openapi.v3.Server:
+      type: object
+      properties:
+        url:
+          type: string
+          title: url
+        description:
+          type: string
+          title: description
+        variables:
+          title: variables
+          $ref: '#/components/schemas/gnostic.openapi.v3.ServerVariables'
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Server
+      additionalProperties: false
+      description: An object representing a Server.
+    gnostic.openapi.v3.ServerVariable:
+      type: object
+      properties:
+        enum:
+          type: array
+          items:
+            type: string
+          title: enum
+        default:
+          type: string
+          title: default
+        description:
+          type: string
+          title: description
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: ServerVariable
+      additionalProperties: false
+      description: An object representing a Server Variable for server URL template substitution.
+    gnostic.openapi.v3.ServerVariables:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedServerVariable'
+          title: additional_properties
+      title: ServerVariables
+      additionalProperties: false
+    gnostic.openapi.v3.SpecificationExtension:
+      type: object
+      oneOf:
+        - properties:
+            boolean:
+              type: boolean
+              title: boolean
+          title: boolean
+          required:
+            - boolean
+        - properties:
+            number:
+              type: number
+              title: number
+              format: double
+          title: number
+          required:
+            - number
+        - properties:
+            string:
+              type: string
+              title: string
+          title: string
+          required:
+            - string
+      title: SpecificationExtension
+      additionalProperties: false
+      description: Any property starting with x- is valid.
+    gnostic.openapi.v3.StringArray:
+      type: object
+      properties:
+        value:
+          type: array
+          items:
+            type: string
+          title: value
+      title: StringArray
+      additionalProperties: false
+    gnostic.openapi.v3.Strings:
+      type: object
+      properties:
+        additionalProperties:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedString'
+          title: additional_properties
+      title: Strings
+      additionalProperties: false
+    gnostic.openapi.v3.Tag:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+        description:
+          type: string
+          title: description
+        externalDocs:
+          title: external_docs
+          $ref: '#/components/schemas/gnostic.openapi.v3.ExternalDocs'
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Tag
+      additionalProperties: false
+      description: Adds metadata to a single tag that is used by the Operation Object. It is not mandatory to have a Tag Object per tag defined in the Operation Object instances.
+    gnostic.openapi.v3.Xml:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+        namespace:
+          type: string
+          title: namespace
+        prefix:
+          type: string
+          title: prefix
+        attribute:
+          type: boolean
+          title: attribute
+        wrapped:
+          type: boolean
+          title: wrapped
+        specificationExtension:
+          type: array
+          items:
+            $ref: '#/components/schemas/gnostic.openapi.v3.NamedAny'
+          title: specification_extension
+      title: Xml
+      additionalProperties: false
+      description: A metadata object that allows for more fine-tuned XML model definitions.  When using arrays, XML element names are *not* inferred (for singular/plural forms) and the `name` property SHOULD be used to add that information. See examples for expected behavior.
+    google.protobuf.Any:
+      type: object
+      properties:
+        type:
+          type: string
+        value:
+          type: string
+          format: binary
+        debug:
+          type: object
+          additionalProperties: true
+      additionalProperties: true
+      description: Contains an arbitrary serialized message along with a @type that describes the type of the serialized message.
+security: []

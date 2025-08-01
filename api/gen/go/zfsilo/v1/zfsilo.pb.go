@@ -8,7 +8,7 @@ package zfsilov1
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	_ "github.com/google/gnostic/openapiv3"
+	_ "github.com/jovulic/zfsilo/api/gen/go/gnostic/openapi/v3"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"

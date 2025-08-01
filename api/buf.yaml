@@ -3,7 +3,6 @@ modules:
   - path: src
 deps: # https://buf.build/search
   - buf.build/bufbuild/protovalidate:v0.14.1
-  - buf.build/gnostic/gnostic
 lint:
   use:
     - STANDARD
