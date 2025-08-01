@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"connectrpc.com/grpcreflect"
 	"github.com/google/wire"
 	"github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1/zfsilov1connect"
 	"github.com/jovulic/zfsilo/app/internal/config"
@@ -39,6 +40,15 @@ func WireServer(
 			greeterService,
 		)
 		mux.Handle(path, handler)
+	}
+
+	// Register grpc reflection.
+	{
+		reflector := grpcreflect.NewStaticReflector(
+			zfsilov1connect.GreeterServiceName,
+		)
+		mux.Handle(grpcreflect.NewHandlerV1(reflector))
+		mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
 	}
 
 	go func() {
