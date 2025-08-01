@@ -45,7 +45,6 @@
               && last != "result"
             );
         };
-      # sourceRoot = "source/app";
 
       nativeBuildInputs = [
         pkgs.go
