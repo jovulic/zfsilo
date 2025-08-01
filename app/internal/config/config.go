@@ -62,7 +62,8 @@ type Config struct {
 		Level LogLevel `json:"level" mod:"default=INFO" validate:"oneof=DEBUG INFO WARN ERROR"`
 	} `json:"log"`
 	Service struct {
-		BindAddress string `json:"bindAddress" mod:"default=:9090"`
+		BindAddress       string `json:"bindAddress"       mod:"default=:8000"`
+		ExternalServerURI string `json:"externalServerURI" validate:"required"`
 	} `json:"service"`
 }
 

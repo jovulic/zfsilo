@@ -2,5 +2,8 @@
   "log": {
     "mode": "TEXT",
     "level": "INFO"
+  },
+  "service": {
+    "externalServerUri": "dns:///:8000"
   }
 }
