@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -10,8 +12,11 @@ import (
 	"github.com/google/wire"
 	"github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1/zfsilov1connect"
 	"github.com/jovulic/zfsilo/app/internal/config"
+	"github.com/jovulic/zfsilo/lib/selfcert"
 	"github.com/skovtunenko/graterm"
 	slogctx "github.com/veqryn/slog-context"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 var WireSet = wire.NewSet(
@@ -29,8 +34,10 @@ func WireServer(
 	term *graterm.Terminator,
 	greeterService *GreeterService,
 ) (*http.Server, error) {
-	server := new(http.Server)
-	server.Addr = conf.Service.BindAddress
+	cert, err := selfcert.GenerateCertificate()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate certificate: %w", err)
+	}
 
 	mux := http.NewServeMux()
 
@@ -49,6 +56,14 @@ func WireServer(
 		)
 		mux.Handle(grpcreflect.NewHandlerV1(reflector))
 		mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+	}
+
+	server := &http.Server{
+		Addr:    conf.Service.BindAddress,
+		Handler: h2c.NewHandler(mux, &http2.Server{}),
+		TLSConfig: &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		},
 	}
 
 	go func() {
