@@ -33,8 +33,7 @@
               first = pkgs.lib.head segments;
               last = pkgs.lib.last segments;
             in
-            relative == ""
-            || (
+            (
               pkgs.lib.elem first [
                 ".gitignore"
                 "api"
