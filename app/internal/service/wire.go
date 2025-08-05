@@ -57,9 +57,12 @@ func WireServer(
 		mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
 	}
 
-	// Register the grpc ui.
+	// Register the grpc ui route.
 	grpcuiHandler := NewGRPCUIHandler(conf.Service.ExternalServerURI)
 	mux.Handle("/", grpcuiHandler)
+
+	// Register OpenAPI route.
+	mux.Handle("/v1", NewV1OpenAPIHandler())
 
 	server := &http.Server{
 		Addr:    conf.Service.BindAddress,
