@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"connectrpc.com/grpchealth"
 	"connectrpc.com/grpcreflect"
 	"github.com/google/wire"
 	"github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1/zfsilov1connect"
@@ -48,10 +49,19 @@ func WireServer(
 		mux.Handle(path, handler)
 	}
 
+	// Register grpc health.
+	{
+		checker := grpchealth.NewStaticChecker(
+			zfsilov1connect.GreeterServiceName,
+		)
+		mux.Handle(grpchealth.NewHandler(checker))
+	}
+
 	// Register grpc reflection.
 	{
 		reflector := grpcreflect.NewStaticReflector(
 			zfsilov1connect.GreeterServiceName,
+			grpchealth.HealthV1ServiceName,
 		)
 		mux.Handle(grpcreflect.NewHandlerV1(reflector))
 		mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
