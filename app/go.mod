@@ -39,6 +39,7 @@ require (
 	github.com/jhump/protoreflect v1.17.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.1 // indirect
+	github.com/samber/lo v1.51.0 // indirect
 	github.com/segmentio/go-camelcase v0.0.0-20160726192923-7085f1e3c734 // indirect
 	github.com/segmentio/go-snakecase v1.2.0 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
