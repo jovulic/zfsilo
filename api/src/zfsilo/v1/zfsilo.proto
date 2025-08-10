@@ -4,7 +4,10 @@ package zfsilo.v1;
 
 import "buf/validate/validate.proto";
 import "gnostic/openapi/v3/annotations.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
 
+// documentation: https://github.com/sudorandom/protoc-gen-connect-openapi/blob/main/gnostic.md
 option (gnostic.openapi.v3.document) = {
   info: {
     title: "ZFSilo"
@@ -24,11 +27,11 @@ option (gnostic.openapi.v3.document) = {
     security_schemes: {
       additional_properties: [
         {
-          name: "BasicAuth"
+          name: "BearerAuth"
           value: {
             security_scheme: {
               type: "http"
-              scheme: "basic"
+              scheme: "bearer"
             }
           }
         }
@@ -36,6 +39,162 @@ option (gnostic.openapi.v3.document) = {
     }
   }
 };
+
+service Service {
+  rpc GetCapacity(GetCapacityRequest) returns (GetCapacityResponse) {
+    option (gnostic.openapi.v3.operation) = {
+      summary: "Return the current free capacity in bytes."
+      description: "GetCapacity returns a non‑negative available_capacity_bytes value indicating how many bytes are still available for allocation. "
+    };
+  }
+}
+
+message GetCapacityRequest {
+  option (gnostic.openapi.v3.schema) = {description: "The get capacity request."};
+}
+
+message GetCapacityResponse {
+  option (gnostic.openapi.v3.schema) = {description: "The get capacity response."};
+
+  int64 available_capacity_bytes = 1 [(gnostic.openapi.v3.property) = {description: "The available capacity in bytes."}];
+}
+
+service VolumeService {
+  rpc GetVolume(GetVolumeRequest) returns (GetVolumeResponse) {}
+  rpc ListVolumes(ListVolumesRequest) returns (ListVolumesResponse) {}
+  rpc UpdateVolume(UpdateVolumeRequest) returns (UpdateVolumeResponse) {}
+  rpc DeleteVolume(DeleteVolumeRequest) returns (DeleteVolumeResponse) {}
+}
+
+message Volume {
+  option (gnostic.openapi.v3.schema) = {description: "The volume resource."};
+
+  message Option {
+    string key = 1;
+    string value = 2;
+  }
+
+  enum Mode {
+    MODE_UNSPECIFIED = 0;
+    MODE_BLOCK = 1;
+    MODE_FILESYSTEM = 2;
+  }
+
+  google.protobuf.Struct struct = 1 [(gnostic.openapi.v3.property) = {description: "Loosely structured data stored with the volume."}];
+  google.protobuf.Timestamp create_time = 2 [(gnostic.openapi.v3.property) = {
+    description: "When the volume was created."
+    read_only: true
+  }];
+  google.protobuf.Timestamp update_time = 3 [(gnostic.openapi.v3.property) = {
+    description: "When the volume was last updated."
+    read_only: true
+  }];
+  string id = 4 [
+    (gnostic.openapi.v3.property) = {description: "The resource id. Immutable."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
+  ];
+  string name = 5 [
+    (gnostic.openapi.v3.property) = {description: "The resource name. Immutable."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^volumes/vol_[a-zA-Z0-9-_]+$"
+  ];
+  string dataset_id = 6 [
+    (gnostic.openapi.v3.property) = {description: "The ZFS dataset id. Immutable."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+(/?[a-zA-Z0-9-_]+)*$"
+  ];
+  repeated Option options = 7 [(gnostic.openapi.v3.property) = {description: "The options applied to the volume. Immutable."}];
+  bool sparse = 8 [
+    (gnostic.openapi.v3.property) = {description: "Whether the volume is sparse. Immutable."},
+    (buf.validate.field).required = true
+  ];
+  Mode mode = 9 [
+    (gnostic.openapi.v3.property) = {description: "The mode of the volume. Immutable."},
+    (buf.validate.field).required = true
+  ];
+  int64 capacity_bytes = 10 [
+    (gnostic.openapi.v3.property) = {description: "The capacity of the volume."},
+    (buf.validate.field).int64.gte = 0
+  ];
+  optional string initiator_iqn = 11 [
+    (gnostic.openapi.v3.property) = {
+      description: "The iSCSI initiator IQN."
+      read_only: true
+    },
+    (buf.validate.field).string = {pattern: "^iqn.*$"}
+  ];
+  optional string target_iqn = 12 [
+    (gnostic.openapi.v3.property) = {
+      description: "The iSCSI target IQN."
+      read_only: true
+    },
+    (buf.validate.field).string = {pattern: "^iqn.*$"}
+  ];
+  optional string target_address = 13 [
+    (gnostic.openapi.v3.property) = {
+      description: "The iSCSI target address (host and port)."
+      read_only: true
+    },
+    (buf.validate.field).string = {host_and_port: true}
+  ];
+  optional string mount_path = 14 [
+    (gnostic.openapi.v3.property) = {
+      description: "The iSCSI mount path."
+      read_only: true
+    },
+    (buf.validate.field).string = {pattern: "^(/[^/ ]*)+/?$"}
+  ];
+}
+
+message GetVolumeRequest {
+  string id = 1 [
+    (gnostic.openapi.v3.property) = {description: "The volume id."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
+  ];
+}
+
+message GetVolumeResponse {
+  Volume volume = 1 [(gnostic.openapi.v3.property) = {description: "The volume resource."}];
+}
+
+message ListVolumesRequest {
+  int32 page_size = 1 [
+    (gnostic.openapi.v3.property) = {description: "The page size."},
+    (buf.validate.field).int32.gte = 0
+  ];
+  string filter = 2 [(gnostic.openapi.v3.property) = {description: "The filter to apply over volumes."}];
+  string order_by = 3 [(gnostic.openapi.v3.property) = {description: "The ordering to apply over volumes."}];
+  string page_token = 4 [(gnostic.openapi.v3.property) = {description: "The page token. Used in subsequent requests to page over volumes."}];
+}
+
+message ListVolumesResponse {
+  repeated Volume volumes = 1 [(gnostic.openapi.v3.property) = {description: "The list of volumes."}];
+  string next_page_token = 2 [(gnostic.openapi.v3.property) = {description: "The page token for the next page of volumes."}];
+  int32 total_size = 3 [(gnostic.openapi.v3.property) = {description: "The total number of volumes."}];
+}
+
+message UpdateVolumeRequest {
+  google.protobuf.Struct volume = 1 [
+    (gnostic.openapi.v3.property) = {description: "The volume to updated. Requires the volume id to be specified and then include only the fields to be changed."},
+    (buf.validate.field).required = true
+  ];
+}
+
+message UpdateVolumeResponse {
+  Volume volume = 1;
+}
+
+message DeleteVolumeRequest {
+  string id = 1 [
+    (gnostic.openapi.v3.property) = {description: "The volume id."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
+  ];
+}
+
+message DeleteVolumeResponse {}
 
 service GreeterService {
   rpc SayHello(SayHelloRequest) returns (SayHelloResponse) {

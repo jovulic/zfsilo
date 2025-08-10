@@ -21,6 +21,10 @@ import (
 const _ = connect.IsAtLeastVersion1_13_0
 
 const (
+	// ServiceName is the fully-qualified name of the Service service.
+	ServiceName = "zfsilo.v1.Service"
+	// VolumeServiceName is the fully-qualified name of the VolumeService service.
+	VolumeServiceName = "zfsilo.v1.VolumeService"
 	// GreeterServiceName is the fully-qualified name of the GreeterService service.
 	GreeterServiceName = "zfsilo.v1.GreeterService"
 )
@@ -33,9 +37,240 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// ServiceGetCapacityProcedure is the fully-qualified name of the Service's GetCapacity RPC.
+	ServiceGetCapacityProcedure = "/zfsilo.v1.Service/GetCapacity"
+	// VolumeServiceGetVolumeProcedure is the fully-qualified name of the VolumeService's GetVolume RPC.
+	VolumeServiceGetVolumeProcedure = "/zfsilo.v1.VolumeService/GetVolume"
+	// VolumeServiceListVolumesProcedure is the fully-qualified name of the VolumeService's ListVolumes
+	// RPC.
+	VolumeServiceListVolumesProcedure = "/zfsilo.v1.VolumeService/ListVolumes"
+	// VolumeServiceUpdateVolumeProcedure is the fully-qualified name of the VolumeService's
+	// UpdateVolume RPC.
+	VolumeServiceUpdateVolumeProcedure = "/zfsilo.v1.VolumeService/UpdateVolume"
+	// VolumeServiceDeleteVolumeProcedure is the fully-qualified name of the VolumeService's
+	// DeleteVolume RPC.
+	VolumeServiceDeleteVolumeProcedure = "/zfsilo.v1.VolumeService/DeleteVolume"
 	// GreeterServiceSayHelloProcedure is the fully-qualified name of the GreeterService's SayHello RPC.
 	GreeterServiceSayHelloProcedure = "/zfsilo.v1.GreeterService/SayHello"
 )
+
+// ServiceClient is a client for the zfsilo.v1.Service service.
+type ServiceClient interface {
+	GetCapacity(context.Context, *connect.Request[v1.GetCapacityRequest]) (*connect.Response[v1.GetCapacityResponse], error)
+}
+
+// NewServiceClient constructs a client for the zfsilo.v1.Service service. By default, it uses the
+// Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
+// uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
+// connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	serviceMethods := v1.File_zfsilo_v1_zfsilo_proto.Services().ByName("Service").Methods()
+	return &serviceClient{
+		getCapacity: connect.NewClient[v1.GetCapacityRequest, v1.GetCapacityResponse](
+			httpClient,
+			baseURL+ServiceGetCapacityProcedure,
+			connect.WithSchema(serviceMethods.ByName("GetCapacity")),
+			connect.WithClientOptions(opts...),
+		),
+	}
+}
+
+// serviceClient implements ServiceClient.
+type serviceClient struct {
+	getCapacity *connect.Client[v1.GetCapacityRequest, v1.GetCapacityResponse]
+}
+
+// GetCapacity calls zfsilo.v1.Service.GetCapacity.
+func (c *serviceClient) GetCapacity(ctx context.Context, req *connect.Request[v1.GetCapacityRequest]) (*connect.Response[v1.GetCapacityResponse], error) {
+	return c.getCapacity.CallUnary(ctx, req)
+}
+
+// ServiceHandler is an implementation of the zfsilo.v1.Service service.
+type ServiceHandler interface {
+	GetCapacity(context.Context, *connect.Request[v1.GetCapacityRequest]) (*connect.Response[v1.GetCapacityResponse], error)
+}
+
+// NewServiceHandler builds an HTTP handler from the service implementation. It returns the path on
+// which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewServiceHandler(svc ServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	serviceMethods := v1.File_zfsilo_v1_zfsilo_proto.Services().ByName("Service").Methods()
+	serviceGetCapacityHandler := connect.NewUnaryHandler(
+		ServiceGetCapacityProcedure,
+		svc.GetCapacity,
+		connect.WithSchema(serviceMethods.ByName("GetCapacity")),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/zfsilo.v1.Service/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case ServiceGetCapacityProcedure:
+			serviceGetCapacityHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
+// UnimplementedServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedServiceHandler struct{}
+
+func (UnimplementedServiceHandler) GetCapacity(context.Context, *connect.Request[v1.GetCapacityRequest]) (*connect.Response[v1.GetCapacityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.Service.GetCapacity is not implemented"))
+}
+
+// VolumeServiceClient is a client for the zfsilo.v1.VolumeService service.
+type VolumeServiceClient interface {
+	GetVolume(context.Context, *connect.Request[v1.GetVolumeRequest]) (*connect.Response[v1.GetVolumeResponse], error)
+	ListVolumes(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
+	UpdateVolume(context.Context, *connect.Request[v1.UpdateVolumeRequest]) (*connect.Response[v1.UpdateVolumeResponse], error)
+	DeleteVolume(context.Context, *connect.Request[v1.DeleteVolumeRequest]) (*connect.Response[v1.DeleteVolumeResponse], error)
+}
+
+// NewVolumeServiceClient constructs a client for the zfsilo.v1.VolumeService service. By default,
+// it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and
+// sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC()
+// or connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewVolumeServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) VolumeServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	volumeServiceMethods := v1.File_zfsilo_v1_zfsilo_proto.Services().ByName("VolumeService").Methods()
+	return &volumeServiceClient{
+		getVolume: connect.NewClient[v1.GetVolumeRequest, v1.GetVolumeResponse](
+			httpClient,
+			baseURL+VolumeServiceGetVolumeProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("GetVolume")),
+			connect.WithClientOptions(opts...),
+		),
+		listVolumes: connect.NewClient[v1.ListVolumesRequest, v1.ListVolumesResponse](
+			httpClient,
+			baseURL+VolumeServiceListVolumesProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("ListVolumes")),
+			connect.WithClientOptions(opts...),
+		),
+		updateVolume: connect.NewClient[v1.UpdateVolumeRequest, v1.UpdateVolumeResponse](
+			httpClient,
+			baseURL+VolumeServiceUpdateVolumeProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("UpdateVolume")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteVolume: connect.NewClient[v1.DeleteVolumeRequest, v1.DeleteVolumeResponse](
+			httpClient,
+			baseURL+VolumeServiceDeleteVolumeProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("DeleteVolume")),
+			connect.WithClientOptions(opts...),
+		),
+	}
+}
+
+// volumeServiceClient implements VolumeServiceClient.
+type volumeServiceClient struct {
+	getVolume    *connect.Client[v1.GetVolumeRequest, v1.GetVolumeResponse]
+	listVolumes  *connect.Client[v1.ListVolumesRequest, v1.ListVolumesResponse]
+	updateVolume *connect.Client[v1.UpdateVolumeRequest, v1.UpdateVolumeResponse]
+	deleteVolume *connect.Client[v1.DeleteVolumeRequest, v1.DeleteVolumeResponse]
+}
+
+// GetVolume calls zfsilo.v1.VolumeService.GetVolume.
+func (c *volumeServiceClient) GetVolume(ctx context.Context, req *connect.Request[v1.GetVolumeRequest]) (*connect.Response[v1.GetVolumeResponse], error) {
+	return c.getVolume.CallUnary(ctx, req)
+}
+
+// ListVolumes calls zfsilo.v1.VolumeService.ListVolumes.
+func (c *volumeServiceClient) ListVolumes(ctx context.Context, req *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error) {
+	return c.listVolumes.CallUnary(ctx, req)
+}
+
+// UpdateVolume calls zfsilo.v1.VolumeService.UpdateVolume.
+func (c *volumeServiceClient) UpdateVolume(ctx context.Context, req *connect.Request[v1.UpdateVolumeRequest]) (*connect.Response[v1.UpdateVolumeResponse], error) {
+	return c.updateVolume.CallUnary(ctx, req)
+}
+
+// DeleteVolume calls zfsilo.v1.VolumeService.DeleteVolume.
+func (c *volumeServiceClient) DeleteVolume(ctx context.Context, req *connect.Request[v1.DeleteVolumeRequest]) (*connect.Response[v1.DeleteVolumeResponse], error) {
+	return c.deleteVolume.CallUnary(ctx, req)
+}
+
+// VolumeServiceHandler is an implementation of the zfsilo.v1.VolumeService service.
+type VolumeServiceHandler interface {
+	GetVolume(context.Context, *connect.Request[v1.GetVolumeRequest]) (*connect.Response[v1.GetVolumeResponse], error)
+	ListVolumes(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
+	UpdateVolume(context.Context, *connect.Request[v1.UpdateVolumeRequest]) (*connect.Response[v1.UpdateVolumeResponse], error)
+	DeleteVolume(context.Context, *connect.Request[v1.DeleteVolumeRequest]) (*connect.Response[v1.DeleteVolumeResponse], error)
+}
+
+// NewVolumeServiceHandler builds an HTTP handler from the service implementation. It returns the
+// path on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewVolumeServiceHandler(svc VolumeServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	volumeServiceMethods := v1.File_zfsilo_v1_zfsilo_proto.Services().ByName("VolumeService").Methods()
+	volumeServiceGetVolumeHandler := connect.NewUnaryHandler(
+		VolumeServiceGetVolumeProcedure,
+		svc.GetVolume,
+		connect.WithSchema(volumeServiceMethods.ByName("GetVolume")),
+		connect.WithHandlerOptions(opts...),
+	)
+	volumeServiceListVolumesHandler := connect.NewUnaryHandler(
+		VolumeServiceListVolumesProcedure,
+		svc.ListVolumes,
+		connect.WithSchema(volumeServiceMethods.ByName("ListVolumes")),
+		connect.WithHandlerOptions(opts...),
+	)
+	volumeServiceUpdateVolumeHandler := connect.NewUnaryHandler(
+		VolumeServiceUpdateVolumeProcedure,
+		svc.UpdateVolume,
+		connect.WithSchema(volumeServiceMethods.ByName("UpdateVolume")),
+		connect.WithHandlerOptions(opts...),
+	)
+	volumeServiceDeleteVolumeHandler := connect.NewUnaryHandler(
+		VolumeServiceDeleteVolumeProcedure,
+		svc.DeleteVolume,
+		connect.WithSchema(volumeServiceMethods.ByName("DeleteVolume")),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/zfsilo.v1.VolumeService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case VolumeServiceGetVolumeProcedure:
+			volumeServiceGetVolumeHandler.ServeHTTP(w, r)
+		case VolumeServiceListVolumesProcedure:
+			volumeServiceListVolumesHandler.ServeHTTP(w, r)
+		case VolumeServiceUpdateVolumeProcedure:
+			volumeServiceUpdateVolumeHandler.ServeHTTP(w, r)
+		case VolumeServiceDeleteVolumeProcedure:
+			volumeServiceDeleteVolumeHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
+// UnimplementedVolumeServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedVolumeServiceHandler struct{}
+
+func (UnimplementedVolumeServiceHandler) GetVolume(context.Context, *connect.Request[v1.GetVolumeRequest]) (*connect.Response[v1.GetVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.GetVolume is not implemented"))
+}
+
+func (UnimplementedVolumeServiceHandler) ListVolumes(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.ListVolumes is not implemented"))
+}
+
+func (UnimplementedVolumeServiceHandler) UpdateVolume(context.Context, *connect.Request[v1.UpdateVolumeRequest]) (*connect.Response[v1.UpdateVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.UpdateVolume is not implemented"))
+}
+
+func (UnimplementedVolumeServiceHandler) DeleteVolume(context.Context, *connect.Request[v1.DeleteVolumeRequest]) (*connect.Response[v1.DeleteVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.DeleteVolume is not implemented"))
+}
 
 // GreeterServiceClient is a client for the zfsilo.v1.GreeterService service.
 type GreeterServiceClient interface {

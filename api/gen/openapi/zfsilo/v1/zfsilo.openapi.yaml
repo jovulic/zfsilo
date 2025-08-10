@@ -11,6 +11,182 @@ info:
     url: https://github.com/jovulic/zfsilo/blob/main/LICENSE
   version: 0.1.0
 paths:
+  /zfsilo.v1.Service/GetCapacity:
+    post:
+      tags:
+        - zfsilo.v1.Service
+      summary: Return the current free capacity in bytes.
+      description: 'GetCapacity returns a non‑negative available_capacity_bytes value indicating how many bytes are still available for allocation. '
+      operationId: zfsilo.v1.Service.GetCapacity
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.GetCapacityRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.GetCapacityResponse'
+  /zfsilo.v1.VolumeService/GetVolume:
+    post:
+      tags:
+        - zfsilo.v1.VolumeService
+      summary: GetVolume
+      operationId: zfsilo.v1.VolumeService.GetVolume
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.GetVolumeRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.GetVolumeResponse'
+  /zfsilo.v1.VolumeService/ListVolumes:
+    post:
+      tags:
+        - zfsilo.v1.VolumeService
+      summary: ListVolumes
+      operationId: zfsilo.v1.VolumeService.ListVolumes
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.ListVolumesRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.ListVolumesResponse'
+  /zfsilo.v1.VolumeService/UpdateVolume:
+    post:
+      tags:
+        - zfsilo.v1.VolumeService
+      summary: UpdateVolume
+      operationId: zfsilo.v1.VolumeService.UpdateVolume
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.UpdateVolumeRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.UpdateVolumeResponse'
+  /zfsilo.v1.VolumeService/DeleteVolume:
+    post:
+      tags:
+        - zfsilo.v1.VolumeService
+      summary: DeleteVolume
+      operationId: zfsilo.v1.VolumeService.DeleteVolume
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.DeleteVolumeRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.DeleteVolumeResponse'
   /zfsilo.v1.GreeterService/SayHello:
     post:
       tags:
@@ -49,6 +225,271 @@ paths:
                 $ref: '#/components/schemas/zfsilo.v1.SayHelloResponse'
 components:
   schemas:
+    google.protobuf.NullValue:
+      type: string
+      title: NullValue
+      enum:
+        - NULL_VALUE
+      description: |-
+        `NullValue` is a singleton enumeration to represent the null value for the
+         `Value` type union.
+
+         The JSON representation for `NullValue` is JSON `null`.
+    zfsilo.v1.Volume.Mode:
+      type: string
+      title: Mode
+      enum:
+        - MODE_UNSPECIFIED
+        - MODE_BLOCK
+        - MODE_FILESYSTEM
+    google.protobuf.ListValue:
+      type: object
+      properties:
+        values:
+          type: array
+          items:
+            $ref: '#/components/schemas/google.protobuf.Value'
+          title: values
+          description: Repeated field of dynamically typed values.
+      title: ListValue
+      additionalProperties: false
+      description: |-
+        `ListValue` is a wrapper around a repeated field of values.
+
+         The JSON representation for `ListValue` is JSON array.
+    google.protobuf.Struct:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/google.protobuf.Value'
+      description: |-
+        `Struct` represents a structured data value, consisting of fields
+         which map to dynamically typed values. In some languages, `Struct`
+         might be supported by a native representation. For example, in
+         scripting languages like JS a struct is represented as an
+         object. The details of that representation are described together
+         with the proto support for the language.
+
+         The JSON representation for `Struct` is JSON object.
+    google.protobuf.Struct.FieldsEntry:
+      type: object
+      properties:
+        key:
+          type: string
+          title: key
+        value:
+          title: value
+          $ref: '#/components/schemas/google.protobuf.Value'
+      title: FieldsEntry
+      additionalProperties: false
+    google.protobuf.Timestamp:
+      type: string
+      examples:
+        - 1s
+        - 1.000340012s
+      format: date-time
+      description: |-
+        A Timestamp represents a point in time independent of any time zone or local
+         calendar, encoded as a count of seconds and fractions of seconds at
+         nanosecond resolution. The count is relative to an epoch at UTC midnight on
+         January 1, 1970, in the proleptic Gregorian calendar which extends the
+         Gregorian calendar backwards to year one.
+
+         All minutes are 60 seconds long. Leap seconds are "smeared" so that no leap
+         second table is needed for interpretation, using a [24-hour linear
+         smear](https://developers.google.com/time/smear).
+
+         The range is from 0001-01-01T00:00:00Z to 9999-12-31T23:59:59.999999999Z. By
+         restricting to that range, we ensure that we can convert to and from [RFC
+         3339](https://www.ietf.org/rfc/rfc3339.txt) date strings.
+
+         # Examples
+
+         Example 1: Compute Timestamp from POSIX `time()`.
+
+             Timestamp timestamp;
+             timestamp.set_seconds(time(NULL));
+             timestamp.set_nanos(0);
+
+         Example 2: Compute Timestamp from POSIX `gettimeofday()`.
+
+             struct timeval tv;
+             gettimeofday(&tv, NULL);
+
+             Timestamp timestamp;
+             timestamp.set_seconds(tv.tv_sec);
+             timestamp.set_nanos(tv.tv_usec * 1000);
+
+         Example 3: Compute Timestamp from Win32 `GetSystemTimeAsFileTime()`.
+
+             FILETIME ft;
+             GetSystemTimeAsFileTime(&ft);
+             UINT64 ticks = (((UINT64)ft.dwHighDateTime) << 32) | ft.dwLowDateTime;
+
+             // A Windows tick is 100 nanoseconds. Windows epoch 1601-01-01T00:00:00Z
+             // is 11644473600 seconds before Unix epoch 1970-01-01T00:00:00Z.
+             Timestamp timestamp;
+             timestamp.set_seconds((INT64) ((ticks / 10000000) - 11644473600LL));
+             timestamp.set_nanos((INT32) ((ticks % 10000000) * 100));
+
+         Example 4: Compute Timestamp from Java `System.currentTimeMillis()`.
+
+             long millis = System.currentTimeMillis();
+
+             Timestamp timestamp = Timestamp.newBuilder().setSeconds(millis / 1000)
+                 .setNanos((int) ((millis % 1000) * 1000000)).build();
+
+         Example 5: Compute Timestamp from Java `Instant.now()`.
+
+             Instant now = Instant.now();
+
+             Timestamp timestamp =
+                 Timestamp.newBuilder().setSeconds(now.getEpochSecond())
+                     .setNanos(now.getNano()).build();
+
+         Example 6: Compute Timestamp from current time in Python.
+
+             timestamp = Timestamp()
+             timestamp.GetCurrentTime()
+
+         # JSON Mapping
+
+         In JSON format, the Timestamp type is encoded as a string in the
+         [RFC 3339](https://www.ietf.org/rfc/rfc3339.txt) format. That is, the
+         format is "{year}-{month}-{day}T{hour}:{min}:{sec}[.{frac_sec}]Z"
+         where {year} is always expressed using four digits while {month}, {day},
+         {hour}, {min}, and {sec} are zero-padded to two digits each. The fractional
+         seconds, which can go up to 9 digits (i.e. up to 1 nanosecond resolution),
+         are optional. The "Z" suffix indicates the timezone ("UTC"); the timezone
+         is required. A proto3 JSON serializer should always use UTC (as indicated by
+         "Z") when printing the Timestamp type and a proto3 JSON parser should be
+         able to accept both UTC and other timezones (as indicated by an offset).
+
+         For example, "2017-01-15T01:30:15.01Z" encodes 15.01 seconds past
+         01:30 UTC on January 15, 2017.
+
+         In JavaScript, one can convert a Date object to this format using the
+         standard
+         [toISOString()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toISOString)
+         method. In Python, a standard `datetime.datetime` object can be converted
+         to this format using
+         [`strftime`](https://docs.python.org/2/library/time.html#time.strftime) with
+         the time format spec '%Y-%m-%dT%H:%M:%S.%fZ'. Likewise, in Java, one can use
+         the Joda Time's [`ISODateTimeFormat.dateTime()`](
+         http://joda-time.sourceforge.net/apidocs/org/joda/time/format/ISODateTimeFormat.html#dateTime()
+         ) to obtain a formatter capable of generating timestamps in this format.
+    google.protobuf.Value:
+      oneOf:
+        - type: "null"
+        - type: number
+        - type: string
+        - type: boolean
+        - type: array
+        - type: object
+          additionalProperties: true
+      description: |-
+        `Value` represents a dynamically typed value which can be either
+         null, a number, a string, a boolean, a recursive struct value, or a
+         list of values. A producer of value is expected to set one of these
+         variants. Absence of any variant indicates an error.
+
+         The JSON representation for `Value` is JSON value.
+    zfsilo.v1.DeleteVolumeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          title: id
+          pattern: ^vol_[a-zA-Z0-9-_]+$
+          description: The volume id.
+      title: DeleteVolumeRequest
+      required:
+        - id
+      additionalProperties: false
+    zfsilo.v1.DeleteVolumeResponse:
+      type: object
+      title: DeleteVolumeResponse
+      additionalProperties: false
+    zfsilo.v1.GetCapacityRequest:
+      type: object
+      title: GetCapacityRequest
+      additionalProperties: false
+      description: The get capacity request.
+    zfsilo.v1.GetCapacityResponse:
+      type: object
+      properties:
+        availableCapacityBytes:
+          type:
+            - integer
+            - string
+          title: available_capacity_bytes
+          format: int64
+          description: The available capacity in bytes.
+      title: GetCapacityResponse
+      additionalProperties: false
+      description: The get capacity response.
+    zfsilo.v1.GetVolumeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          title: id
+          pattern: ^vol_[a-zA-Z0-9-_]+$
+          description: The volume id.
+      title: GetVolumeRequest
+      required:
+        - id
+      additionalProperties: false
+    zfsilo.v1.GetVolumeResponse:
+      type: object
+      properties:
+        volume:
+          title: volume
+          description: The volume resource.
+          $ref: '#/components/schemas/zfsilo.v1.Volume'
+      title: GetVolumeResponse
+      additionalProperties: false
+    zfsilo.v1.ListVolumesRequest:
+      type: object
+      properties:
+        pageSize:
+          type: integer
+          title: page_size
+          format: int32
+          description: The page size.
+        filter:
+          type: string
+          title: filter
+          description: The filter to apply over volumes.
+        orderBy:
+          type: string
+          title: order_by
+          description: The ordering to apply over volumes.
+        pageToken:
+          type: string
+          title: page_token
+          description: The page token. Used in subsequent requests to page over volumes.
+      title: ListVolumesRequest
+      additionalProperties: false
+    zfsilo.v1.ListVolumesResponse:
+      type: object
+      properties:
+        volumes:
+          type: array
+          items:
+            $ref: '#/components/schemas/zfsilo.v1.Volume'
+          title: volumes
+          description: The list of volumes.
+        nextPageToken:
+          type: string
+          title: next_page_token
+          description: The page token for the next page of volumes.
+        totalSize:
+          type: integer
+          title: total_size
+          format: int32
+          description: The total number of volumes.
+      title: ListVolumesResponse
+      additionalProperties: false
     zfsilo.v1.SayHelloRequest:
       type: object
       properties:
@@ -67,6 +508,125 @@ components:
           type: string
           title: message
       title: SayHelloResponse
+      additionalProperties: false
+    zfsilo.v1.UpdateVolumeRequest:
+      type: object
+      properties:
+        volume:
+          title: volume
+          description: The volume to updated. Requires the volume id to be specified and then include only the fields to be changed.
+          $ref: '#/components/schemas/google.protobuf.Struct'
+      title: UpdateVolumeRequest
+      required:
+        - volume
+      additionalProperties: false
+    zfsilo.v1.UpdateVolumeResponse:
+      type: object
+      properties:
+        volume:
+          title: volume
+          $ref: '#/components/schemas/zfsilo.v1.Volume'
+      title: UpdateVolumeResponse
+      additionalProperties: false
+    zfsilo.v1.Volume:
+      type: object
+      properties:
+        struct:
+          title: struct
+          description: Loosely structured data stored with the volume.
+          $ref: '#/components/schemas/google.protobuf.Struct'
+        createTime:
+          title: create_time
+          description: When the volume was created.
+          readOnly: true
+          $ref: '#/components/schemas/google.protobuf.Timestamp'
+        updateTime:
+          title: update_time
+          description: When the volume was last updated.
+          readOnly: true
+          $ref: '#/components/schemas/google.protobuf.Timestamp'
+        id:
+          type: string
+          title: id
+          pattern: ^vol_[a-zA-Z0-9-_]+$
+          description: The resource id. Immutable.
+        name:
+          type: string
+          title: name
+          pattern: ^volumes/vol_[a-zA-Z0-9-_]+$
+          description: The resource name. Immutable.
+        datasetId:
+          type: string
+          title: dataset_id
+          pattern: ^[a-zA-Z0-9-_]+(/?[a-zA-Z0-9-_]+)*$
+          description: The ZFS dataset id. Immutable.
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/zfsilo.v1.Volume.Option'
+          title: options
+          description: The options applied to the volume. Immutable.
+        sparse:
+          type: boolean
+          title: sparse
+          description: Whether the volume is sparse. Immutable.
+        mode:
+          title: mode
+          description: The mode of the volume. Immutable.
+          $ref: '#/components/schemas/zfsilo.v1.Volume.Mode'
+        capacityBytes:
+          type:
+            - integer
+            - string
+          title: capacity_bytes
+          format: int64
+          description: The capacity of the volume.
+        initiatorIqn:
+          type: string
+          title: initiator_iqn
+          pattern: ^iqn.*$
+          description: The iSCSI initiator IQN.
+          nullable: true
+          readOnly: true
+        targetIqn:
+          type: string
+          title: target_iqn
+          pattern: ^iqn.*$
+          description: The iSCSI target IQN.
+          nullable: true
+          readOnly: true
+        targetAddress:
+          type: string
+          title: target_address
+          description: The iSCSI target address (host and port).
+          nullable: true
+          readOnly: true
+        mountPath:
+          type: string
+          title: mount_path
+          pattern: ^(/[^/ ]*)+/?$
+          description: The iSCSI mount path.
+          nullable: true
+          readOnly: true
+      title: Volume
+      required:
+        - id
+        - name
+        - datasetId
+        - sparse
+        - mode
+      additionalProperties: false
+      description: The volume resource.
+    zfsilo.v1.Volume.Option:
+      type: object
+      properties:
+        key:
+          type: string
+          title: key
+        value:
+          type: string
+          title: value
+      title: Option
       additionalProperties: false
     connect-protocol-version:
       type: number
@@ -126,9 +686,11 @@ components:
       additionalProperties: true
       description: Contains an arbitrary serialized message along with a @type that describes the type of the serialized message.
   securitySchemes:
-    BasicAuth:
+    BearerAuth:
       type: http
-      scheme: basic
+      scheme: bearer
 security: []
 tags:
+  - name: zfsilo.v1.Service
+  - name: zfsilo.v1.VolumeService
   - name: zfsilo.v1.GreeterService
