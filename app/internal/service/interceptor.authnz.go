@@ -19,7 +19,7 @@ type authnzContextValue struct {
 }
 
 func newAuthnzInterceptor(
-	packs []struct {
+	keys []struct {
 		identity string
 		token    string
 	},
@@ -42,9 +42,9 @@ func newAuthnzInterceptor(
 			// We intentionally iterate over a list and perform constant time compares.
 			token := strings.TrimPrefix(authHeader, "Bearer")
 			identity := func() string {
-				for _, pack := range packs {
-					if subtle.ConstantTimeCompare([]byte(token), []byte(pack.token)) == 1 {
-						return pack.identity
+				for _, key := range keys {
+					if subtle.ConstantTimeCompare([]byte(token), []byte(key.token)) == 1 {
+						return key.identity
 					}
 				}
 				return ""
