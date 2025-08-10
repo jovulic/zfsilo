@@ -9,12 +9,14 @@ import (
 	"net/http"
 	"time"
 
+	"connectrpc.com/connect"
 	"connectrpc.com/grpchealth"
 	"connectrpc.com/grpcreflect"
 	"github.com/google/wire"
 	"github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1/zfsilov1connect"
 	"github.com/jovulic/zfsilo/app/internal/config"
 	"github.com/jovulic/zfsilo/lib/selfcert"
+	"github.com/samber/lo"
 	"github.com/skovtunenko/graterm"
 	slogctx "github.com/veqryn/slog-context"
 )
@@ -43,18 +45,44 @@ func WireServer(
 
 	// Register services.
 	{
+		logInterceptor := newLogInterceptor(slogctx.FromCtx(ctx))
+
+		type ConfigKey = struct {
+			Identity string `json:"identity"`
+			Token    string `json:"token"`
+		}
+		type Key = struct {
+			identity string
+			token    string
+		}
+		authnzInterceptor := newAuthnzInterceptor(
+			lo.Map(conf.Service.Keys, func(item ConfigKey, index int) Key {
+				return Key{
+					identity: item.Identity,
+					token:    item.Token,
+				}
+			}),
+		)
+		validateInterceptor := newValidateInterceptor()
 		path, handler := zfsilov1connect.NewGreeterServiceHandler(
 			greeterService,
+			connect.WithInterceptors(
+				logInterceptor,
+				authnzInterceptor,
+				validateInterceptor,
+			),
 		)
 		mux.Handle(path, handler)
-	}
 
-	// Register grpc health.
-	{
+		// Register grpc health.
 		checker := grpchealth.NewStaticChecker(
 			zfsilov1connect.GreeterServiceName,
 		)
-		mux.Handle(grpchealth.NewHandler(checker))
+		mux.Handle(grpchealth.NewHandler(checker,
+			connect.WithInterceptors(
+				logInterceptor,
+			),
+		))
 	}
 
 	// Register grpc reflection.
