@@ -13,3 +13,4 @@ linters:
     - lll
     - prealloc
     - mnd
+    - funlen
