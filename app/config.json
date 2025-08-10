@@ -4,6 +4,12 @@
     "level": "INFO"
   },
   "service": {
-    "externalServerUri": "dns:///:8000"
+    "externalServerUri": "dns:///:8000",
+    "keys": [
+      {
+        "identity": "me",
+        "token": "sk_token"
+      }
+    ]
   }
 }

@@ -64,6 +64,10 @@ type Config struct {
 	Service struct {
 		BindAddress       string `json:"bindAddress"       mod:"default=:8000"`
 		ExternalServerURI string `json:"externalServerURI" validate:"required"`
+		Keys              []struct {
+			Identity string `json:"identity"`
+			Token    string `json:"token"`
+		} `json:"keys"`
 	} `json:"service"`
 }
 
