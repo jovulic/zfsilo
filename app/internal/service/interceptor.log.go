@@ -23,8 +23,8 @@ func newLogInterceptor(log *slog.Logger) connect.UnaryInterceptorFunc {
 			procedure := req.Spec().Procedure
 			ctx = slogctx.With(ctx, slog.String("procedure", procedure))
 
-			requestId := ulid.Make()
-			ctx = slogctx.With(ctx, slog.String("requestId", requestId.String()))
+			requestID := ulid.Make()
+			ctx = slogctx.With(ctx, slog.String("requestId", requestID.String()))
 
 			slogctx.Info(ctx, "request received")
 
