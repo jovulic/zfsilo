@@ -16,8 +16,10 @@ import (
 // Injectors from wire.go:
 
 func WireApp(ctx context.Context, conf config.Config, term *graterm.Terminator) (*App, error) {
+	serviceService := service.WireService()
+	volumeService := service.WireVolumeService()
 	greeterService := service.WireGreeterService()
-	server, err := service.WireServer(ctx, conf, term, greeterService)
+	server, err := service.WireServer(ctx, conf, term, serviceService, volumeService, greeterService)
 	if err != nil {
 		return nil, err
 	}

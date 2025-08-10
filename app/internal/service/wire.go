@@ -22,6 +22,8 @@ import (
 )
 
 var WireSet = wire.NewSet(
+	WireService,
+	WireVolumeService,
 	WireGreeterService,
 	WireServer,
 )
@@ -30,10 +32,20 @@ func WireGreeterService() *GreeterService {
 	return NewGreeterService()
 }
 
+func WireService() *Service {
+	return NewService()
+}
+
+func WireVolumeService() *VolumeService {
+	return NewVolumeService()
+}
+
 func WireServer(
 	ctx context.Context,
 	conf config.Config,
 	term *graterm.Terminator,
+	service *Service,
+	volumeService *VolumeService,
 	greeterService *GreeterService,
 ) (*http.Server, error) {
 	cert, err := selfcert.GenerateCertificate()
@@ -64,30 +76,64 @@ func WireServer(
 			}),
 		)
 		validateInterceptor := newValidateInterceptor()
-		path, handler := zfsilov1connect.NewGreeterServiceHandler(
-			greeterService,
-			connect.WithInterceptors(
-				logInterceptor,
-				authnzInterceptor,
-				validateInterceptor,
-			),
-		)
-		mux.Handle(path, handler)
+
+		// Register root service.
+		{
+			path, handler := zfsilov1connect.NewServiceHandler(
+				service,
+				connect.WithInterceptors(
+					logInterceptor,
+					authnzInterceptor,
+					validateInterceptor,
+				),
+			)
+			mux.Handle(path, handler)
+		}
+
+		// Register volume service.
+		{
+			path, handler := zfsilov1connect.NewVolumeServiceHandler(
+				volumeService,
+				connect.WithInterceptors(
+					logInterceptor,
+					authnzInterceptor,
+					validateInterceptor,
+				),
+			)
+			mux.Handle(path, handler)
+		}
+
+		// Register greeter service.
+		{
+			path, handler := zfsilov1connect.NewGreeterServiceHandler(
+				greeterService,
+				connect.WithInterceptors(
+					logInterceptor,
+					authnzInterceptor,
+					validateInterceptor,
+				),
+			)
+			mux.Handle(path, handler)
+		}
 
 		// Register grpc health.
-		checker := grpchealth.NewStaticChecker(
-			zfsilov1connect.GreeterServiceName,
-		)
-		mux.Handle(grpchealth.NewHandler(checker,
-			connect.WithInterceptors(
-				logInterceptor,
-			),
-		))
+		{
+			checker := grpchealth.NewStaticChecker(
+				zfsilov1connect.GreeterServiceName,
+			)
+			mux.Handle(grpchealth.NewHandler(checker,
+				connect.WithInterceptors(
+					logInterceptor,
+				),
+			))
+		}
 	}
 
 	// Register grpc reflection.
 	{
 		reflector := grpcreflect.NewStaticReflector(
+			zfsilov1connect.ServiceName,
+			zfsilov1connect.VolumeServiceName,
 			zfsilov1connect.GreeterServiceName,
 			grpchealth.HealthV1ServiceName,
 		)

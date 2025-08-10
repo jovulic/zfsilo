@@ -17,8 +17,8 @@ func NewGreeterService() *GreeterService {
 	return &GreeterService{}
 }
 
-func (g *GreeterService) SayHello(ctx context.Context, request *connect.Request[zfsilov1.SayHelloRequest]) (*connect.Response[zfsilov1.SayHelloResponse], error) {
-	name := request.Msg.GetName()
+func (g *GreeterService) SayHello(ctx context.Context, req *connect.Request[zfsilov1.SayHelloRequest]) (*connect.Response[zfsilov1.SayHelloResponse], error) {
+	name := req.Msg.GetName()
 	return connect.NewResponse(
 		&zfsilov1.SayHelloResponse{
 			Message: fmt.Sprintf("Hello %s!", name),
