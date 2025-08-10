@@ -40,7 +40,7 @@ func newAuthnzInterceptor(
 			}
 
 			// We intentionally iterate over a list and perform constant time compares.
-			token := strings.TrimPrefix(authHeader, "Bearer")
+			token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer"))
 			identity := func() string {
 				for _, key := range keys {
 					if subtle.ConstantTimeCompare([]byte(token), []byte(key.token)) == 1 {
