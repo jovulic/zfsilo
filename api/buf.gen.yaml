@@ -16,9 +16,6 @@ plugins:
   - local: protoc-gen-connect-go
     out: gen/go
     opt: paths=source_relative
-  - local: protoc-gen-go-aip
-    out: gen/go
-    opt: paths=source_relative
   - local: protoc-gen-connect-openapi
     out: gen/openapi
 inputs:
