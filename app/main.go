@@ -57,14 +57,14 @@ func main() {
 
 		app, err := WireApp(ctx, conf, term)
 		if err != nil {
-			slogctx.Error(ctx, "failed to wire app", slog.Any("error", err))
+			slogctx.Error(ctx, "failed to wire app", slogctx.Err(err))
 			os.Exit(1)
 		}
 
 		_ = app
 
 		if err := term.Wait(ctx, time.Minute); err != nil {
-			slogctx.Error(ctx, "failed to gracefully terminate application", slog.Any("error", err))
+			slogctx.Error(ctx, "failed to gracefully terminate application", slogctx.Err(err))
 			os.Exit(1)
 		}
 		slogctx.Info(ctx, "successfully terminated the application")
