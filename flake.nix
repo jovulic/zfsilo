@@ -26,19 +26,18 @@
         { pkgs, ... }:
         {
           default = pkgs.mkShell {
-            packages =
-              [
-                pkgs.git
-                pkgs.bash
-                pkgs.just
-                pkgs.go
-              ]
-              ++ (pkgs.callPackage ./api {
-                inherit version commitHashShort;
-              }).shell.packages
-              ++ (pkgs.callPackage ./app {
-                inherit version commitHashShort;
-              }).shell.packages;
+            packages = [
+              pkgs.git
+              pkgs.bash
+              pkgs.just
+              pkgs.go
+            ]
+            ++ (pkgs.callPackage ./api {
+              inherit version commitHashShort;
+            }).shell.packages
+            ++ (pkgs.callPackage ./app {
+              inherit version commitHashShort;
+            }).shell.packages;
           };
         }
       );

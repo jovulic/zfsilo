@@ -9,6 +9,7 @@
     packages = [
       pkgs.go
       pkgs.wire
+      pkgs.sqlite
     ];
   };
   package =

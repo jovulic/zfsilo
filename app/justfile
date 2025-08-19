@@ -1,5 +1,11 @@
 run:
   go run -ldflags "-X 'main.Version=local'" . start --config ./config.json 
 
+build:
+  go build -tags "json1"
+
+generate:
+  GOWORK=off go generate ./...
+
 wire:
   wire
