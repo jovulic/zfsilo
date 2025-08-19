@@ -10,18 +10,14 @@ import (
 	"gorm.io/datatypes"
 )
 
-// VolumeOption stores a simple key-value pair.
 type VolumeOption struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
 
-// VolumeOptionList is a slice of VolumeOption. It implements the Scanner and Valuer
-// interfaces to be stored as JSON in the database.
 type VolumeOptionList []VolumeOption
 
-// Value implements the driver.Valuer interface, allowing VolumeOptionList to be
-// saved as JSON.
+// Value implements the driver.Valuer interface.
 func (vol *VolumeOptionList) Value() (driver.Value, error) {
 	if vol == nil {
 		return nil, nil
@@ -29,8 +25,7 @@ func (vol *VolumeOptionList) Value() (driver.Value, error) {
 	return json.Marshal(vol)
 }
 
-// Scan implements the sql.Scanner interface, allowing VolumeOptionList to be
-// read from a JSON database value.
+// Scan implements the sql.Scanner interface.
 func (vol *VolumeOptionList) Scan(value any) error {
 	bytes, ok := value.([]byte)
 	if !ok {
