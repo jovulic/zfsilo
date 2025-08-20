@@ -62,6 +62,7 @@ message GetCapacityResponse {
 service VolumeService {
   rpc GetVolume(GetVolumeRequest) returns (GetVolumeResponse) {}
   rpc ListVolumes(ListVolumesRequest) returns (ListVolumesResponse) {}
+  rpc CreateVolume(CreateVolumeRequest) returns (CreateVolumeResponse) {}
   rpc UpdateVolume(UpdateVolumeRequest) returns (UpdateVolumeResponse) {}
   rpc DeleteVolume(DeleteVolumeRequest) returns (DeleteVolumeResponse) {}
 }
@@ -173,6 +174,17 @@ message ListVolumesResponse {
   repeated Volume volumes = 1 [(gnostic.openapi.v3.property) = {description: "The list of volumes."}];
   string next_page_token = 2 [(gnostic.openapi.v3.property) = {description: "The page token for the next page of volumes."}];
   int32 total_size = 3 [(gnostic.openapi.v3.property) = {description: "The total number of volumes."}];
+}
+
+message CreateVolumeRequest {
+  Volume volume = 1 [
+    (gnostic.openapi.v3.property) = {description: "The volume resource."},
+    (buf.validate.field).required = true
+  ];
+}
+
+message CreateVolumeResponse {
+  Volume volume = 1;
 }
 
 message UpdateVolumeRequest {

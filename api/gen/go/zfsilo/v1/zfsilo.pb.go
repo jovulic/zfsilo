@@ -518,6 +518,94 @@ func (x *ListVolumesResponse) GetTotalSize() int32 {
 	return 0
 }
 
+type CreateVolumeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Volume        *Volume                `protobuf:"bytes,1,opt,name=volume,proto3" json:"volume,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateVolumeRequest) Reset() {
+	*x = CreateVolumeRequest{}
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateVolumeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateVolumeRequest) ProtoMessage() {}
+
+func (x *CreateVolumeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateVolumeRequest.ProtoReflect.Descriptor instead.
+func (*CreateVolumeRequest) Descriptor() ([]byte, []int) {
+	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *CreateVolumeRequest) GetVolume() *Volume {
+	if x != nil {
+		return x.Volume
+	}
+	return nil
+}
+
+type CreateVolumeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Volume        *Volume                `protobuf:"bytes,1,opt,name=volume,proto3" json:"volume,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateVolumeResponse) Reset() {
+	*x = CreateVolumeResponse{}
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateVolumeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateVolumeResponse) ProtoMessage() {}
+
+func (x *CreateVolumeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateVolumeResponse.ProtoReflect.Descriptor instead.
+func (*CreateVolumeResponse) Descriptor() ([]byte, []int) {
+	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *CreateVolumeResponse) GetVolume() *Volume {
+	if x != nil {
+		return x.Volume
+	}
+	return nil
+}
+
 type UpdateVolumeRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Volume        *structpb.Struct       `protobuf:"bytes,1,opt,name=volume,proto3" json:"volume,omitempty"`
@@ -527,7 +615,7 @@ type UpdateVolumeRequest struct {
 
 func (x *UpdateVolumeRequest) Reset() {
 	*x = UpdateVolumeRequest{}
-	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[7]
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -539,7 +627,7 @@ func (x *UpdateVolumeRequest) String() string {
 func (*UpdateVolumeRequest) ProtoMessage() {}
 
 func (x *UpdateVolumeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[7]
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -552,7 +640,7 @@ func (x *UpdateVolumeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateVolumeRequest.ProtoReflect.Descriptor instead.
 func (*UpdateVolumeRequest) Descriptor() ([]byte, []int) {
-	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{7}
+	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *UpdateVolumeRequest) GetVolume() *structpb.Struct {
@@ -571,7 +659,7 @@ type UpdateVolumeResponse struct {
 
 func (x *UpdateVolumeResponse) Reset() {
 	*x = UpdateVolumeResponse{}
-	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[8]
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -583,7 +671,7 @@ func (x *UpdateVolumeResponse) String() string {
 func (*UpdateVolumeResponse) ProtoMessage() {}
 
 func (x *UpdateVolumeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[8]
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -596,7 +684,7 @@ func (x *UpdateVolumeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateVolumeResponse.ProtoReflect.Descriptor instead.
 func (*UpdateVolumeResponse) Descriptor() ([]byte, []int) {
-	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{8}
+	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdateVolumeResponse) GetVolume() *Volume {
@@ -615,7 +703,7 @@ type DeleteVolumeRequest struct {
 
 func (x *DeleteVolumeRequest) Reset() {
 	*x = DeleteVolumeRequest{}
-	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[9]
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -627,7 +715,7 @@ func (x *DeleteVolumeRequest) String() string {
 func (*DeleteVolumeRequest) ProtoMessage() {}
 
 func (x *DeleteVolumeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[9]
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -640,7 +728,7 @@ func (x *DeleteVolumeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteVolumeRequest.ProtoReflect.Descriptor instead.
 func (*DeleteVolumeRequest) Descriptor() ([]byte, []int) {
-	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{9}
+	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeleteVolumeRequest) GetId() string {
@@ -658,7 +746,7 @@ type DeleteVolumeResponse struct {
 
 func (x *DeleteVolumeResponse) Reset() {
 	*x = DeleteVolumeResponse{}
-	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[10]
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -670,7 +758,7 @@ func (x *DeleteVolumeResponse) String() string {
 func (*DeleteVolumeResponse) ProtoMessage() {}
 
 func (x *DeleteVolumeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[10]
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -683,7 +771,7 @@ func (x *DeleteVolumeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteVolumeResponse.ProtoReflect.Descriptor instead.
 func (*DeleteVolumeResponse) Descriptor() ([]byte, []int) {
-	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{10}
+	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{12}
 }
 
 type SayHelloRequest struct {
@@ -695,7 +783,7 @@ type SayHelloRequest struct {
 
 func (x *SayHelloRequest) Reset() {
 	*x = SayHelloRequest{}
-	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[11]
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -707,7 +795,7 @@ func (x *SayHelloRequest) String() string {
 func (*SayHelloRequest) ProtoMessage() {}
 
 func (x *SayHelloRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[11]
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -720,7 +808,7 @@ func (x *SayHelloRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SayHelloRequest.ProtoReflect.Descriptor instead.
 func (*SayHelloRequest) Descriptor() ([]byte, []int) {
-	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{11}
+	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SayHelloRequest) GetName() string {
@@ -739,7 +827,7 @@ type SayHelloResponse struct {
 
 func (x *SayHelloResponse) Reset() {
 	*x = SayHelloResponse{}
-	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[12]
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -751,7 +839,7 @@ func (x *SayHelloResponse) String() string {
 func (*SayHelloResponse) ProtoMessage() {}
 
 func (x *SayHelloResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[12]
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -764,7 +852,7 @@ func (x *SayHelloResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SayHelloResponse.ProtoReflect.Descriptor instead.
 func (*SayHelloResponse) Descriptor() ([]byte, []int) {
-	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{12}
+	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *SayHelloResponse) GetMessage() string {
@@ -784,7 +872,7 @@ type Volume_Option struct {
 
 func (x *Volume_Option) Reset() {
 	*x = Volume_Option{}
-	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[13]
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -796,7 +884,7 @@ func (x *Volume_Option) String() string {
 func (*Volume_Option) ProtoMessage() {}
 
 func (x *Volume_Option) ProtoReflect() protoreflect.Message {
-	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[13]
+	mi := &file_zfsilo_v1_zfsilo_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -881,7 +969,11 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\avolumes\x18\x01 \x03(\v2\x11.zfsilo.v1.VolumeB\x1a\xbaG\x17\x92\x02\x14The list of volumes.R\avolumes\x12Z\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tB2\xbaG/\x92\x02,The page token for the next page of volumes.R\rnextPageToken\x12A\n" +
 	"\n" +
-	"total_size\x18\x03 \x01(\x05B\"\xbaG\x1f\x92\x02\x1cThe total number of volumes.R\ttotalSize\"\xc2\x01\n" +
+	"total_size\x18\x03 \x01(\x05B\"\xbaG\x1f\x92\x02\x1cThe total number of volumes.R\ttotalSize\"b\n" +
+	"\x13CreateVolumeRequest\x12K\n" +
+	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeB \xbaG\x17\x92\x02\x14The volume resource.\xbaH\x03\xc8\x01\x01R\x06volume\"A\n" +
+	"\x14CreateVolumeResponse\x12)\n" +
+	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"\xc2\x01\n" +
 	"\x13UpdateVolumeRequest\x12\xaa\x01\n" +
 	"\x06volume\x18\x01 \x01(\v2\x17.google.protobuf.StructBy\xbaGp\x92\x02mThe volume to updated. Requires the volume id to be specified and then include only the fields to be changed.\xbaH\x03\xc8\x01\x01R\x06volume\"A\n" +
 	"\x14UpdateVolumeResponse\x12)\n" +
@@ -895,10 +987,11 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\x10SayHelloResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage2\x90\x02\n" +
 	"\aService\x12\x84\x02\n" +
-	"\vGetCapacity\x12\x1d.zfsilo.v1.GetCapacityRequest\x1a\x1e.zfsilo.v1.GetCapacityResponse\"\xb5\x01\xbaG\xb1\x01\x12*Return the current free capacity in bytes.\x1a\x82\x01GetCapacity returns a non‑negative available_capacity_bytes value indicating how many bytes are still available for allocation. 2\xcf\x02\n" +
+	"\vGetCapacity\x12\x1d.zfsilo.v1.GetCapacityRequest\x1a\x1e.zfsilo.v1.GetCapacityResponse\"\xb5\x01\xbaG\xb1\x01\x12*Return the current free capacity in bytes.\x1a\x82\x01GetCapacity returns a non‑negative available_capacity_bytes value indicating how many bytes are still available for allocation. 2\xa2\x03\n" +
 	"\rVolumeService\x12H\n" +
 	"\tGetVolume\x12\x1b.zfsilo.v1.GetVolumeRequest\x1a\x1c.zfsilo.v1.GetVolumeResponse\"\x00\x12N\n" +
 	"\vListVolumes\x12\x1d.zfsilo.v1.ListVolumesRequest\x1a\x1e.zfsilo.v1.ListVolumesResponse\"\x00\x12Q\n" +
+	"\fCreateVolume\x12\x1e.zfsilo.v1.CreateVolumeRequest\x1a\x1f.zfsilo.v1.CreateVolumeResponse\"\x00\x12Q\n" +
 	"\fUpdateVolume\x12\x1e.zfsilo.v1.UpdateVolumeRequest\x1a\x1f.zfsilo.v1.UpdateVolumeResponse\"\x00\x12Q\n" +
 	"\fDeleteVolume\x12\x1e.zfsilo.v1.DeleteVolumeRequest\x1a\x1f.zfsilo.v1.DeleteVolumeResponse\"\x002i\n" +
 	"\x0eGreeterService\x12W\n" +
@@ -928,7 +1021,7 @@ func file_zfsilo_v1_zfsilo_proto_rawDescGZIP() []byte {
 }
 
 var file_zfsilo_v1_zfsilo_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_zfsilo_v1_zfsilo_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_zfsilo_v1_zfsilo_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_zfsilo_v1_zfsilo_proto_goTypes = []any{
 	(Volume_Mode)(0),              // 0: zfsilo.v1.Volume.Mode
 	(*GetCapacityRequest)(nil),    // 1: zfsilo.v1.GetCapacityRequest
@@ -938,43 +1031,49 @@ var file_zfsilo_v1_zfsilo_proto_goTypes = []any{
 	(*GetVolumeResponse)(nil),     // 5: zfsilo.v1.GetVolumeResponse
 	(*ListVolumesRequest)(nil),    // 6: zfsilo.v1.ListVolumesRequest
 	(*ListVolumesResponse)(nil),   // 7: zfsilo.v1.ListVolumesResponse
-	(*UpdateVolumeRequest)(nil),   // 8: zfsilo.v1.UpdateVolumeRequest
-	(*UpdateVolumeResponse)(nil),  // 9: zfsilo.v1.UpdateVolumeResponse
-	(*DeleteVolumeRequest)(nil),   // 10: zfsilo.v1.DeleteVolumeRequest
-	(*DeleteVolumeResponse)(nil),  // 11: zfsilo.v1.DeleteVolumeResponse
-	(*SayHelloRequest)(nil),       // 12: zfsilo.v1.SayHelloRequest
-	(*SayHelloResponse)(nil),      // 13: zfsilo.v1.SayHelloResponse
-	(*Volume_Option)(nil),         // 14: zfsilo.v1.Volume.Option
-	(*structpb.Struct)(nil),       // 15: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil), // 16: google.protobuf.Timestamp
+	(*CreateVolumeRequest)(nil),   // 8: zfsilo.v1.CreateVolumeRequest
+	(*CreateVolumeResponse)(nil),  // 9: zfsilo.v1.CreateVolumeResponse
+	(*UpdateVolumeRequest)(nil),   // 10: zfsilo.v1.UpdateVolumeRequest
+	(*UpdateVolumeResponse)(nil),  // 11: zfsilo.v1.UpdateVolumeResponse
+	(*DeleteVolumeRequest)(nil),   // 12: zfsilo.v1.DeleteVolumeRequest
+	(*DeleteVolumeResponse)(nil),  // 13: zfsilo.v1.DeleteVolumeResponse
+	(*SayHelloRequest)(nil),       // 14: zfsilo.v1.SayHelloRequest
+	(*SayHelloResponse)(nil),      // 15: zfsilo.v1.SayHelloResponse
+	(*Volume_Option)(nil),         // 16: zfsilo.v1.Volume.Option
+	(*structpb.Struct)(nil),       // 17: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil), // 18: google.protobuf.Timestamp
 }
 var file_zfsilo_v1_zfsilo_proto_depIdxs = []int32{
-	15, // 0: zfsilo.v1.Volume.struct:type_name -> google.protobuf.Struct
-	16, // 1: zfsilo.v1.Volume.create_time:type_name -> google.protobuf.Timestamp
-	16, // 2: zfsilo.v1.Volume.update_time:type_name -> google.protobuf.Timestamp
-	14, // 3: zfsilo.v1.Volume.options:type_name -> zfsilo.v1.Volume.Option
+	17, // 0: zfsilo.v1.Volume.struct:type_name -> google.protobuf.Struct
+	18, // 1: zfsilo.v1.Volume.create_time:type_name -> google.protobuf.Timestamp
+	18, // 2: zfsilo.v1.Volume.update_time:type_name -> google.protobuf.Timestamp
+	16, // 3: zfsilo.v1.Volume.options:type_name -> zfsilo.v1.Volume.Option
 	0,  // 4: zfsilo.v1.Volume.mode:type_name -> zfsilo.v1.Volume.Mode
 	3,  // 5: zfsilo.v1.GetVolumeResponse.volume:type_name -> zfsilo.v1.Volume
 	3,  // 6: zfsilo.v1.ListVolumesResponse.volumes:type_name -> zfsilo.v1.Volume
-	15, // 7: zfsilo.v1.UpdateVolumeRequest.volume:type_name -> google.protobuf.Struct
-	3,  // 8: zfsilo.v1.UpdateVolumeResponse.volume:type_name -> zfsilo.v1.Volume
-	1,  // 9: zfsilo.v1.Service.GetCapacity:input_type -> zfsilo.v1.GetCapacityRequest
-	4,  // 10: zfsilo.v1.VolumeService.GetVolume:input_type -> zfsilo.v1.GetVolumeRequest
-	6,  // 11: zfsilo.v1.VolumeService.ListVolumes:input_type -> zfsilo.v1.ListVolumesRequest
-	8,  // 12: zfsilo.v1.VolumeService.UpdateVolume:input_type -> zfsilo.v1.UpdateVolumeRequest
-	10, // 13: zfsilo.v1.VolumeService.DeleteVolume:input_type -> zfsilo.v1.DeleteVolumeRequest
-	12, // 14: zfsilo.v1.GreeterService.SayHello:input_type -> zfsilo.v1.SayHelloRequest
-	2,  // 15: zfsilo.v1.Service.GetCapacity:output_type -> zfsilo.v1.GetCapacityResponse
-	5,  // 16: zfsilo.v1.VolumeService.GetVolume:output_type -> zfsilo.v1.GetVolumeResponse
-	7,  // 17: zfsilo.v1.VolumeService.ListVolumes:output_type -> zfsilo.v1.ListVolumesResponse
-	9,  // 18: zfsilo.v1.VolumeService.UpdateVolume:output_type -> zfsilo.v1.UpdateVolumeResponse
-	11, // 19: zfsilo.v1.VolumeService.DeleteVolume:output_type -> zfsilo.v1.DeleteVolumeResponse
-	13, // 20: zfsilo.v1.GreeterService.SayHello:output_type -> zfsilo.v1.SayHelloResponse
-	15, // [15:21] is the sub-list for method output_type
-	9,  // [9:15] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	3,  // 7: zfsilo.v1.CreateVolumeRequest.volume:type_name -> zfsilo.v1.Volume
+	3,  // 8: zfsilo.v1.CreateVolumeResponse.volume:type_name -> zfsilo.v1.Volume
+	17, // 9: zfsilo.v1.UpdateVolumeRequest.volume:type_name -> google.protobuf.Struct
+	3,  // 10: zfsilo.v1.UpdateVolumeResponse.volume:type_name -> zfsilo.v1.Volume
+	1,  // 11: zfsilo.v1.Service.GetCapacity:input_type -> zfsilo.v1.GetCapacityRequest
+	4,  // 12: zfsilo.v1.VolumeService.GetVolume:input_type -> zfsilo.v1.GetVolumeRequest
+	6,  // 13: zfsilo.v1.VolumeService.ListVolumes:input_type -> zfsilo.v1.ListVolumesRequest
+	8,  // 14: zfsilo.v1.VolumeService.CreateVolume:input_type -> zfsilo.v1.CreateVolumeRequest
+	10, // 15: zfsilo.v1.VolumeService.UpdateVolume:input_type -> zfsilo.v1.UpdateVolumeRequest
+	12, // 16: zfsilo.v1.VolumeService.DeleteVolume:input_type -> zfsilo.v1.DeleteVolumeRequest
+	14, // 17: zfsilo.v1.GreeterService.SayHello:input_type -> zfsilo.v1.SayHelloRequest
+	2,  // 18: zfsilo.v1.Service.GetCapacity:output_type -> zfsilo.v1.GetCapacityResponse
+	5,  // 19: zfsilo.v1.VolumeService.GetVolume:output_type -> zfsilo.v1.GetVolumeResponse
+	7,  // 20: zfsilo.v1.VolumeService.ListVolumes:output_type -> zfsilo.v1.ListVolumesResponse
+	9,  // 21: zfsilo.v1.VolumeService.CreateVolume:output_type -> zfsilo.v1.CreateVolumeResponse
+	11, // 22: zfsilo.v1.VolumeService.UpdateVolume:output_type -> zfsilo.v1.UpdateVolumeResponse
+	13, // 23: zfsilo.v1.VolumeService.DeleteVolume:output_type -> zfsilo.v1.DeleteVolumeResponse
+	15, // 24: zfsilo.v1.GreeterService.SayHello:output_type -> zfsilo.v1.SayHelloResponse
+	18, // [18:25] is the sub-list for method output_type
+	11, // [11:18] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_zfsilo_v1_zfsilo_proto_init() }
@@ -989,7 +1088,7 @@ func file_zfsilo_v1_zfsilo_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zfsilo_v1_zfsilo_proto_rawDesc), len(file_zfsilo_v1_zfsilo_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   14,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   3,
 		},

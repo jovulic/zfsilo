@@ -117,6 +117,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/zfsilo.v1.ListVolumesResponse'
+  /zfsilo.v1.VolumeService/CreateVolume:
+    post:
+      tags:
+        - zfsilo.v1.VolumeService
+      summary: CreateVolume
+      operationId: zfsilo.v1.VolumeService.CreateVolume
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.CreateVolumeRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.CreateVolumeResponse'
   /zfsilo.v1.VolumeService/UpdateVolume:
     post:
       tags:
@@ -393,6 +428,25 @@ components:
          variants. Absence of any variant indicates an error.
 
          The JSON representation for `Value` is JSON value.
+    zfsilo.v1.CreateVolumeRequest:
+      type: object
+      properties:
+        volume:
+          title: volume
+          description: The volume resource.
+          $ref: '#/components/schemas/zfsilo.v1.Volume'
+      title: CreateVolumeRequest
+      required:
+        - volume
+      additionalProperties: false
+    zfsilo.v1.CreateVolumeResponse:
+      type: object
+      properties:
+        volume:
+          title: volume
+          $ref: '#/components/schemas/zfsilo.v1.Volume'
+      title: CreateVolumeResponse
+      additionalProperties: false
     zfsilo.v1.DeleteVolumeRequest:
       type: object
       properties:

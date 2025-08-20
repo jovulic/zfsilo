@@ -44,6 +44,9 @@ const (
 	// VolumeServiceListVolumesProcedure is the fully-qualified name of the VolumeService's ListVolumes
 	// RPC.
 	VolumeServiceListVolumesProcedure = "/zfsilo.v1.VolumeService/ListVolumes"
+	// VolumeServiceCreateVolumeProcedure is the fully-qualified name of the VolumeService's
+	// CreateVolume RPC.
+	VolumeServiceCreateVolumeProcedure = "/zfsilo.v1.VolumeService/CreateVolume"
 	// VolumeServiceUpdateVolumeProcedure is the fully-qualified name of the VolumeService's
 	// UpdateVolume RPC.
 	VolumeServiceUpdateVolumeProcedure = "/zfsilo.v1.VolumeService/UpdateVolume"
@@ -128,6 +131,7 @@ func (UnimplementedServiceHandler) GetCapacity(context.Context, *connect.Request
 type VolumeServiceClient interface {
 	GetVolume(context.Context, *connect.Request[v1.GetVolumeRequest]) (*connect.Response[v1.GetVolumeResponse], error)
 	ListVolumes(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
+	CreateVolume(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error)
 	UpdateVolume(context.Context, *connect.Request[v1.UpdateVolumeRequest]) (*connect.Response[v1.UpdateVolumeResponse], error)
 	DeleteVolume(context.Context, *connect.Request[v1.DeleteVolumeRequest]) (*connect.Response[v1.DeleteVolumeResponse], error)
 }
@@ -155,6 +159,12 @@ func NewVolumeServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(volumeServiceMethods.ByName("ListVolumes")),
 			connect.WithClientOptions(opts...),
 		),
+		createVolume: connect.NewClient[v1.CreateVolumeRequest, v1.CreateVolumeResponse](
+			httpClient,
+			baseURL+VolumeServiceCreateVolumeProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("CreateVolume")),
+			connect.WithClientOptions(opts...),
+		),
 		updateVolume: connect.NewClient[v1.UpdateVolumeRequest, v1.UpdateVolumeResponse](
 			httpClient,
 			baseURL+VolumeServiceUpdateVolumeProcedure,
@@ -174,6 +184,7 @@ func NewVolumeServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 type volumeServiceClient struct {
 	getVolume    *connect.Client[v1.GetVolumeRequest, v1.GetVolumeResponse]
 	listVolumes  *connect.Client[v1.ListVolumesRequest, v1.ListVolumesResponse]
+	createVolume *connect.Client[v1.CreateVolumeRequest, v1.CreateVolumeResponse]
 	updateVolume *connect.Client[v1.UpdateVolumeRequest, v1.UpdateVolumeResponse]
 	deleteVolume *connect.Client[v1.DeleteVolumeRequest, v1.DeleteVolumeResponse]
 }
@@ -186,6 +197,11 @@ func (c *volumeServiceClient) GetVolume(ctx context.Context, req *connect.Reques
 // ListVolumes calls zfsilo.v1.VolumeService.ListVolumes.
 func (c *volumeServiceClient) ListVolumes(ctx context.Context, req *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error) {
 	return c.listVolumes.CallUnary(ctx, req)
+}
+
+// CreateVolume calls zfsilo.v1.VolumeService.CreateVolume.
+func (c *volumeServiceClient) CreateVolume(ctx context.Context, req *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error) {
+	return c.createVolume.CallUnary(ctx, req)
 }
 
 // UpdateVolume calls zfsilo.v1.VolumeService.UpdateVolume.
@@ -202,6 +218,7 @@ func (c *volumeServiceClient) DeleteVolume(ctx context.Context, req *connect.Req
 type VolumeServiceHandler interface {
 	GetVolume(context.Context, *connect.Request[v1.GetVolumeRequest]) (*connect.Response[v1.GetVolumeResponse], error)
 	ListVolumes(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error)
+	CreateVolume(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error)
 	UpdateVolume(context.Context, *connect.Request[v1.UpdateVolumeRequest]) (*connect.Response[v1.UpdateVolumeResponse], error)
 	DeleteVolume(context.Context, *connect.Request[v1.DeleteVolumeRequest]) (*connect.Response[v1.DeleteVolumeResponse], error)
 }
@@ -225,6 +242,12 @@ func NewVolumeServiceHandler(svc VolumeServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(volumeServiceMethods.ByName("ListVolumes")),
 		connect.WithHandlerOptions(opts...),
 	)
+	volumeServiceCreateVolumeHandler := connect.NewUnaryHandler(
+		VolumeServiceCreateVolumeProcedure,
+		svc.CreateVolume,
+		connect.WithSchema(volumeServiceMethods.ByName("CreateVolume")),
+		connect.WithHandlerOptions(opts...),
+	)
 	volumeServiceUpdateVolumeHandler := connect.NewUnaryHandler(
 		VolumeServiceUpdateVolumeProcedure,
 		svc.UpdateVolume,
@@ -243,6 +266,8 @@ func NewVolumeServiceHandler(svc VolumeServiceHandler, opts ...connect.HandlerOp
 			volumeServiceGetVolumeHandler.ServeHTTP(w, r)
 		case VolumeServiceListVolumesProcedure:
 			volumeServiceListVolumesHandler.ServeHTTP(w, r)
+		case VolumeServiceCreateVolumeProcedure:
+			volumeServiceCreateVolumeHandler.ServeHTTP(w, r)
 		case VolumeServiceUpdateVolumeProcedure:
 			volumeServiceUpdateVolumeHandler.ServeHTTP(w, r)
 		case VolumeServiceDeleteVolumeProcedure:
@@ -262,6 +287,10 @@ func (UnimplementedVolumeServiceHandler) GetVolume(context.Context, *connect.Req
 
 func (UnimplementedVolumeServiceHandler) ListVolumes(context.Context, *connect.Request[v1.ListVolumesRequest]) (*connect.Response[v1.ListVolumesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.ListVolumes is not implemented"))
+}
+
+func (UnimplementedVolumeServiceHandler) CreateVolume(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.CreateVolume is not implemented"))
 }
 
 func (UnimplementedVolumeServiceHandler) UpdateVolume(context.Context, *connect.Request[v1.UpdateVolumeRequest]) (*connect.Response[v1.UpdateVolumeResponse], error) {
