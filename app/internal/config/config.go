@@ -1,3 +1,8 @@
+// Package config defines the application configuration.
+//
+// The configuration is referenced by the various internal packages. In
+// particular it is used with `wire` to feed configuration to the various
+// packages.
 package config
 
 import (
