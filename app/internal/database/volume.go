@@ -34,7 +34,7 @@ func (vol *VolumeOptionList) Scan(value any) error {
 	return json.Unmarshal(bytes, vol)
 }
 
-//go:generate stringer -type=VolumeMode -linecomment
+//go:generate stringer -type=VolumeMode -linecomment volume.go
 type VolumeMode int
 
 const (

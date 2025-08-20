@@ -14,9 +14,16 @@ require (
 	github.com/google/wire v0.6.0
 	github.com/jovulic/zfsilo/api v0.0.0-20250810000217-ff0f7e40d403
 	github.com/jovulic/zfsilo/lib v0.0.0-20250801015212-9b3041fbb599
+	github.com/oklog/ulid/v2 v2.1.1
+	github.com/samber/lo v1.51.0
 	github.com/skovtunenko/graterm v1.2.0
+	github.com/stretchr/testify v1.10.0
 	github.com/veqryn/slog-context v0.8.0
 	google.golang.org/grpc v1.65.0
+	google.golang.org/protobuf v1.36.6
+	gorm.io/datatypes v1.2.6
+	gorm.io/driver/sqlite v1.6.0
+	gorm.io/gorm v1.30.1
 )
 
 require (
@@ -26,6 +33,7 @@ require (
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/bufbuild/protocompile v0.14.1 // indirect
 	github.com/cncf/xds/go v0.0.0-20240423153145-555b57ec207b // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/envoyproxy/go-control-plane v0.12.0 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.0.4 // indirect
 	github.com/fullstorydev/grpcurl v1.9.3 // indirect
@@ -44,22 +52,19 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mattn/go-sqlite3 v1.14.32 // indirect
-	github.com/oklog/ulid/v2 v2.1.1 // indirect
-	github.com/samber/lo v1.51.0 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/segmentio/go-camelcase v0.0.0-20160726192923-7085f1e3c734 // indirect
 	github.com/segmentio/go-snakecase v1.2.0 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
+	golang.org/x/crypto v0.40.0 // indirect
 	golang.org/x/exp v0.0.0-20240325151524-a685a6edb6d8 // indirect
-	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/net v0.42.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240826202546-f6391c0de4c7 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240826202546-f6391c0de4c7 // indirect
-	google.golang.org/protobuf v1.36.6 // indirect
-	gorm.io/datatypes v1.2.6 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/mysql v1.5.6 // indirect
-	gorm.io/driver/sqlite v1.6.0 // indirect
-	gorm.io/gorm v1.30.1 // indirect
 )

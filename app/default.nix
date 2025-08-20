@@ -10,6 +10,7 @@
       pkgs.go
       pkgs.wire
       pkgs.sqlite
+      pkgs.goverter
     ];
   };
   package =
