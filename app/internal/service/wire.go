@@ -40,9 +40,9 @@ func WireService() *Service {
 
 func WireVolumeService(
 	database *gorm.DB,
-	volumeConverter converteriface.VolumeConverter,
+	converter converteriface.VolumeConverter,
 ) *VolumeService {
-	return NewVolumeService()
+	return NewVolumeService(database, converter)
 }
 
 func WireServer(
