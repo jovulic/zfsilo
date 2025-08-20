@@ -11,5 +11,8 @@
         "token": "sk_token"
       }
     ]
+  },
+  "database": {
+    "dsn": "file::memory:?cache=shared"
   }
 }

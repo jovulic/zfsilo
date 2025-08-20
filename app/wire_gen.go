@@ -10,6 +10,7 @@ import (
 	"context"
 	"github.com/jovulic/zfsilo/app/internal/config"
 	"github.com/jovulic/zfsilo/app/internal/converter"
+	"github.com/jovulic/zfsilo/app/internal/database"
 	"github.com/jovulic/zfsilo/app/internal/service"
 	"github.com/skovtunenko/graterm"
 )
@@ -18,8 +19,12 @@ import (
 
 func WireApp(ctx context.Context, conf config.Config, term *graterm.Terminator) (*App, error) {
 	serviceService := service.WireService()
+	db, err := database.WireDatabase(ctx, conf)
+	if err != nil {
+		return nil, err
+	}
 	volumeConverter := converter.WireVolumeConverter()
-	volumeService := service.WireVolumeService(volumeConverter)
+	volumeService := service.WireVolumeService(db, volumeConverter)
 	greeterService := service.WireGreeterService()
 	server, err := service.WireServer(ctx, conf, term, serviceService, volumeService, greeterService)
 	if err != nil {

@@ -74,6 +74,9 @@ type Config struct {
 			Token    string `json:"token"`
 		} `json:"keys"`
 	} `json:"service"`
+	Database struct {
+		DSN string `json:"dsn" validate:"required"`
+	} `json:"database"`
 }
 
 func BuildConfig(ctx context.Context, configValue string) (Config, error) {

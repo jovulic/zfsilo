@@ -20,6 +20,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/skovtunenko/graterm"
 	slogctx "github.com/veqryn/slog-context"
+	"gorm.io/gorm"
 )
 
 var WireSet = wire.NewSet(
@@ -38,6 +39,7 @@ func WireService() *Service {
 }
 
 func WireVolumeService(
+	database *gorm.DB,
 	volumeConverter converteriface.VolumeConverter,
 ) *VolumeService {
 	return NewVolumeService()
@@ -194,7 +196,7 @@ func WireServer(
 		return nil, fmt.Errorf("failed to start the grpcui handler: %w", err)
 	}
 	term.
-		WithOrder(4).
+		WithOrder(6).
 		WithName("grpcui-handler").
 		Register(time.Minute, func(ctx context.Context) {
 			if err := grpcuiHandler.Stop(ctx); err != nil {
