@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/wire"
 	"github.com/jovulic/zfsilo/app/internal/config"
+	"github.com/jovulic/zfsilo/app/internal/converter"
 	"github.com/jovulic/zfsilo/app/internal/service"
 	"github.com/skovtunenko/graterm"
 )
@@ -16,6 +17,6 @@ func WireApp(
 	conf config.Config,
 	term *graterm.Terminator,
 ) (*App, error) {
-	wire.Build(service.WireSet, NewApp)
+	wire.Build(service.WireSet, converter.WireSet, NewApp)
 	return new(App), nil
 }

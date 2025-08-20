@@ -1,4 +1,4 @@
-package converter
+package converteriface
 
 import (
 	zfsilov1 "github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1"
@@ -9,8 +9,8 @@ import (
 //go:generate goverter gen ./...
 
 //goverter:converter
-//goverter:output:file ./gen/volume.go
-//goverter:output:package converter
+//goverter:output:file ../impl/volume.go
+//goverter:output:package converterimpl
 //goverter:extend ConvertFromJSONToStruct
 //goverter:extend ConvertFromStructToJSON
 //goverter:extend ConvertTimeToTimestamp

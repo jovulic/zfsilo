@@ -5,7 +5,7 @@ import (
 	"time"
 
 	zfsilov1 "github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1"
-	converter "github.com/jovulic/zfsilo/app/internal/converter/gen"
+	converter "github.com/jovulic/zfsilo/app/internal/converter/impl"
 	"github.com/jovulic/zfsilo/app/internal/database"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"

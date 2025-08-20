@@ -15,6 +15,7 @@ import (
 	"github.com/google/wire"
 	"github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1/zfsilov1connect"
 	"github.com/jovulic/zfsilo/app/internal/config"
+	converteriface "github.com/jovulic/zfsilo/app/internal/converter/iface"
 	"github.com/jovulic/zfsilo/lib/selfcert"
 	"github.com/samber/lo"
 	"github.com/skovtunenko/graterm"
@@ -36,7 +37,9 @@ func WireService() *Service {
 	return NewService()
 }
 
-func WireVolumeService() *VolumeService {
+func WireVolumeService(
+	volumeConverter converteriface.VolumeConverter,
+) *VolumeService {
 	return NewVolumeService()
 }
 
