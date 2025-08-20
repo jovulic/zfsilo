@@ -25,6 +25,10 @@ func (s *VolumeService) ListVolumes(ctx context.Context, req *connect.Request[zf
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.zfsilov1.VolumeService.ListVolumes is not implemented"))
 }
 
+func (s *VolumeService) CreateVolume(ctx context.Context, req *connect.Request[zfsilov1.CreateVolumeRequest]) (*connect.Response[zfsilov1.CreateVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.zfsilov1.VolumeService.CreateVolume is not implemented"))
+}
+
 func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[zfsilov1.UpdateVolumeRequest]) (*connect.Response[zfsilov1.UpdateVolumeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.zfsilov1.VolumeService.UpdateVolume is not implemented"))
 }
