@@ -462,7 +462,6 @@ type ListVolumesResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Volumes       []*Volume              `protobuf:"bytes,1,rep,name=volumes,proto3" json:"volumes,omitempty"`
 	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	TotalSize     int32                  `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -509,13 +508,6 @@ func (x *ListVolumesResponse) GetNextPageToken() string {
 		return x.NextPageToken
 	}
 	return ""
-}
-
-func (x *ListVolumesResponse) GetTotalSize() int32 {
-	if x != nil {
-		return x.TotalSize
-	}
-	return 0
 }
 
 type CreateVolumeRequest struct {
@@ -964,12 +956,10 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\x06filter\x18\x02 \x01(\tB'\xbaG$\x92\x02!The filter to apply over volumes.R\x06filter\x12D\n" +
 	"\border_by\x18\x03 \x01(\tB)\xbaG&\x92\x02#The ordering to apply over volumes.R\aorderBy\x12f\n" +
 	"\n" +
-	"page_token\x18\x04 \x01(\tBG\xbaGD\x92\x02AThe page token. Used in subsequent requests to page over volumes.R\tpageToken\"\xfd\x01\n" +
+	"page_token\x18\x04 \x01(\tBG\xbaGD\x92\x02AThe page token. Used in subsequent requests to page over volumes.R\tpageToken\"\xba\x01\n" +
 	"\x13ListVolumesResponse\x12G\n" +
 	"\avolumes\x18\x01 \x03(\v2\x11.zfsilo.v1.VolumeB\x1a\xbaG\x17\x92\x02\x14The list of volumes.R\avolumes\x12Z\n" +
-	"\x0fnext_page_token\x18\x02 \x01(\tB2\xbaG/\x92\x02,The page token for the next page of volumes.R\rnextPageToken\x12A\n" +
-	"\n" +
-	"total_size\x18\x03 \x01(\x05B\"\xbaG\x1f\x92\x02\x1cThe total number of volumes.R\ttotalSize\"b\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tB2\xbaG/\x92\x02,The page token for the next page of volumes.R\rnextPageToken\"b\n" +
 	"\x13CreateVolumeRequest\x12K\n" +
 	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeB \xbaG\x17\x92\x02\x14The volume resource.\xbaH\x03\xc8\x01\x01R\x06volume\"A\n" +
 	"\x14CreateVolumeResponse\x12)\n" +

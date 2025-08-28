@@ -173,7 +173,6 @@ message ListVolumesRequest {
 message ListVolumesResponse {
   repeated Volume volumes = 1 [(gnostic.openapi.v3.property) = {description: "The list of volumes."}];
   string next_page_token = 2 [(gnostic.openapi.v3.property) = {description: "The page token for the next page of volumes."}];
-  int32 total_size = 3 [(gnostic.openapi.v3.property) = {description: "The total number of volumes."}];
 }
 
 message CreateVolumeRequest {

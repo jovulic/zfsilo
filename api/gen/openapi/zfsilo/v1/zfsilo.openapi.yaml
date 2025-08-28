@@ -537,11 +537,6 @@ components:
           type: string
           title: next_page_token
           description: The page token for the next page of volumes.
-        totalSize:
-          type: integer
-          title: total_size
-          format: int32
-          description: The total number of volumes.
       title: ListVolumesResponse
       additionalProperties: false
     zfsilo.v1.SayHelloRequest:
