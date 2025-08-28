@@ -13,6 +13,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	listVolumesDefaultPageSize = 25
+	listVolumeMaxPageSize      = 100
+)
+
 type VolumeService struct {
 	zfsilov1connect.UnimplementedVolumeServiceHandler
 
@@ -52,7 +57,71 @@ func (s *VolumeService) GetVolume(ctx context.Context, req *connect.Request[zfsi
 }
 
 func (s *VolumeService) ListVolumes(ctx context.Context, req *connect.Request[zfsilov1.ListVolumesRequest]) (*connect.Response[zfsilov1.ListVolumesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.zfsilov1.VolumeService.ListVolumes is not implemented"))
+	// Determine the offset and limit parameters.
+	var offset, limit int
+
+	pageSize := int(req.Msg.PageSize)
+	if pageSize <= 0 {
+		pageSize = listVolumesDefaultPageSize
+	}
+	if pageSize > listVolumeMaxPageSize {
+		pageSize = listVolumeMaxPageSize
+	}
+
+	// The page token is empty on the first reuqest and populated on subsequent
+	// requests.
+	if req.Msg.PageToken == "" {
+		offset = 0
+		limit = pageSize
+	} else {
+		pageToken, err := UnmarshalPageToken(req.Msg.PageToken)
+		if err != nil {
+			slogctx.Error(ctx, "failed to unmarshal page token", slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid page token"))
+		}
+		offset = pageToken.Offset
+		limit = pageToken.Limit
+	}
+
+	// Execute the database query using the determined parameters.
+	volumedbs, err := gorm.G[database.Volume](s.database).
+		Order("create_time desc").
+		Offset(offset).
+		Limit(limit).
+		Find(ctx)
+	if err != nil {
+		slogctx.Error(ctx, "failed to get volumes from database", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to retrieve volumes"))
+	}
+
+	// Convert database models to API models.
+	volumeapis, err := s.converter.FromDBToAPIList(volumedbs)
+	if err != nil {
+		slogctx.Error(ctx, "failed to map database volumes to API", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to process volumes"))
+	}
+
+	// Determine the next page token and build the response. If we are at the
+	// limit, we might have another page. If we are below we are finished and do
+	// not need to create a next page token.
+	var nextPageTokenString string
+	if len(volumeapis) == limit {
+		nextPageToken := PageToken{
+			Offset: offset + len(volumeapis),
+			Limit:  limit,
+		}
+		tokenStr, err := nextPageToken.Marshal()
+		if err != nil {
+			slogctx.Error(ctx, "failed to marshal next page token", slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeInternal, errors.New("failed to create next page token"))
+		}
+		nextPageTokenString = tokenStr
+	}
+
+	return connect.NewResponse(&zfsilov1.ListVolumesResponse{
+		Volumes:       volumeapis,
+		NextPageToken: nextPageTokenString,
+	}), nil
 }
 
 func (s *VolumeService) CreateVolume(ctx context.Context, req *connect.Request[zfsilov1.CreateVolumeRequest]) (*connect.Response[zfsilov1.CreateVolumeResponse], error) {

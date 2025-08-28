@@ -53,6 +53,20 @@ func (c *VolumeConverterImpl) FromAPIToDB(source *v1.Volume) (database.Volume, e
 	}
 	return databaseVolume, nil
 }
+func (c *VolumeConverterImpl) FromAPIToDBList(source []*v1.Volume) ([]database.Volume, error) {
+	var databaseVolumeList []database.Volume
+	if source != nil {
+		databaseVolumeList = make([]database.Volume, len(source))
+		for i := 0; i < len(source); i++ {
+			databaseVolume, err := c.FromAPIToDB(source[i])
+			if err != nil {
+				return nil, err
+			}
+			databaseVolumeList[i] = databaseVolume
+		}
+	}
+	return databaseVolumeList, nil
+}
 func (c *VolumeConverterImpl) FromDBToAPI(source database.Volume) (*v1.Volume, error) {
 	var zfsilov1Volume v1.Volume
 	pStructpbStruct, err := iface.ConvertFromJSONToStruct(source.Struct)
@@ -86,4 +100,18 @@ func (c *VolumeConverterImpl) FromDBToAPI(source database.Volume) (*v1.Volume, e
 	pString4 := source.MountPath
 	zfsilov1Volume.MountPath = &pString4
 	return &zfsilov1Volume, nil
+}
+func (c *VolumeConverterImpl) FromDBToAPIList(source []database.Volume) ([]*v1.Volume, error) {
+	var pZfsilov1VolumeList []*v1.Volume
+	if source != nil {
+		pZfsilov1VolumeList = make([]*v1.Volume, len(source))
+		for i := 0; i < len(source); i++ {
+			pZfsilov1Volume, err := c.FromDBToAPI(source[i])
+			if err != nil {
+				return nil, err
+			}
+			pZfsilov1VolumeList[i] = pZfsilov1Volume
+		}
+	}
+	return pZfsilov1VolumeList, nil
 }
