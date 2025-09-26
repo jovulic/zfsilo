@@ -68,6 +68,13 @@ service VolumeService {
 }
 
 message Volume {
+  option (buf.validate.message) = {
+    cel: {
+      id: "volume.name_id_consistency"
+      message: "The 'name' field must be in the format 'volumes/{id}'"
+      expression: "this.name == 'volumes/' + this.id"
+    }
+  };
   option (gnostic.openapi.v3.schema) = {description: "The volume resource."};
 
   message Option {
