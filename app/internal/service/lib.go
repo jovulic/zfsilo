@@ -74,3 +74,17 @@ func ParseResourceName(resourceName string) ([]string, error) {
 	return ids, nil
 }
 
+var ErrFieldTypeError *FieldTypeError
+
+// FieldTypeError is a custom error for invalid data types in an update request.
+// It implements the standard error interface.
+type FieldTypeError struct {
+	FieldName    string
+	ExpectedType string
+	ActualType   string
+}
+
+// Error returns a user-friendly error message.
+func (e *FieldTypeError) Error() string {
+	return fmt.Sprintf("field '%s' has invalid type: expected %s, but got %s", e.FieldName, e.ExpectedType, e.ActualType)
+}
