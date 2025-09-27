@@ -252,5 +252,15 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 }
 
 func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[zfsilov1.DeleteVolumeRequest]) (*connect.Response[zfsilov1.DeleteVolumeResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.DeleteVolume is not implemented"))
+	_, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).Delete(ctx)
+	switch {
+	case err == nil:
+		// okay
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
+	default:
+		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+	}
+	return connect.NewResponse(&zfsilov1.DeleteVolumeResponse{}), nil
 }
