@@ -181,11 +181,11 @@ func (s *VolumeService) CreateVolume(ctx context.Context, req *connect.Request[z
 		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
 	}
 
-	result := s.database.Create(&volumedb)
+	err = gorm.G[database.Volume](s.database).Create(ctx, &volumedb)
 	switch {
-	case result.Error == nil:
+	case err == nil:
 		// okay
-	case errors.Is(result.Error, gorm.ErrDuplicatedKey):
+	case errors.Is(err, gorm.ErrDuplicatedKey):
 		return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("volume already exists"))
 	default:
 		slogctx.Error(ctx, "failed to create volume", slogctx.Err(err))
@@ -242,8 +242,8 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
 	}
 
-	result := s.database.Save(volumedb)
-	if result.Error != nil {
+	_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
+	if err != nil {
 		slogctx.Error(ctx, "failed to update volume", slogctx.Err(err))
 		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
 	}
