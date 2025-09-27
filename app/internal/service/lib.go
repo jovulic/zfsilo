@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // PageToken represents the structure of the pagination token.
@@ -38,3 +39,38 @@ func UnmarshalPageToken(encodedToken string) (PageToken, error) {
 
 	return token, nil
 }
+
+// ParseResourceName extracts all resource IDs from a resource name. It assumes
+// the path follows a repeating "name/id/name/id..." pattern.
+func ParseResourceName(resourceName string) ([]string, error) {
+	// Return an error if the path is empty.
+	if resourceName == "" {
+		return nil, fmt.Errorf("resource name cannot be empty")
+	}
+
+	// Split the path into its components.
+	parts := strings.Split(resourceName, "/")
+
+	// A valid path must have an even number of parts (a name for every id).
+	if len(parts)%2 != 0 {
+		return nil, fmt.Errorf("invalid path format: path must contain pairs of resourceName/resourceId")
+	}
+
+	// Pre-allocate a slice with the exact capacity needed.
+	ids := make([]string, 0, len(parts)/2)
+
+	// Loop through the parts, incrementing by 2 to only access the ID elements.
+	// The IDs are at indices 1, 3, 5, etc.
+	for i := 1; i < len(parts); i += 2 {
+		id := parts[i]
+		// Ensure the ID itself is not an empty string.
+		if id == "" {
+			pairIndex := (i / 2) + 1
+			return nil, fmt.Errorf("resource id in pair %d of resource name %s was empty", pairIndex, resourceName)
+		}
+		ids = append(ids, id)
+	}
+
+	return ids, nil
+}
+
