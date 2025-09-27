@@ -226,12 +226,11 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 	}
 
 	err = applyVolumeUpdate(volumeapi, req.Msg.Volume)
-	switch {
-	case err == nil:
-		// okay
-	case errors.Is(err, ErrFieldTypeError):
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("failed to update volume: %w", err))
-	default:
+	if err != nil {
+		var errField *FieldTypeError
+		if errors.As(err, &errField) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("failed to update volume: %w", errField))
+		}
 		slogctx.Error(ctx, "failed to apply update to volume", slogctx.Err(err))
 		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
 	}
