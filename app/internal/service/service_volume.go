@@ -125,11 +125,34 @@ func (s *VolumeService) ListVolumes(ctx context.Context, req *connect.Request[zf
 }
 
 func (s *VolumeService) CreateVolume(ctx context.Context, req *connect.Request[zfsilov1.CreateVolumeRequest]) (*connect.Response[zfsilov1.CreateVolumeResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.zfsilov1.VolumeService.CreateVolume is not implemented"))
+	volumedb, err := s.converter.FromAPIToDB(req.Msg.Volume)
+	if err != nil {
+		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+	}
+
+	result := s.database.Create(&volumedb)
+	switch {
+	case result.Error == nil:
+		// okay
+	case errors.Is(result.Error, gorm.ErrDuplicatedKey):
+		return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("volume already exists"))
+	default:
+		slogctx.Error(ctx, "failed to create volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+	}
+
+	volumeapi, err := s.converter.FromDBToAPI(volumedb)
+	if err != nil {
+		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+	}
+
+	return connect.NewResponse(&zfsilov1.CreateVolumeResponse{Volume: volumeapi}), nil
 }
 
 func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[zfsilov1.UpdateVolumeRequest]) (*connect.Response[zfsilov1.UpdateVolumeResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.zfsilov1.VolumeService.UpdateVolume is not implemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.UpdateVolume is not implemented"))
 }
 
 func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[zfsilov1.DeleteVolumeRequest]) (*connect.Response[zfsilov1.DeleteVolumeResponse], error) {
