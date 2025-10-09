@@ -913,7 +913,7 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\x16zfsilo/v1/zfsilo.proto\x12\tzfsilo.v1\x1a\x1bbuf/validate/validate.proto\x1a$gnostic/openapi/v3/annotations.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"5\n" +
 	"\x12GetCapacityRequest:\x1f\xbaG\x1c\x92\x02\x19The get capacity request.\"\x99\x01\n" +
 	"\x13GetCapacityResponse\x12`\n" +
-	"\x18available_capacity_bytes\x18\x01 \x01(\x03B&\xbaG#\x92\x02 The available capacity in bytes.R\x16availableCapacityBytes: \xbaG\x1d\x92\x02\x1aThe get capacity response.\"\xff\v\n" +
+	"\x18available_capacity_bytes\x18\x01 \x01(\x03B&\xbaG#\x92\x02 The available capacity in bytes.R\x16availableCapacityBytes: \xbaG\x1d\x92\x02\x1aThe get capacity response.\"\xfb\f\n" +
 	"\x06Volume\x12f\n" +
 	"\x06struct\x18\x01 \x01(\v2\x17.google.protobuf.StructB5\xbaG2\x92\x02/Loosely structured data stored with the volume.R\x06struct\x12a\n" +
 	"\vcreate_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampB$\xbaG!\x18\x01\x92\x02\x1cWhen the volume was created.R\n" +
@@ -942,7 +942,8 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\x10MODE_UNSPECIFIED\x10\x00\x12\x0e\n" +
 	"\n" +
 	"MODE_BLOCK\x10\x01\x12\x13\n" +
-	"\x0fMODE_FILESYSTEM\x10\x02:\x1a\xbaG\x17\x92\x02\x14The volume resource.B\x10\n" +
+	"\x0fMODE_FILESYSTEM\x10\x02:\x95\x01\xbaG\x17\x92\x02\x14The volume resource.\xbaHx\x1av\n" +
+	"\x1avolume.name_id_consistency\x125The 'name' field must be in the format 'volumes/{id}'\x1a!this.name == 'volumes/' + this.idB\x10\n" +
 	"\x0e_initiator_iqnB\r\n" +
 	"\v_target_iqnB\x11\n" +
 	"\x0f_target_addressB\r\n" +
