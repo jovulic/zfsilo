@@ -1,10 +1,12 @@
-package tagged
+package tagged_test
 
 import (
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/jovulic/zfsilo/lib/tagged"
 )
 
 type Animal interface {
@@ -46,7 +48,7 @@ func TestNewCodec(t *testing.T) {
 			}
 		}()
 		// This should panic because Dog is a struct, not an interface.
-		NewCodec[*Dog]()
+		tagged.NewCodec[*Dog]()
 	})
 
 	t.Run("should not panic for interface type", func(t *testing.T) {
@@ -56,22 +58,12 @@ func TestNewCodec(t *testing.T) {
 			}
 		}()
 		// This should be successful.
-		NewCodec[Animal]()
+		tagged.NewCodec[Animal]()
 	})
 }
 
 func TestRegister(t *testing.T) {
-	codec := NewCodec[Animal]()
-
-	t.Run("should register a new type", func(t *testing.T) {
-		codec.Register("dog", &Dog{})
-		if _, ok := codec.kindToType["dog"]; !ok {
-			t.Error("expected 'dog' kind to be registered")
-		}
-		if _, ok := codec.typeToKind[reflect.TypeOf(&Dog{})]; !ok {
-			t.Error("expected '*Dog' type to be registered")
-		}
-	})
+	codec := tagged.NewCodec[Animal]()
 
 	t.Run("should panic on duplicate kind", func(t *testing.T) {
 		defer func() {
@@ -93,7 +85,7 @@ func TestRegister(t *testing.T) {
 }
 
 func TestMarshalJSON(t *testing.T) {
-	codec := NewCodec[Animal]()
+	codec := tagged.NewCodec[Animal]()
 	codec.Register("dog", &Dog{})
 	codec.Register("cat", &Cat{})
 
@@ -121,7 +113,7 @@ func TestMarshalJSON(t *testing.T) {
 
 	t.Run("should error for unregistered type", func(t *testing.T) {
 		// Create a new codec without registering Cat
-		unregisteredCodec := NewCodec[Animal]()
+		unregisteredCodec := tagged.NewCodec[Animal]()
 		cat := &Cat{Name: "Whiskers", Claws: true}
 		wrapped := unregisteredCodec.Wrap(cat)
 
@@ -132,7 +124,7 @@ func TestMarshalJSON(t *testing.T) {
 	})
 
 	t.Run("should error if 'kind' field already exists", func(t *testing.T) {
-		codecWithBird := NewCodec[Animal]()
+		codecWithBird := tagged.NewCodec[Animal]()
 		codecWithBird.Register("bird", &Bird{})
 		bird := &Bird{Name: "Polly", Kind: "Parrot"}
 		wrapped := codecWithBird.Wrap(bird)
@@ -145,13 +137,13 @@ func TestMarshalJSON(t *testing.T) {
 }
 
 func TestUnmarshalJSON(t *testing.T) {
-	codec := NewCodec[Animal]()
+	codec := tagged.NewCodec[Animal]()
 	codec.Register("dog", &Dog{})
 	codec.Register("cat", &Cat{})
 
 	t.Run("should unmarshal dog correctly", func(t *testing.T) {
 		jsonData := `{"kind": "dog", "name": "Rex", "breed": "German Shepherd"}`
-		wrapped := NewUnion(codec)
+		wrapped := tagged.NewUnion(codec)
 
 		fmt.Printf("LOOK %T", wrapped.Value)
 
@@ -173,7 +165,7 @@ func TestUnmarshalJSON(t *testing.T) {
 
 	t.Run("should unmarshal cat correctly", func(t *testing.T) {
 		jsonData := `{"kind": "cat", "name": "Misty", "claws": false}`
-		wrapped := NewUnion(codec)
+		wrapped := tagged.NewUnion(codec)
 
 		if err := json.Unmarshal([]byte(jsonData), &wrapped); err != nil {
 			t.Fatalf("failed to unmarshal: %v", err)
@@ -193,7 +185,7 @@ func TestUnmarshalJSON(t *testing.T) {
 
 	t.Run("should error for missing kind field", func(t *testing.T) {
 		jsonData := `{"name": "Mystery"}`
-		wrapped := NewUnion(codec)
+		wrapped := tagged.NewUnion(codec)
 
 		err := json.Unmarshal([]byte(jsonData), &wrapped)
 		if err == nil {
@@ -203,7 +195,7 @@ func TestUnmarshalJSON(t *testing.T) {
 
 	t.Run("should error for unregistered kind", func(t *testing.T) {
 		jsonData := `{"kind": "fish", "name": "Nemo"}`
-		wrapped := NewUnion(codec)
+		wrapped := tagged.NewUnion(codec)
 
 		err := json.Unmarshal([]byte(jsonData), &wrapped)
 		if err == nil {
@@ -213,7 +205,7 @@ func TestUnmarshalJSON(t *testing.T) {
 }
 
 func TestMarshalUnmarshal(t *testing.T) {
-	codec := NewCodec[Animal]()
+	codec := tagged.NewCodec[Animal]()
 	codec.Register("dog", &Dog{})
 	codec.Register("cat", &Cat{})
 
@@ -228,8 +220,8 @@ func TestMarshalUnmarshal(t *testing.T) {
 		}
 
 		// Unmarshal.
-		var newWrapped Union[Animal]
-		newWrapped.codec = codec
+		var newWrapped tagged.Union[Animal]
+		// newWrapped.codec = codec
 		if err := json.Unmarshal(data, &newWrapped); err != nil {
 			t.Fatalf("unmarshal failed: %v", err)
 		}
