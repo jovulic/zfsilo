@@ -12,3 +12,6 @@ linters:
     - godox
     - lll
     - prealloc
+    - cyclop
+    - gocognit
+    - funlen

@@ -11,6 +11,7 @@ linters:
     - nlreturn
     - godox
     - lll
-    - prealloc
     - mnd
+    - cyclop
+    - gocognit
     - funlen
