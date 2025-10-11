@@ -2,7 +2,6 @@ package tagged_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -71,6 +70,7 @@ func TestRegister(t *testing.T) {
 				t.Errorf("Register did not panic for duplicate kind")
 			}
 		}()
+		codec.Register("dog", &Dog{})
 		codec.Register("dog", &Cat{}) // "dog" is already registered
 	})
 
@@ -80,6 +80,7 @@ func TestRegister(t *testing.T) {
 				t.Errorf("Register did not panic for duplicate type")
 			}
 		}()
+		codec.Register("dog", &Dog{})
 		codec.Register("another_dog", &Dog{}) // *Dog is already registered
 	})
 }
@@ -144,8 +145,6 @@ func TestUnmarshalJSON(t *testing.T) {
 	t.Run("should unmarshal dog correctly", func(t *testing.T) {
 		jsonData := `{"kind": "dog", "name": "Rex", "breed": "German Shepherd"}`
 		wrapped := tagged.NewUnion(codec)
-
-		fmt.Printf("LOOK %T", wrapped.Value)
 
 		if err := json.Unmarshal([]byte(jsonData), &wrapped); err != nil {
 			t.Fatalf("failed to unmarshal: %v", err)
@@ -220,8 +219,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 		}
 
 		// Unmarshal.
-		var newWrapped tagged.Union[Animal]
-		// newWrapped.codec = codec
+		newWrapped := tagged.NewUnion(codec)
 		if err := json.Unmarshal(data, &newWrapped); err != nil {
 			t.Fatalf("unmarshal failed: %v", err)
 		}
