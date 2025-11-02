@@ -1,2 +1,2 @@
-infra:
-    ./justfile_infra.sh
+dev:
+    ./justfile_dev.sh

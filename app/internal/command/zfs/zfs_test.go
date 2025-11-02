@@ -14,9 +14,9 @@ import (
 
 func getTestZFSClient(t *testing.T) *zfs.ZFS {
 	// This connects to the 'give' vm, which is tunneled to localhost:9000
-	// by the infra just recipe.
+	// by the dev just recipe.
 	// NOTE: This assumes that the test VM is running and accessible.
-	// Run `just infra` in a separate terminal.
+	// Run `just dev` in a separate terminal.
 	// NOTE: This also assumes that the root user can log in without a password,
 	// or that the SSH client is configured to use a key.
 	executor := command.NewRemoteExecutor(command.RemoteExecutorConfig{
