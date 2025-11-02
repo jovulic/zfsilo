@@ -8,6 +8,8 @@ package main
 
 import (
 	"context"
+	"github.com/jovulic/zfsilo/app/internal/command"
+	"github.com/jovulic/zfsilo/app/internal/command/zfs"
 	"github.com/jovulic/zfsilo/app/internal/config"
 	"github.com/jovulic/zfsilo/app/internal/converter"
 	"github.com/jovulic/zfsilo/app/internal/database"
@@ -24,7 +26,12 @@ func WireApp(ctx context.Context, conf config.Config, term *graterm.Terminator) 
 		return nil, err
 	}
 	volumeConverter := converter.WireVolumeConverter()
-	volumeService := service.WireVolumeService(db, volumeConverter)
+	executor, err := command.WireExecutor(conf)
+	if err != nil {
+		return nil, err
+	}
+	zfsZFS := zfs.WireZFS(executor)
+	volumeService := service.WireVolumeService(db, volumeConverter, zfsZFS)
 	greeterService := service.WireGreeterService()
 	server, err := service.WireServer(ctx, conf, term, serviceService, volumeService, greeterService)
 	if err != nil {

@@ -6,6 +6,8 @@ import (
 	"context"
 
 	"github.com/google/wire"
+	"github.com/jovulic/zfsilo/app/internal/command"
+	"github.com/jovulic/zfsilo/app/internal/command/zfs"
 	"github.com/jovulic/zfsilo/app/internal/config"
 	"github.com/jovulic/zfsilo/app/internal/converter"
 	"github.com/jovulic/zfsilo/app/internal/database"
@@ -18,6 +20,6 @@ func WireApp(
 	conf config.Config,
 	term *graterm.Terminator,
 ) (*App, error) {
-	wire.Build(service.WireSet, database.WireSet, converter.WireSet, NewApp)
+	wire.Build(service.WireSet, database.WireSet, converter.WireSet, command.WireSet, zfs.WireSet, NewApp)
 	return new(App), nil
 }
