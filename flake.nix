@@ -31,6 +31,8 @@
               pkgs.bash
               pkgs.just
               pkgs.go
+              pkgs.toybox
+              pkgs.openssh
             ]
             ++ (pkgs.callPackage ./api {
               inherit version commitHashShort;
