@@ -1,0 +1,104 @@
+// Package zfs contains lib/command wrappers for executing and working with ZFS.
+package zfs
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/jovulic/zfsilo/lib/command"
+)
+
+// ZFS provides an interface for interacting with ZFS.
+type ZFS struct {
+	executor command.Executor
+}
+
+// NewZFS creates a new ZFS instance.
+func NewZFS(executor command.Executor) *ZFS {
+	return &ZFS{
+		executor: executor,
+	}
+}
+
+// CreateVolumeArguments represents the options for creating a ZFS volume.
+type CreateVolumeArguments struct {
+	Name    string
+	Size    uint64
+	Options map[string]string
+	Sparse  bool
+}
+
+// CreateVolume creates a new ZFS volume.
+//
+// zfs create [-p] [-o property=value]... -V <size> <volume>
+func (z *ZFS) CreateVolume(ctx context.Context, args CreateVolumeArguments) error {
+	var cmd strings.Builder
+	cmd.WriteString("zfs create")
+
+	if args.Sparse {
+		cmd.WriteString(" -s")
+	}
+
+	if len(args.Options) > 0 {
+		for key, value := range args.Options {
+			cmd.WriteString(fmt.Sprintf(" -o %s=%s", key, value))
+		}
+	}
+
+	cmd.WriteString(fmt.Sprintf(" -V %d %s", args.Size, args.Name))
+
+	result, err := z.executor.Exec(ctx, cmd.String())
+	if err != nil {
+		// The command can fail with a non-zero exit code. The `Exec` method in
+		// `lib/command/command.go` returns an error for non-zero exit codes. It
+		// also returns the result. We wrap the error with more context.
+		return fmt.Errorf("failed to create volume '%s': %w, stderr: %s", args.Name, err, result.Stderr)
+	}
+
+	return nil
+}
+
+// DestroyVolumeArguments represents the options for destroying a ZFS volume.
+type DestroyVolumeArguments struct {
+	Name string
+}
+
+// DestroyVolume destroys a ZFS volume.
+//
+// zfs destroy [-r] <volume>
+func (z *ZFS) DestroyVolume(ctx context.Context, args DestroyVolumeArguments) error {
+	var cmd strings.Builder
+	cmd.WriteString("zfs destroy")
+
+	cmd.WriteString(fmt.Sprintf(" %s", args.Name))
+
+	result, err := z.executor.Exec(ctx, cmd.String())
+	if err != nil {
+		return fmt.Errorf("failed to destroy volume '%s': %w, stderr: %s", args.Name, err, result.Stderr)
+	}
+
+	return nil
+}
+
+// VolumeExists checks if a ZFS volume exists.
+func (z *ZFS) VolumeExists(ctx context.Context, name string) (bool, error) {
+	// Use `zfs list -H -o name` to check for the volume.
+	// The -H flag gives script-friendly output (no headers).
+	// We pipe to grep to check for an exact match.
+	cmd := fmt.Sprintf("zfs list -H -o name | grep -x %s", name)
+	res, err := z.executor.Exec(ctx, cmd)
+	if err != nil {
+		// grep exits with 1 if no match is found. The command executor returns
+		// an error on non-zero exit codes. If stderr is empty and exit code is
+		// 1, it means the volume was not found, which is not an error for us.
+		if res != nil && res.ExitCode == 1 && res.Stderr == "" {
+			return false, nil
+		}
+		// For other errors, we return them.
+		return false, err
+	}
+
+	// If grep exits with 0, a match was found.
+	return res.ExitCode == 0, nil
+}
