@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	zfsilov1 "github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1"
 	"github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1/zfsilov1connect"
+	"github.com/jovulic/zfsilo/app/internal/command/zfs"
 	converteriface "github.com/jovulic/zfsilo/app/internal/converter/iface"
 	"github.com/jovulic/zfsilo/app/internal/database"
 	slogctx "github.com/veqryn/slog-context"
@@ -73,15 +74,18 @@ type VolumeService struct {
 
 	database  *gorm.DB
 	converter converteriface.VolumeConverter
+	zfs       *zfs.ZFS
 }
 
 func NewVolumeService(
 	database *gorm.DB,
 	converter converteriface.VolumeConverter,
+	zfs *zfs.ZFS,
 ) *VolumeService {
 	return &VolumeService{
 		database:  database,
 		converter: converter,
+		zfs:       zfs,
 	}
 }
 
@@ -181,15 +185,39 @@ func (s *VolumeService) CreateVolume(ctx context.Context, req *connect.Request[z
 		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
 	}
 
-	err = gorm.G[database.Volume](s.database).Create(ctx, &volumedb)
-	switch {
-	case err == nil:
-		// okay
-	case errors.Is(err, gorm.ErrDuplicatedKey):
-		return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("volume already exists"))
-	default:
+	err = s.database.Transaction(func(tx *gorm.DB) error {
+		// Create database entry.
+		err := gorm.G[database.Volume](tx).Create(ctx, &volumedb)
+		if err != nil {
+			return err
+		}
+
+		// Create ZFS volume.
+		opts := make(map[string]string)
+		for _, option := range req.Msg.Volume.Options {
+			opts[option.Key] = option.Value
+		}
+		err = s.zfs.CreateVolume(ctx, zfs.CreateVolumeArguments{
+			Name:    req.Msg.Volume.DatasetId,
+			Size:    uint64(req.Msg.Volume.CapacityBytes),
+			Options: opts,
+			Sparse:  req.Msg.Volume.Sparse,
+		})
+		if err != nil {
+			slogctx.Error(ctx, "failed to create zfs volume", slogctx.Err(err))
+			return fmt.Errorf("failed to create zfs volume: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		// Check for specific database errors to return correct connect codes.
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("volume already exists"))
+		}
+		// For ZFS errors or other DB errors, return internal error.
 		slogctx.Error(ctx, "failed to create volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create volume: %w", err))
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
@@ -251,15 +279,38 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 }
 
 func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[zfsilov1.DeleteVolumeRequest]) (*connect.Response[zfsilov1.DeleteVolumeResponse], error) {
-	_, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).Delete(ctx)
-	switch {
-	case err == nil:
-		// okay
-	case errors.Is(err, gorm.ErrRecordNotFound):
-		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
-	default:
-		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+	var volumedb database.Volume
+	err := s.database.Transaction(func(tx *gorm.DB) error {
+		// Get volume from DB to find the dataset name.
+		var err error
+		volumedb, err = gorm.G[database.Volume](tx).Where("id = ?", req.Msg.Id).First(ctx)
+		if err != nil {
+			return err
+		}
+
+		// Delete from database.
+		_, err = gorm.G[database.Volume](tx).Where("id = ?", req.Msg.Id).Delete(ctx)
+		if err != nil {
+			return err
+		}
+
+		// Destroy ZFS volume.
+		err = s.zfs.DestroyVolume(ctx, zfs.DestroyVolumeArguments{
+			Name: volumedb.DatasetID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to destroy zfs volume: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
+		}
+		slogctx.Error(ctx, "failed to delete volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete volume: %w", err))
 	}
+
 	return connect.NewResponse(&zfsilov1.DeleteVolumeResponse{}), nil
 }
