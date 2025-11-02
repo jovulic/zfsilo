@@ -24,7 +24,7 @@ type CommandResult struct {
 }
 
 type Executor interface {
-	Exec(ctx context.Context, command string) (CommandResult, error)
+	Exec(ctx context.Context, command string) (*CommandResult, error)
 }
 
 type LocalExecutorConfig struct {
