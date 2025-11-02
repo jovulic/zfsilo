@@ -21,7 +21,7 @@ func NewZFS(executor command.Executor) *ZFS {
 	}
 }
 
-// CreateVolumeArguments represents the options for creating a ZFS volume.
+// CreateVolumeArguments represents the arguments for creating a ZFS volume.
 type CreateVolumeArguments struct {
 	Name    string
 	Size    uint64
@@ -59,7 +59,7 @@ func (z *ZFS) CreateVolume(ctx context.Context, args CreateVolumeArguments) erro
 	return nil
 }
 
-// DestroyVolumeArguments represents the options for destroying a ZFS volume.
+// DestroyVolumeArguments represents the arguments for destroying a ZFS volume.
 type DestroyVolumeArguments struct {
 	Name string
 }
@@ -81,12 +81,17 @@ func (z *ZFS) DestroyVolume(ctx context.Context, args DestroyVolumeArguments) er
 	return nil
 }
 
+// VolumeExistsArguments represents the arguments for checking if a ZFS volume exists.
+type VolumeExistsArguments struct {
+	Name string
+}
+
 // VolumeExists checks if a ZFS volume exists.
-func (z *ZFS) VolumeExists(ctx context.Context, name string) (bool, error) {
+func (z *ZFS) VolumeExists(ctx context.Context, args VolumeExistsArguments) (bool, error) {
 	// Use `zfs list -H -o name` to check for the volume.
 	// The -H flag gives script-friendly output (no headers).
 	// We pipe to grep to check for an exact match.
-	cmd := fmt.Sprintf("zfs list -H -o name | grep -x %s", name)
+	cmd := fmt.Sprintf("zfs list -H -o name | grep -x %s", args.Name)
 	res, err := z.executor.Exec(ctx, cmd)
 	if err != nil {
 		// grep exits with 1 if no match is found. The command executor returns

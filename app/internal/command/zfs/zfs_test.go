@@ -54,7 +54,7 @@ func TestCreateAndDestroyVolume(t *testing.T) {
 	require.NoError(t, err, "failed to create volume")
 
 	// Verify the volume exists.
-	exists, err := client.VolumeExists(context.Background(), volName)
+	exists, err := client.VolumeExists(context.Background(), zfs.VolumeExistsArguments{Name: volName})
 	require.NoError(t, err, "failed to check if volume exists after creation")
 	assert.True(t, exists, "volume should exist after creation")
 
@@ -66,7 +66,7 @@ func TestCreateAndDestroyVolume(t *testing.T) {
 	require.NoError(t, err, "failed to destroy volume")
 
 	// Verify the volume is gone.
-	exists, err = client.VolumeExists(context.Background(), volName)
+	exists, err = client.VolumeExists(context.Background(), zfs.VolumeExistsArguments{Name: volName})
 	require.NoError(t, err, "failed to check if volume exists after destruction")
 	assert.False(t, exists, "volume should not exist after destruction")
 }
