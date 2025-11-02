@@ -23,7 +23,7 @@ func getTestZFSClient(t *testing.T) *zfs.ZFS {
 		Address:  "localhost",
 		Port:     9000,
 		Username: "root",
-		Password: "", // Assuming passwordless or key-based auth
+		Password: "",
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
