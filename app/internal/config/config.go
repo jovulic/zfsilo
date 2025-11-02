@@ -77,6 +77,16 @@ type Config struct {
 	Database struct {
 		DSN string `json:"dsn" validate:"required"`
 	} `json:"database"`
+	Command struct {
+		Mode      string `json:"mode"      mod:"default=local" validate:"oneof=local remote"`
+		RunAsRoot bool   `json:"runAsRoot"`
+		Remote    struct {
+			Address  string `json:"address"  validate:"required_if=Mode remote"`
+			Port     uint16 `json:"port"     mod:"default=22"                   validate:"required_if=Mode remote"`
+			Username string `json:"username" validate:"required_if=Mode remote"`
+			Password string `json:"password" validate:"required_if=Mode remote"`
+		} `json:"remote"`
+	} `json:"command"`
 }
 
 func BuildConfig(ctx context.Context, configValue string) (Config, error) {
