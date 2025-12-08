@@ -1,5 +1,5 @@
-// Package structs contains useful functions when dealing with structs.
-package structs
+// Package structutil contains useful functions when dealing with structs.
+package structutil
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 func Apply(config any) error {
 	// Verify that the config is a non-nil pointer to a struct.
 	val := reflect.ValueOf(config)
-	if val.Kind() != reflect.Ptr {
+	if val.Kind() != reflect.Pointer {
 		return fmt.Errorf("input must be a pointer to a struct, but got type %T", config)
 	}
 	if val.IsNil() {
