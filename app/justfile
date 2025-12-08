@@ -1,6 +1,9 @@
 run:
   go run -ldflags "-X 'main.Version=local'" . start --config ./config.json 
 
+test:
+  go test ./...
+
 build:
   go build -tags "json1"
 
