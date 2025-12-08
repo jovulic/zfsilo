@@ -13,7 +13,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/jovulic/zfsilo/lib/structs"
+	"github.com/jovulic/zfsilo/lib/structutil"
 	slogctx "github.com/veqryn/slog-context"
 )
 
@@ -36,7 +36,7 @@ type LocalExecutor struct {
 }
 
 func NewLocalExector(config LocalExecutorConfig) *LocalExecutor {
-	if err := structs.Apply(&config); err != nil {
+	if err := structutil.Apply(&config); err != nil {
 		message := fmt.Sprintf("command: failed to process config: %s", err)
 		panic(message)
 	}
@@ -96,7 +96,7 @@ type RemoteExecutor struct {
 }
 
 func NewRemoteExecutor(config RemoteExecutorConfig) *RemoteExecutor {
-	if err := structs.Apply(&config); err != nil {
+	if err := structutil.Apply(&config); err != nil {
 		message := fmt.Sprintf("command: failed to process config: %s", err)
 		panic(message)
 	}
