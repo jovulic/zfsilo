@@ -82,7 +82,7 @@ type RemoteExecutorConfig struct {
 	Address   string `validate:"required"`
 	Port      uint16 `validate:"required"`
 	Username  string `validate:"required"`
-	Password  string `validate:"required"`
+	Password  string
 }
 
 type RemoteExecutor struct {
