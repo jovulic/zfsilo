@@ -1,9 +1,9 @@
+#!/usr/bin/env bash
 # Starts the local development environment used in testing.
 #
 # This will start the host VM and create SSH tunnels to the guest VMs.
 # The environment will be torn down automatically when this command is exited.
 
-#!/usr/bin/env bash
 set -euo pipefail
 
 host_pid=""
