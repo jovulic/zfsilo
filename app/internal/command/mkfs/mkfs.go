@@ -32,12 +32,12 @@ type ExistsArguments struct {
 func (m *Mkfs) Exists(ctx context.Context, args ExistsArguments) (bool, error) {
 	timeout := args.Timeout
 	if timeout == 0 {
-		timeout = 10 * time.Second // Default timeout
+		timeout = 10 * time.Second // default timeout
 	}
 
 	pollInterval := args.PollInterval
 	if pollInterval == 0 {
-		pollInterval = 500 * time.Millisecond // Default interval
+		pollInterval = 500 * time.Millisecond // default interval
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -51,7 +51,7 @@ func (m *Mkfs) Exists(ctx context.Context, args ExistsArguments) (bool, error) {
 			// Use stat to check for the device file.
 			_, err := m.executor.Exec(ctx, fmt.Sprintf("stat %s", args.Device))
 			if err == nil {
-				return true, nil // Device found
+				return true, nil // device found
 			}
 			time.Sleep(pollInterval)
 		}
