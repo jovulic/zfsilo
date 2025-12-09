@@ -1,2 +1,2 @@
-start
-    ./justfile_start.sh
+start:
+  ./justfile_start.sh
