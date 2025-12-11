@@ -65,6 +65,15 @@ service VolumeService {
   rpc CreateVolume(CreateVolumeRequest) returns (CreateVolumeResponse) {}
   rpc UpdateVolume(UpdateVolumeRequest) returns (UpdateVolumeResponse) {}
   rpc DeleteVolume(DeleteVolumeRequest) returns (DeleteVolumeResponse) {}
+  rpc PublishVolume(PublishVolumeRequest) returns (PublishVolumeResponse) {}
+  rpc UnpublishVolume(UnpublishVolumeRequest) returns (UnpublishVolumeResponse) {}
+  rpc ConnectVolume(ConnectVolumeRequest) returns (ConnectVolumeResponse) {}
+  rpc DisconnectVolume(DisconnectVolumeRequest) returns (DisconnectVolumeResponse) {}
+  rpc MountVolume(MountVolumeRequest) returns (MountVolumeResponse) {}
+  rpc UnmountVolume(UnmountVolumeRequest) returns (UnmountVolumeResponse) {}
+  rpc StatsVolume(StatsVolumeRequest) returns (StatsVolumeResponse) {}
+  rpc SyncVolume(SyncVolumeRequest) returns (SyncVolumeResponse) {}
+  rpc SyncVolumes(SyncVolumesRequest) returns (SyncVolumesResponse) {}
 }
 
 message Volume {
@@ -214,20 +223,138 @@ message DeleteVolumeRequest {
 
 message DeleteVolumeResponse {}
 
-service GreeterService {
-  rpc SayHello(SayHelloRequest) returns (SayHelloResponse) {
-    option idempotency_level = NO_SIDE_EFFECTS;
-    option (gnostic.openapi.v3.operation).description = "Say hello!";
-  }
-}
-
-message SayHelloRequest {
-  string name = 1 [
+message PublishVolumeRequest {
+  string id = 1 [
+    (gnostic.openapi.v3.property) = {description: "The id of the volume to be published."},
     (buf.validate.field).required = true,
-    (buf.validate.field).string.max_len = 64
+    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
   ];
 }
 
-message SayHelloResponse {
-  string message = 1;
+message PublishVolumeResponse {
+  Volume volume = 1;
 }
+
+message UnpublishVolumeRequest {
+  string id = 1 [
+    (gnostic.openapi.v3.property) = {description: "The id of the volume to be unpublished."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
+  ];
+}
+
+message UnpublishVolumeResponse {
+  Volume volume = 1;
+}
+
+message ConnectVolumeRequest {
+  string id = 1 [
+    (gnostic.openapi.v3.property) = {description: "The id of the volume to be connected."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
+  ];
+  string initiator_iqn = 2 [
+    (gnostic.openapi.v3.property) = {description: "The initiator iqn."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^iqn.*$"
+  ];
+  string target_address = 3 [
+    (gnostic.openapi.v3.property) = {description: "The target address."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string = {host_and_port: true}
+  ];
+}
+
+message ConnectVolumeResponse {
+  Volume volume = 1;
+}
+
+message DisconnectVolumeRequest {
+  string id = 1 [
+    (gnostic.openapi.v3.property) = {description: "The id of the volume to be disconnected."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
+  ];
+}
+
+message DisconnectVolumeResponse {
+  Volume volume = 1;
+}
+
+message MountVolumeRequest {
+  enum Mode {
+    MODE_UNSPECIFIED = 0;
+    MODE_BLOCK = 1;
+    MODE_FILESYSTEM = 2;
+  }
+
+  string id = 1 [
+    (gnostic.openapi.v3.property) = {description: "The id of the volume to be mounted."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
+  ];
+  string target_path = 2 [
+    (gnostic.openapi.v3.property) = {description: "The target path."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^(/[^/ ]*)+/?$"
+  ];
+}
+
+message MountVolumeResponse {
+  Volume volume = 1;
+}
+
+message UnmountVolumeRequest {
+  string id = 1 [
+    (gnostic.openapi.v3.property) = {description: "The id of the volume to be unmounted."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
+  ];
+}
+
+message UnmountVolumeResponse {
+  Volume volume = 1;
+}
+
+message StatsVolumeRequest {
+  string id = 1 [
+    (gnostic.openapi.v3.property) = {description: "The id of the volume."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
+  ];
+}
+
+message StatsVolumeResponse {
+  message Stats {
+    message Usage {
+      enum Unit {
+        UNIT_UNSPECIFIED = 0;
+        UNIT_BYTES = 1;
+        UNIT_INODES = 2;
+      }
+
+      int64 total = 1;
+      int64 used = 2;
+      int64 available = 3;
+      Unit unit = 4;
+    }
+
+    repeated Usage usage = 1;
+  }
+
+  Stats stats = 1;
+}
+
+message SyncVolumeRequest {
+  string id = 1 [
+    (gnostic.openapi.v3.property) = {description: "The id of the volume to sync."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
+  ];
+}
+
+message SyncVolumeResponse {}
+
+message SyncVolumesRequest {}
+
+message SyncVolumesResponse {}

@@ -25,8 +25,6 @@ const (
 	ServiceName = "zfsilo.v1.Service"
 	// VolumeServiceName is the fully-qualified name of the VolumeService service.
 	VolumeServiceName = "zfsilo.v1.VolumeService"
-	// GreeterServiceName is the fully-qualified name of the GreeterService service.
-	GreeterServiceName = "zfsilo.v1.GreeterService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -53,8 +51,33 @@ const (
 	// VolumeServiceDeleteVolumeProcedure is the fully-qualified name of the VolumeService's
 	// DeleteVolume RPC.
 	VolumeServiceDeleteVolumeProcedure = "/zfsilo.v1.VolumeService/DeleteVolume"
-	// GreeterServiceSayHelloProcedure is the fully-qualified name of the GreeterService's SayHello RPC.
-	GreeterServiceSayHelloProcedure = "/zfsilo.v1.GreeterService/SayHello"
+	// VolumeServicePublishVolumeProcedure is the fully-qualified name of the VolumeService's
+	// PublishVolume RPC.
+	VolumeServicePublishVolumeProcedure = "/zfsilo.v1.VolumeService/PublishVolume"
+	// VolumeServiceUnpublishVolumeProcedure is the fully-qualified name of the VolumeService's
+	// UnpublishVolume RPC.
+	VolumeServiceUnpublishVolumeProcedure = "/zfsilo.v1.VolumeService/UnpublishVolume"
+	// VolumeServiceConnectVolumeProcedure is the fully-qualified name of the VolumeService's
+	// ConnectVolume RPC.
+	VolumeServiceConnectVolumeProcedure = "/zfsilo.v1.VolumeService/ConnectVolume"
+	// VolumeServiceDisconnectVolumeProcedure is the fully-qualified name of the VolumeService's
+	// DisconnectVolume RPC.
+	VolumeServiceDisconnectVolumeProcedure = "/zfsilo.v1.VolumeService/DisconnectVolume"
+	// VolumeServiceMountVolumeProcedure is the fully-qualified name of the VolumeService's MountVolume
+	// RPC.
+	VolumeServiceMountVolumeProcedure = "/zfsilo.v1.VolumeService/MountVolume"
+	// VolumeServiceUnmountVolumeProcedure is the fully-qualified name of the VolumeService's
+	// UnmountVolume RPC.
+	VolumeServiceUnmountVolumeProcedure = "/zfsilo.v1.VolumeService/UnmountVolume"
+	// VolumeServiceStatsVolumeProcedure is the fully-qualified name of the VolumeService's StatsVolume
+	// RPC.
+	VolumeServiceStatsVolumeProcedure = "/zfsilo.v1.VolumeService/StatsVolume"
+	// VolumeServiceSyncVolumeProcedure is the fully-qualified name of the VolumeService's SyncVolume
+	// RPC.
+	VolumeServiceSyncVolumeProcedure = "/zfsilo.v1.VolumeService/SyncVolume"
+	// VolumeServiceSyncVolumesProcedure is the fully-qualified name of the VolumeService's SyncVolumes
+	// RPC.
+	VolumeServiceSyncVolumesProcedure = "/zfsilo.v1.VolumeService/SyncVolumes"
 )
 
 // ServiceClient is a client for the zfsilo.v1.Service service.
@@ -134,6 +157,15 @@ type VolumeServiceClient interface {
 	CreateVolume(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error)
 	UpdateVolume(context.Context, *connect.Request[v1.UpdateVolumeRequest]) (*connect.Response[v1.UpdateVolumeResponse], error)
 	DeleteVolume(context.Context, *connect.Request[v1.DeleteVolumeRequest]) (*connect.Response[v1.DeleteVolumeResponse], error)
+	PublishVolume(context.Context, *connect.Request[v1.PublishVolumeRequest]) (*connect.Response[v1.PublishVolumeResponse], error)
+	UnpublishVolume(context.Context, *connect.Request[v1.UnpublishVolumeRequest]) (*connect.Response[v1.UnpublishVolumeResponse], error)
+	ConnectVolume(context.Context, *connect.Request[v1.ConnectVolumeRequest]) (*connect.Response[v1.ConnectVolumeResponse], error)
+	DisconnectVolume(context.Context, *connect.Request[v1.DisconnectVolumeRequest]) (*connect.Response[v1.DisconnectVolumeResponse], error)
+	MountVolume(context.Context, *connect.Request[v1.MountVolumeRequest]) (*connect.Response[v1.MountVolumeResponse], error)
+	UnmountVolume(context.Context, *connect.Request[v1.UnmountVolumeRequest]) (*connect.Response[v1.UnmountVolumeResponse], error)
+	StatsVolume(context.Context, *connect.Request[v1.StatsVolumeRequest]) (*connect.Response[v1.StatsVolumeResponse], error)
+	SyncVolume(context.Context, *connect.Request[v1.SyncVolumeRequest]) (*connect.Response[v1.SyncVolumeResponse], error)
+	SyncVolumes(context.Context, *connect.Request[v1.SyncVolumesRequest]) (*connect.Response[v1.SyncVolumesResponse], error)
 }
 
 // NewVolumeServiceClient constructs a client for the zfsilo.v1.VolumeService service. By default,
@@ -177,16 +209,79 @@ func NewVolumeServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(volumeServiceMethods.ByName("DeleteVolume")),
 			connect.WithClientOptions(opts...),
 		),
+		publishVolume: connect.NewClient[v1.PublishVolumeRequest, v1.PublishVolumeResponse](
+			httpClient,
+			baseURL+VolumeServicePublishVolumeProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("PublishVolume")),
+			connect.WithClientOptions(opts...),
+		),
+		unpublishVolume: connect.NewClient[v1.UnpublishVolumeRequest, v1.UnpublishVolumeResponse](
+			httpClient,
+			baseURL+VolumeServiceUnpublishVolumeProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("UnpublishVolume")),
+			connect.WithClientOptions(opts...),
+		),
+		connectVolume: connect.NewClient[v1.ConnectVolumeRequest, v1.ConnectVolumeResponse](
+			httpClient,
+			baseURL+VolumeServiceConnectVolumeProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("ConnectVolume")),
+			connect.WithClientOptions(opts...),
+		),
+		disconnectVolume: connect.NewClient[v1.DisconnectVolumeRequest, v1.DisconnectVolumeResponse](
+			httpClient,
+			baseURL+VolumeServiceDisconnectVolumeProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("DisconnectVolume")),
+			connect.WithClientOptions(opts...),
+		),
+		mountVolume: connect.NewClient[v1.MountVolumeRequest, v1.MountVolumeResponse](
+			httpClient,
+			baseURL+VolumeServiceMountVolumeProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("MountVolume")),
+			connect.WithClientOptions(opts...),
+		),
+		unmountVolume: connect.NewClient[v1.UnmountVolumeRequest, v1.UnmountVolumeResponse](
+			httpClient,
+			baseURL+VolumeServiceUnmountVolumeProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("UnmountVolume")),
+			connect.WithClientOptions(opts...),
+		),
+		statsVolume: connect.NewClient[v1.StatsVolumeRequest, v1.StatsVolumeResponse](
+			httpClient,
+			baseURL+VolumeServiceStatsVolumeProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("StatsVolume")),
+			connect.WithClientOptions(opts...),
+		),
+		syncVolume: connect.NewClient[v1.SyncVolumeRequest, v1.SyncVolumeResponse](
+			httpClient,
+			baseURL+VolumeServiceSyncVolumeProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("SyncVolume")),
+			connect.WithClientOptions(opts...),
+		),
+		syncVolumes: connect.NewClient[v1.SyncVolumesRequest, v1.SyncVolumesResponse](
+			httpClient,
+			baseURL+VolumeServiceSyncVolumesProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("SyncVolumes")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // volumeServiceClient implements VolumeServiceClient.
 type volumeServiceClient struct {
-	getVolume    *connect.Client[v1.GetVolumeRequest, v1.GetVolumeResponse]
-	listVolumes  *connect.Client[v1.ListVolumesRequest, v1.ListVolumesResponse]
-	createVolume *connect.Client[v1.CreateVolumeRequest, v1.CreateVolumeResponse]
-	updateVolume *connect.Client[v1.UpdateVolumeRequest, v1.UpdateVolumeResponse]
-	deleteVolume *connect.Client[v1.DeleteVolumeRequest, v1.DeleteVolumeResponse]
+	getVolume        *connect.Client[v1.GetVolumeRequest, v1.GetVolumeResponse]
+	listVolumes      *connect.Client[v1.ListVolumesRequest, v1.ListVolumesResponse]
+	createVolume     *connect.Client[v1.CreateVolumeRequest, v1.CreateVolumeResponse]
+	updateVolume     *connect.Client[v1.UpdateVolumeRequest, v1.UpdateVolumeResponse]
+	deleteVolume     *connect.Client[v1.DeleteVolumeRequest, v1.DeleteVolumeResponse]
+	publishVolume    *connect.Client[v1.PublishVolumeRequest, v1.PublishVolumeResponse]
+	unpublishVolume  *connect.Client[v1.UnpublishVolumeRequest, v1.UnpublishVolumeResponse]
+	connectVolume    *connect.Client[v1.ConnectVolumeRequest, v1.ConnectVolumeResponse]
+	disconnectVolume *connect.Client[v1.DisconnectVolumeRequest, v1.DisconnectVolumeResponse]
+	mountVolume      *connect.Client[v1.MountVolumeRequest, v1.MountVolumeResponse]
+	unmountVolume    *connect.Client[v1.UnmountVolumeRequest, v1.UnmountVolumeResponse]
+	statsVolume      *connect.Client[v1.StatsVolumeRequest, v1.StatsVolumeResponse]
+	syncVolume       *connect.Client[v1.SyncVolumeRequest, v1.SyncVolumeResponse]
+	syncVolumes      *connect.Client[v1.SyncVolumesRequest, v1.SyncVolumesResponse]
 }
 
 // GetVolume calls zfsilo.v1.VolumeService.GetVolume.
@@ -214,6 +309,51 @@ func (c *volumeServiceClient) DeleteVolume(ctx context.Context, req *connect.Req
 	return c.deleteVolume.CallUnary(ctx, req)
 }
 
+// PublishVolume calls zfsilo.v1.VolumeService.PublishVolume.
+func (c *volumeServiceClient) PublishVolume(ctx context.Context, req *connect.Request[v1.PublishVolumeRequest]) (*connect.Response[v1.PublishVolumeResponse], error) {
+	return c.publishVolume.CallUnary(ctx, req)
+}
+
+// UnpublishVolume calls zfsilo.v1.VolumeService.UnpublishVolume.
+func (c *volumeServiceClient) UnpublishVolume(ctx context.Context, req *connect.Request[v1.UnpublishVolumeRequest]) (*connect.Response[v1.UnpublishVolumeResponse], error) {
+	return c.unpublishVolume.CallUnary(ctx, req)
+}
+
+// ConnectVolume calls zfsilo.v1.VolumeService.ConnectVolume.
+func (c *volumeServiceClient) ConnectVolume(ctx context.Context, req *connect.Request[v1.ConnectVolumeRequest]) (*connect.Response[v1.ConnectVolumeResponse], error) {
+	return c.connectVolume.CallUnary(ctx, req)
+}
+
+// DisconnectVolume calls zfsilo.v1.VolumeService.DisconnectVolume.
+func (c *volumeServiceClient) DisconnectVolume(ctx context.Context, req *connect.Request[v1.DisconnectVolumeRequest]) (*connect.Response[v1.DisconnectVolumeResponse], error) {
+	return c.disconnectVolume.CallUnary(ctx, req)
+}
+
+// MountVolume calls zfsilo.v1.VolumeService.MountVolume.
+func (c *volumeServiceClient) MountVolume(ctx context.Context, req *connect.Request[v1.MountVolumeRequest]) (*connect.Response[v1.MountVolumeResponse], error) {
+	return c.mountVolume.CallUnary(ctx, req)
+}
+
+// UnmountVolume calls zfsilo.v1.VolumeService.UnmountVolume.
+func (c *volumeServiceClient) UnmountVolume(ctx context.Context, req *connect.Request[v1.UnmountVolumeRequest]) (*connect.Response[v1.UnmountVolumeResponse], error) {
+	return c.unmountVolume.CallUnary(ctx, req)
+}
+
+// StatsVolume calls zfsilo.v1.VolumeService.StatsVolume.
+func (c *volumeServiceClient) StatsVolume(ctx context.Context, req *connect.Request[v1.StatsVolumeRequest]) (*connect.Response[v1.StatsVolumeResponse], error) {
+	return c.statsVolume.CallUnary(ctx, req)
+}
+
+// SyncVolume calls zfsilo.v1.VolumeService.SyncVolume.
+func (c *volumeServiceClient) SyncVolume(ctx context.Context, req *connect.Request[v1.SyncVolumeRequest]) (*connect.Response[v1.SyncVolumeResponse], error) {
+	return c.syncVolume.CallUnary(ctx, req)
+}
+
+// SyncVolumes calls zfsilo.v1.VolumeService.SyncVolumes.
+func (c *volumeServiceClient) SyncVolumes(ctx context.Context, req *connect.Request[v1.SyncVolumesRequest]) (*connect.Response[v1.SyncVolumesResponse], error) {
+	return c.syncVolumes.CallUnary(ctx, req)
+}
+
 // VolumeServiceHandler is an implementation of the zfsilo.v1.VolumeService service.
 type VolumeServiceHandler interface {
 	GetVolume(context.Context, *connect.Request[v1.GetVolumeRequest]) (*connect.Response[v1.GetVolumeResponse], error)
@@ -221,6 +361,15 @@ type VolumeServiceHandler interface {
 	CreateVolume(context.Context, *connect.Request[v1.CreateVolumeRequest]) (*connect.Response[v1.CreateVolumeResponse], error)
 	UpdateVolume(context.Context, *connect.Request[v1.UpdateVolumeRequest]) (*connect.Response[v1.UpdateVolumeResponse], error)
 	DeleteVolume(context.Context, *connect.Request[v1.DeleteVolumeRequest]) (*connect.Response[v1.DeleteVolumeResponse], error)
+	PublishVolume(context.Context, *connect.Request[v1.PublishVolumeRequest]) (*connect.Response[v1.PublishVolumeResponse], error)
+	UnpublishVolume(context.Context, *connect.Request[v1.UnpublishVolumeRequest]) (*connect.Response[v1.UnpublishVolumeResponse], error)
+	ConnectVolume(context.Context, *connect.Request[v1.ConnectVolumeRequest]) (*connect.Response[v1.ConnectVolumeResponse], error)
+	DisconnectVolume(context.Context, *connect.Request[v1.DisconnectVolumeRequest]) (*connect.Response[v1.DisconnectVolumeResponse], error)
+	MountVolume(context.Context, *connect.Request[v1.MountVolumeRequest]) (*connect.Response[v1.MountVolumeResponse], error)
+	UnmountVolume(context.Context, *connect.Request[v1.UnmountVolumeRequest]) (*connect.Response[v1.UnmountVolumeResponse], error)
+	StatsVolume(context.Context, *connect.Request[v1.StatsVolumeRequest]) (*connect.Response[v1.StatsVolumeResponse], error)
+	SyncVolume(context.Context, *connect.Request[v1.SyncVolumeRequest]) (*connect.Response[v1.SyncVolumeResponse], error)
+	SyncVolumes(context.Context, *connect.Request[v1.SyncVolumesRequest]) (*connect.Response[v1.SyncVolumesResponse], error)
 }
 
 // NewVolumeServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -260,6 +409,60 @@ func NewVolumeServiceHandler(svc VolumeServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(volumeServiceMethods.ByName("DeleteVolume")),
 		connect.WithHandlerOptions(opts...),
 	)
+	volumeServicePublishVolumeHandler := connect.NewUnaryHandler(
+		VolumeServicePublishVolumeProcedure,
+		svc.PublishVolume,
+		connect.WithSchema(volumeServiceMethods.ByName("PublishVolume")),
+		connect.WithHandlerOptions(opts...),
+	)
+	volumeServiceUnpublishVolumeHandler := connect.NewUnaryHandler(
+		VolumeServiceUnpublishVolumeProcedure,
+		svc.UnpublishVolume,
+		connect.WithSchema(volumeServiceMethods.ByName("UnpublishVolume")),
+		connect.WithHandlerOptions(opts...),
+	)
+	volumeServiceConnectVolumeHandler := connect.NewUnaryHandler(
+		VolumeServiceConnectVolumeProcedure,
+		svc.ConnectVolume,
+		connect.WithSchema(volumeServiceMethods.ByName("ConnectVolume")),
+		connect.WithHandlerOptions(opts...),
+	)
+	volumeServiceDisconnectVolumeHandler := connect.NewUnaryHandler(
+		VolumeServiceDisconnectVolumeProcedure,
+		svc.DisconnectVolume,
+		connect.WithSchema(volumeServiceMethods.ByName("DisconnectVolume")),
+		connect.WithHandlerOptions(opts...),
+	)
+	volumeServiceMountVolumeHandler := connect.NewUnaryHandler(
+		VolumeServiceMountVolumeProcedure,
+		svc.MountVolume,
+		connect.WithSchema(volumeServiceMethods.ByName("MountVolume")),
+		connect.WithHandlerOptions(opts...),
+	)
+	volumeServiceUnmountVolumeHandler := connect.NewUnaryHandler(
+		VolumeServiceUnmountVolumeProcedure,
+		svc.UnmountVolume,
+		connect.WithSchema(volumeServiceMethods.ByName("UnmountVolume")),
+		connect.WithHandlerOptions(opts...),
+	)
+	volumeServiceStatsVolumeHandler := connect.NewUnaryHandler(
+		VolumeServiceStatsVolumeProcedure,
+		svc.StatsVolume,
+		connect.WithSchema(volumeServiceMethods.ByName("StatsVolume")),
+		connect.WithHandlerOptions(opts...),
+	)
+	volumeServiceSyncVolumeHandler := connect.NewUnaryHandler(
+		VolumeServiceSyncVolumeProcedure,
+		svc.SyncVolume,
+		connect.WithSchema(volumeServiceMethods.ByName("SyncVolume")),
+		connect.WithHandlerOptions(opts...),
+	)
+	volumeServiceSyncVolumesHandler := connect.NewUnaryHandler(
+		VolumeServiceSyncVolumesProcedure,
+		svc.SyncVolumes,
+		connect.WithSchema(volumeServiceMethods.ByName("SyncVolumes")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/zfsilo.v1.VolumeService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case VolumeServiceGetVolumeProcedure:
@@ -272,6 +475,24 @@ func NewVolumeServiceHandler(svc VolumeServiceHandler, opts ...connect.HandlerOp
 			volumeServiceUpdateVolumeHandler.ServeHTTP(w, r)
 		case VolumeServiceDeleteVolumeProcedure:
 			volumeServiceDeleteVolumeHandler.ServeHTTP(w, r)
+		case VolumeServicePublishVolumeProcedure:
+			volumeServicePublishVolumeHandler.ServeHTTP(w, r)
+		case VolumeServiceUnpublishVolumeProcedure:
+			volumeServiceUnpublishVolumeHandler.ServeHTTP(w, r)
+		case VolumeServiceConnectVolumeProcedure:
+			volumeServiceConnectVolumeHandler.ServeHTTP(w, r)
+		case VolumeServiceDisconnectVolumeProcedure:
+			volumeServiceDisconnectVolumeHandler.ServeHTTP(w, r)
+		case VolumeServiceMountVolumeProcedure:
+			volumeServiceMountVolumeHandler.ServeHTTP(w, r)
+		case VolumeServiceUnmountVolumeProcedure:
+			volumeServiceUnmountVolumeHandler.ServeHTTP(w, r)
+		case VolumeServiceStatsVolumeProcedure:
+			volumeServiceStatsVolumeHandler.ServeHTTP(w, r)
+		case VolumeServiceSyncVolumeProcedure:
+			volumeServiceSyncVolumeHandler.ServeHTTP(w, r)
+		case VolumeServiceSyncVolumesProcedure:
+			volumeServiceSyncVolumesHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -301,74 +522,38 @@ func (UnimplementedVolumeServiceHandler) DeleteVolume(context.Context, *connect.
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.DeleteVolume is not implemented"))
 }
 
-// GreeterServiceClient is a client for the zfsilo.v1.GreeterService service.
-type GreeterServiceClient interface {
-	SayHello(context.Context, *connect.Request[v1.SayHelloRequest]) (*connect.Response[v1.SayHelloResponse], error)
+func (UnimplementedVolumeServiceHandler) PublishVolume(context.Context, *connect.Request[v1.PublishVolumeRequest]) (*connect.Response[v1.PublishVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.PublishVolume is not implemented"))
 }
 
-// NewGreeterServiceClient constructs a client for the zfsilo.v1.GreeterService service. By default,
-// it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and
-// sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC()
-// or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewGreeterServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) GreeterServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	greeterServiceMethods := v1.File_zfsilo_v1_zfsilo_proto.Services().ByName("GreeterService").Methods()
-	return &greeterServiceClient{
-		sayHello: connect.NewClient[v1.SayHelloRequest, v1.SayHelloResponse](
-			httpClient,
-			baseURL+GreeterServiceSayHelloProcedure,
-			connect.WithSchema(greeterServiceMethods.ByName("SayHello")),
-			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
-			connect.WithClientOptions(opts...),
-		),
-	}
+func (UnimplementedVolumeServiceHandler) UnpublishVolume(context.Context, *connect.Request[v1.UnpublishVolumeRequest]) (*connect.Response[v1.UnpublishVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.UnpublishVolume is not implemented"))
 }
 
-// greeterServiceClient implements GreeterServiceClient.
-type greeterServiceClient struct {
-	sayHello *connect.Client[v1.SayHelloRequest, v1.SayHelloResponse]
+func (UnimplementedVolumeServiceHandler) ConnectVolume(context.Context, *connect.Request[v1.ConnectVolumeRequest]) (*connect.Response[v1.ConnectVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.ConnectVolume is not implemented"))
 }
 
-// SayHello calls zfsilo.v1.GreeterService.SayHello.
-func (c *greeterServiceClient) SayHello(ctx context.Context, req *connect.Request[v1.SayHelloRequest]) (*connect.Response[v1.SayHelloResponse], error) {
-	return c.sayHello.CallUnary(ctx, req)
+func (UnimplementedVolumeServiceHandler) DisconnectVolume(context.Context, *connect.Request[v1.DisconnectVolumeRequest]) (*connect.Response[v1.DisconnectVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.DisconnectVolume is not implemented"))
 }
 
-// GreeterServiceHandler is an implementation of the zfsilo.v1.GreeterService service.
-type GreeterServiceHandler interface {
-	SayHello(context.Context, *connect.Request[v1.SayHelloRequest]) (*connect.Response[v1.SayHelloResponse], error)
+func (UnimplementedVolumeServiceHandler) MountVolume(context.Context, *connect.Request[v1.MountVolumeRequest]) (*connect.Response[v1.MountVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.MountVolume is not implemented"))
 }
 
-// NewGreeterServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewGreeterServiceHandler(svc GreeterServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	greeterServiceMethods := v1.File_zfsilo_v1_zfsilo_proto.Services().ByName("GreeterService").Methods()
-	greeterServiceSayHelloHandler := connect.NewUnaryHandler(
-		GreeterServiceSayHelloProcedure,
-		svc.SayHello,
-		connect.WithSchema(greeterServiceMethods.ByName("SayHello")),
-		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/zfsilo.v1.GreeterService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case GreeterServiceSayHelloProcedure:
-			greeterServiceSayHelloHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
+func (UnimplementedVolumeServiceHandler) UnmountVolume(context.Context, *connect.Request[v1.UnmountVolumeRequest]) (*connect.Response[v1.UnmountVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.UnmountVolume is not implemented"))
 }
 
-// UnimplementedGreeterServiceHandler returns CodeUnimplemented from all methods.
-type UnimplementedGreeterServiceHandler struct{}
+func (UnimplementedVolumeServiceHandler) StatsVolume(context.Context, *connect.Request[v1.StatsVolumeRequest]) (*connect.Response[v1.StatsVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.StatsVolume is not implemented"))
+}
 
-func (UnimplementedGreeterServiceHandler) SayHello(context.Context, *connect.Request[v1.SayHelloRequest]) (*connect.Response[v1.SayHelloResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.GreeterService.SayHello is not implemented"))
+func (UnimplementedVolumeServiceHandler) SyncVolume(context.Context, *connect.Request[v1.SyncVolumeRequest]) (*connect.Response[v1.SyncVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.SyncVolume is not implemented"))
+}
+
+func (UnimplementedVolumeServiceHandler) SyncVolumes(context.Context, *connect.Request[v1.SyncVolumesRequest]) (*connect.Response[v1.SyncVolumesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.SyncVolumes is not implemented"))
 }

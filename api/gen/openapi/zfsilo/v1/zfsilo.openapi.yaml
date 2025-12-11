@@ -222,13 +222,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/zfsilo.v1.DeleteVolumeResponse'
-  /zfsilo.v1.GreeterService/SayHello:
+  /zfsilo.v1.VolumeService/PublishVolume:
     post:
       tags:
-        - zfsilo.v1.GreeterService
-      summary: SayHello
-      description: Say hello!
-      operationId: zfsilo.v1.GreeterService.SayHello
+        - zfsilo.v1.VolumeService
+      summary: PublishVolume
+      operationId: zfsilo.v1.VolumeService.PublishVolume
       parameters:
         - name: Connect-Protocol-Version
           in: header
@@ -243,7 +242,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/zfsilo.v1.SayHelloRequest'
+              $ref: '#/components/schemas/zfsilo.v1.PublishVolumeRequest'
         required: true
       responses:
         default:
@@ -257,7 +256,287 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/zfsilo.v1.SayHelloResponse'
+                $ref: '#/components/schemas/zfsilo.v1.PublishVolumeResponse'
+  /zfsilo.v1.VolumeService/UnpublishVolume:
+    post:
+      tags:
+        - zfsilo.v1.VolumeService
+      summary: UnpublishVolume
+      operationId: zfsilo.v1.VolumeService.UnpublishVolume
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.UnpublishVolumeRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.UnpublishVolumeResponse'
+  /zfsilo.v1.VolumeService/ConnectVolume:
+    post:
+      tags:
+        - zfsilo.v1.VolumeService
+      summary: ConnectVolume
+      operationId: zfsilo.v1.VolumeService.ConnectVolume
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.ConnectVolumeRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.ConnectVolumeResponse'
+  /zfsilo.v1.VolumeService/DisconnectVolume:
+    post:
+      tags:
+        - zfsilo.v1.VolumeService
+      summary: DisconnectVolume
+      operationId: zfsilo.v1.VolumeService.DisconnectVolume
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.DisconnectVolumeRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.DisconnectVolumeResponse'
+  /zfsilo.v1.VolumeService/MountVolume:
+    post:
+      tags:
+        - zfsilo.v1.VolumeService
+      summary: MountVolume
+      operationId: zfsilo.v1.VolumeService.MountVolume
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.MountVolumeRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.MountVolumeResponse'
+  /zfsilo.v1.VolumeService/UnmountVolume:
+    post:
+      tags:
+        - zfsilo.v1.VolumeService
+      summary: UnmountVolume
+      operationId: zfsilo.v1.VolumeService.UnmountVolume
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.UnmountVolumeRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.UnmountVolumeResponse'
+  /zfsilo.v1.VolumeService/StatsVolume:
+    post:
+      tags:
+        - zfsilo.v1.VolumeService
+      summary: StatsVolume
+      operationId: zfsilo.v1.VolumeService.StatsVolume
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.StatsVolumeRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.StatsVolumeResponse'
+  /zfsilo.v1.VolumeService/SyncVolume:
+    post:
+      tags:
+        - zfsilo.v1.VolumeService
+      summary: SyncVolume
+      operationId: zfsilo.v1.VolumeService.SyncVolume
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.SyncVolumeRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.SyncVolumeResponse'
+  /zfsilo.v1.VolumeService/SyncVolumes:
+    post:
+      tags:
+        - zfsilo.v1.VolumeService
+      summary: SyncVolumes
+      operationId: zfsilo.v1.VolumeService.SyncVolumes
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.SyncVolumesRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.SyncVolumesResponse'
 components:
   schemas:
     google.protobuf.NullValue:
@@ -270,6 +549,20 @@ components:
          `Value` type union.
 
          The JSON representation for `NullValue` is JSON `null`.
+    zfsilo.v1.MountVolumeRequest.Mode:
+      type: string
+      title: Mode
+      enum:
+        - MODE_UNSPECIFIED
+        - MODE_BLOCK
+        - MODE_FILESYSTEM
+    zfsilo.v1.StatsVolumeResponse.Stats.Usage.Unit:
+      type: string
+      title: Unit
+      enum:
+        - UNIT_UNSPECIFIED
+        - UNIT_BYTES
+        - UNIT_INODES
     zfsilo.v1.Volume.Mode:
       type: string
       title: Mode
@@ -428,6 +721,37 @@ components:
          variants. Absence of any variant indicates an error.
 
          The JSON representation for `Value` is JSON value.
+    zfsilo.v1.ConnectVolumeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          title: id
+          pattern: ^[a-zA-Z0-9-_]+$
+          description: The id of the volume to be connected.
+        initiatorIqn:
+          type: string
+          title: initiator_iqn
+          pattern: ^iqn.*$
+          description: The initiator iqn.
+        targetAddress:
+          type: string
+          title: target_address
+          description: The target address.
+      title: ConnectVolumeRequest
+      required:
+        - id
+        - initiatorIqn
+        - targetAddress
+      additionalProperties: false
+    zfsilo.v1.ConnectVolumeResponse:
+      type: object
+      properties:
+        volume:
+          title: volume
+          $ref: '#/components/schemas/zfsilo.v1.Volume'
+      title: ConnectVolumeResponse
+      additionalProperties: false
     zfsilo.v1.CreateVolumeRequest:
       type: object
       properties:
@@ -462,6 +786,26 @@ components:
     zfsilo.v1.DeleteVolumeResponse:
       type: object
       title: DeleteVolumeResponse
+      additionalProperties: false
+    zfsilo.v1.DisconnectVolumeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          title: id
+          pattern: ^[a-zA-Z0-9-_]+$
+          description: The id of the volume to be disconnected.
+      title: DisconnectVolumeRequest
+      required:
+        - id
+      additionalProperties: false
+    zfsilo.v1.DisconnectVolumeResponse:
+      type: object
+      properties:
+        volume:
+          title: volume
+          $ref: '#/components/schemas/zfsilo.v1.Volume'
+      title: DisconnectVolumeResponse
       additionalProperties: false
     zfsilo.v1.GetCapacityRequest:
       type: object
@@ -539,24 +883,171 @@ components:
           description: The page token for the next page of volumes.
       title: ListVolumesResponse
       additionalProperties: false
-    zfsilo.v1.SayHelloRequest:
+    zfsilo.v1.MountVolumeRequest:
       type: object
       properties:
-        name:
+        id:
           type: string
-          title: name
-          maxLength: 64
-      title: SayHelloRequest
+          title: id
+          pattern: ^[a-zA-Z0-9-_]+$
+          description: The id of the volume to be mounted.
+        targetPath:
+          type: string
+          title: target_path
+          pattern: ^(/[^/ ]*)+/?$
+          description: The target path.
+      title: MountVolumeRequest
       required:
-        - name
+        - id
+        - targetPath
       additionalProperties: false
-    zfsilo.v1.SayHelloResponse:
+    zfsilo.v1.MountVolumeResponse:
       type: object
       properties:
-        message:
+        volume:
+          title: volume
+          $ref: '#/components/schemas/zfsilo.v1.Volume'
+      title: MountVolumeResponse
+      additionalProperties: false
+    zfsilo.v1.PublishVolumeRequest:
+      type: object
+      properties:
+        id:
           type: string
-          title: message
-      title: SayHelloResponse
+          title: id
+          pattern: ^[a-zA-Z0-9-_]+$
+          description: The id of the volume to be published.
+      title: PublishVolumeRequest
+      required:
+        - id
+      additionalProperties: false
+    zfsilo.v1.PublishVolumeResponse:
+      type: object
+      properties:
+        volume:
+          title: volume
+          $ref: '#/components/schemas/zfsilo.v1.Volume'
+      title: PublishVolumeResponse
+      additionalProperties: false
+    zfsilo.v1.StatsVolumeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          title: id
+          pattern: ^[a-zA-Z0-9-_]+$
+          description: The id of the volume.
+      title: StatsVolumeRequest
+      required:
+        - id
+      additionalProperties: false
+    zfsilo.v1.StatsVolumeResponse:
+      type: object
+      properties:
+        stats:
+          title: stats
+          $ref: '#/components/schemas/zfsilo.v1.StatsVolumeResponse.Stats'
+      title: StatsVolumeResponse
+      additionalProperties: false
+    zfsilo.v1.StatsVolumeResponse.Stats:
+      type: object
+      properties:
+        usage:
+          type: array
+          items:
+            $ref: '#/components/schemas/zfsilo.v1.StatsVolumeResponse.Stats.Usage'
+          title: usage
+      title: Stats
+      additionalProperties: false
+    zfsilo.v1.StatsVolumeResponse.Stats.Usage:
+      type: object
+      properties:
+        total:
+          type:
+            - integer
+            - string
+          title: total
+          format: int64
+        used:
+          type:
+            - integer
+            - string
+          title: used
+          format: int64
+        available:
+          type:
+            - integer
+            - string
+          title: available
+          format: int64
+        unit:
+          title: unit
+          $ref: '#/components/schemas/zfsilo.v1.StatsVolumeResponse.Stats.Usage.Unit'
+      title: Usage
+      additionalProperties: false
+    zfsilo.v1.SyncVolumeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          title: id
+          pattern: ^[a-zA-Z0-9-_]+$
+          description: The id of the volume to sync.
+      title: SyncVolumeRequest
+      required:
+        - id
+      additionalProperties: false
+    zfsilo.v1.SyncVolumeResponse:
+      type: object
+      title: SyncVolumeResponse
+      additionalProperties: false
+    zfsilo.v1.SyncVolumesRequest:
+      type: object
+      title: SyncVolumesRequest
+      additionalProperties: false
+    zfsilo.v1.SyncVolumesResponse:
+      type: object
+      title: SyncVolumesResponse
+      additionalProperties: false
+    zfsilo.v1.UnmountVolumeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          title: id
+          pattern: ^[a-zA-Z0-9-_]+$
+          description: The id of the volume to be unmounted.
+      title: UnmountVolumeRequest
+      required:
+        - id
+      additionalProperties: false
+    zfsilo.v1.UnmountVolumeResponse:
+      type: object
+      properties:
+        volume:
+          title: volume
+          $ref: '#/components/schemas/zfsilo.v1.Volume'
+      title: UnmountVolumeResponse
+      additionalProperties: false
+    zfsilo.v1.UnpublishVolumeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          title: id
+          pattern: ^[a-zA-Z0-9-_]+$
+          description: The id of the volume to be unpublished.
+      title: UnpublishVolumeRequest
+      required:
+        - id
+      additionalProperties: false
+    zfsilo.v1.UnpublishVolumeResponse:
+      type: object
+      properties:
+        volume:
+          title: volume
+          $ref: '#/components/schemas/zfsilo.v1.Volume'
+      title: UnpublishVolumeResponse
       additionalProperties: false
     zfsilo.v1.UpdateVolumeRequest:
       type: object
@@ -742,4 +1233,3 @@ security: []
 tags:
   - name: zfsilo.v1.Service
   - name: zfsilo.v1.VolumeService
-  - name: zfsilo.v1.GreeterService
