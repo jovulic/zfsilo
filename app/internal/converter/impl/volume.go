@@ -14,42 +14,40 @@ type VolumeConverterImpl struct{}
 func (c *VolumeConverterImpl) FromAPIToDB(source *v1.Volume) (database.Volume, error) {
 	var databaseVolume database.Volume
 	if source != nil {
-		var databaseVolume2 database.Volume
 		datatypesJSON, err := iface.ConvertFromStructToJSON((*source).Struct)
 		if err != nil {
 			return databaseVolume, err
 		}
-		databaseVolume2.Struct = datatypesJSON
+		databaseVolume.Struct = datatypesJSON
 		timeTime, err := iface.ConvertTimestampToTime((*source).CreateTime)
 		if err != nil {
 			return databaseVolume, err
 		}
-		databaseVolume2.CreateTime = timeTime
+		databaseVolume.CreateTime = timeTime
 		timeTime2, err := iface.ConvertTimestampToTime((*source).UpdateTime)
 		if err != nil {
 			return databaseVolume, err
 		}
-		databaseVolume2.UpdateTime = timeTime2
-		databaseVolume2.ID = (*source).Id
-		databaseVolume2.Name = (*source).Name
-		databaseVolume2.DatasetID = (*source).DatasetId
-		databaseVolume2.Options = iface.ConvertVolumeOptionsFromAPIToDB((*source).Options)
-		databaseVolume2.Sparse = (*source).Sparse
-		databaseVolume2.Mode = iface.ConvertVolumeModeFromAPIToDB((*source).Mode)
-		databaseVolume2.CapacityBytes = (*source).CapacityBytes
+		databaseVolume.UpdateTime = timeTime2
+		databaseVolume.ID = (*source).Id
+		databaseVolume.Name = (*source).Name
+		databaseVolume.DatasetID = (*source).DatasetId
+		databaseVolume.Options = iface.ConvertVolumeOptionsFromAPIToDB((*source).Options)
+		databaseVolume.Sparse = (*source).Sparse
+		databaseVolume.Mode = iface.ConvertVolumeModeFromAPIToDB((*source).Mode)
+		databaseVolume.CapacityBytes = (*source).CapacityBytes
 		if (*source).InitiatorIqn != nil {
-			databaseVolume2.InitiatorIQN = *(*source).InitiatorIqn
+			databaseVolume.InitiatorIQN = *(*source).InitiatorIqn
 		}
 		if (*source).TargetIqn != nil {
-			databaseVolume2.TargetIQN = *(*source).TargetIqn
+			databaseVolume.TargetIQN = *(*source).TargetIqn
 		}
 		if (*source).TargetAddress != nil {
-			databaseVolume2.TargetAddress = *(*source).TargetAddress
+			databaseVolume.TargetAddress = *(*source).TargetAddress
 		}
 		if (*source).MountPath != nil {
-			databaseVolume2.MountPath = *(*source).MountPath
+			databaseVolume.MountPath = *(*source).MountPath
 		}
-		databaseVolume = databaseVolume2
 	}
 	return databaseVolume, nil
 }
