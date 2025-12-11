@@ -1754,10 +1754,10 @@ func (x *StatsVolumeResponse_Stats) GetUsage() []*StatsVolumeResponse_Stats_Usag
 
 type StatsVolumeResponse_Stats_Usage struct {
 	state         protoimpl.MessageState               `protogen:"open.v1"`
-	Total         int64                                `protobuf:"varint,1,opt,name=total,proto3" json:"total,omitempty"`
-	Used          int64                                `protobuf:"varint,2,opt,name=used,proto3" json:"used,omitempty"`
-	Available     int64                                `protobuf:"varint,3,opt,name=available,proto3" json:"available,omitempty"`
-	Unit          StatsVolumeResponse_Stats_Usage_Unit `protobuf:"varint,4,opt,name=unit,proto3,enum=zfsilo.v1.StatsVolumeResponse_Stats_Usage_Unit" json:"unit,omitempty"`
+	Unit          StatsVolumeResponse_Stats_Usage_Unit `protobuf:"varint,1,opt,name=unit,proto3,enum=zfsilo.v1.StatsVolumeResponse_Stats_Usage_Unit" json:"unit,omitempty"`
+	Total         int64                                `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	Used          int64                                `protobuf:"varint,3,opt,name=used,proto3" json:"used,omitempty"`
+	Available     int64                                `protobuf:"varint,4,opt,name=available,proto3" json:"available,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1792,6 +1792,13 @@ func (*StatsVolumeResponse_Stats_Usage) Descriptor() ([]byte, []int) {
 	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{26, 0, 0}
 }
 
+func (x *StatsVolumeResponse_Stats_Usage) GetUnit() StatsVolumeResponse_Stats_Usage_Unit {
+	if x != nil {
+		return x.Unit
+	}
+	return StatsVolumeResponse_Stats_Usage_UNIT_UNSPECIFIED
+}
+
 func (x *StatsVolumeResponse_Stats_Usage) GetTotal() int64 {
 	if x != nil {
 		return x.Total
@@ -1811,13 +1818,6 @@ func (x *StatsVolumeResponse_Stats_Usage) GetAvailable() int64 {
 		return x.Available
 	}
 	return 0
-}
-
-func (x *StatsVolumeResponse_Stats_Usage) GetUnit() StatsVolumeResponse_Stats_Usage_Unit {
-	if x != nil {
-		return x.Unit
-	}
-	return StatsVolumeResponse_Stats_Usage_UNIT_UNSPECIFIED
 }
 
 var File_zfsilo_v1_zfsilo_proto protoreflect.FileDescriptor
@@ -1925,11 +1925,11 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\x05stats\x18\x01 \x01(\v2$.zfsilo.v1.StatsVolumeResponse.StatsR\x05stats\x1a\x9f\x02\n" +
 	"\x05Stats\x12@\n" +
 	"\x05usage\x18\x01 \x03(\v2*.zfsilo.v1.StatsVolumeResponse.Stats.UsageR\x05usage\x1a\xd3\x01\n" +
-	"\x05Usage\x12\x14\n" +
-	"\x05total\x18\x01 \x01(\x03R\x05total\x12\x12\n" +
-	"\x04used\x18\x02 \x01(\x03R\x04used\x12\x1c\n" +
-	"\tavailable\x18\x03 \x01(\x03R\tavailable\x12C\n" +
-	"\x04unit\x18\x04 \x01(\x0e2/.zfsilo.v1.StatsVolumeResponse.Stats.Usage.UnitR\x04unit\"=\n" +
+	"\x05Usage\x12C\n" +
+	"\x04unit\x18\x01 \x01(\x0e2/.zfsilo.v1.StatsVolumeResponse.Stats.Usage.UnitR\x04unit\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\x12\x12\n" +
+	"\x04used\x18\x03 \x01(\x03R\x04used\x12\x1c\n" +
+	"\tavailable\x18\x04 \x01(\x03R\tavailable\"=\n" +
 	"\x04Unit\x12\x14\n" +
 	"\x10UNIT_UNSPECIFIED\x10\x00\x12\x0e\n" +
 	"\n" +

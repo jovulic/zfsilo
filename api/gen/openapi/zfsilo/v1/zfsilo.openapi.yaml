@@ -962,6 +962,9 @@ components:
     zfsilo.v1.StatsVolumeResponse.Stats.Usage:
       type: object
       properties:
+        unit:
+          title: unit
+          $ref: '#/components/schemas/zfsilo.v1.StatsVolumeResponse.Stats.Usage.Unit'
         total:
           type:
             - integer
@@ -980,9 +983,6 @@ components:
             - string
           title: available
           format: int64
-        unit:
-          title: unit
-          $ref: '#/components/schemas/zfsilo.v1.StatsVolumeResponse.Stats.Usage.Unit'
       title: Usage
       additionalProperties: false
     zfsilo.v1.SyncVolumeRequest:
