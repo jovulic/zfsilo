@@ -27,13 +27,8 @@ import (
 var WireSet = wire.NewSet(
 	WireService,
 	WireVolumeService,
-	WireGreeterService,
 	WireServer,
 )
-
-func WireGreeterService() *GreeterService {
-	return NewGreeterService()
-}
 
 func WireService() *Service {
 	return NewService()
@@ -53,7 +48,6 @@ func WireServer(
 	term *graterm.Terminator,
 	service *Service,
 	volumeService *VolumeService,
-	greeterService *GreeterService,
 ) (*http.Server, error) {
 	cert, err := selfcert.GenerateCertificate()
 	if err != nil {
@@ -110,23 +104,11 @@ func WireServer(
 			mux.Handle(path, handler)
 		}
 
-		// Register greeter service.
-		{
-			path, handler := zfsilov1connect.NewGreeterServiceHandler(
-				greeterService,
-				connect.WithInterceptors(
-					logInterceptor,
-					authnzInterceptor,
-					validateInterceptor,
-				),
-			)
-			mux.Handle(path, handler)
-		}
-
 		// Register grpc health.
 		{
 			checker := grpchealth.NewStaticChecker(
-				zfsilov1connect.GreeterServiceName,
+				zfsilov1connect.ServiceName,
+				zfsilov1connect.VolumeServiceName,
 			)
 			mux.Handle(grpchealth.NewHandler(checker,
 				connect.WithInterceptors(
@@ -141,7 +123,6 @@ func WireServer(
 		reflector := grpcreflect.NewStaticReflector(
 			zfsilov1connect.ServiceName,
 			zfsilov1connect.VolumeServiceName,
-			zfsilov1connect.GreeterServiceName,
 			grpchealth.HealthV1ServiceName,
 		)
 		mux.Handle(grpcreflect.NewHandlerV1(reflector))
