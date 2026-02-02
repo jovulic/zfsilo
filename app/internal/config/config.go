@@ -61,6 +61,26 @@ func (SecretValue) MarshalJSON() ([]byte, error) {
 	return json.Marshal("REDACTED")
 }
 
+type ConfigCommandTarget struct {
+	Mode      string `json:"mode"      mod:"default=local" validate:"oneof=local remote"`
+	RunAsRoot bool   `json:"runAsRoot"`
+	Remote    struct {
+		Address  string `json:"address"  validate:"required_if=Mode remote"`
+		Port     uint16 `json:"port"     mod:"default=22"                   validate:"required_if=Mode remote"`
+		Username string `json:"username" validate:"required_if=Mode remote"`
+		Password string `json:"password" validate:"required_if=Mode remote"`
+	} `json:"remote"`
+}
+
+type ConfigCommandTargetProduce struct {
+	ConfigCommandTarget
+}
+
+type ConfigCommandTargetConsume struct {
+	ConfigCommandTargetProduce
+	IQN string `json:"iqn"`
+}
+
 type Config struct {
 	Log struct {
 		Mode  string   `json:"mode"  mod:"default=JSON" validate:"oneof=JSON TEXT"`
@@ -78,14 +98,8 @@ type Config struct {
 		DSN string `json:"dsn" validate:"required"`
 	} `json:"database"`
 	Command struct {
-		Mode      string `json:"mode"      mod:"default=local" validate:"oneof=local remote"`
-		RunAsRoot bool   `json:"runAsRoot"`
-		Remote    struct {
-			Address  string `json:"address"  validate:"required_if=Mode remote"`
-			Port     uint16 `json:"port"     mod:"default=22"                   validate:"required_if=Mode remote"`
-			Username string `json:"username" validate:"required_if=Mode remote"`
-			Password string `json:"password" validate:"required_if=Mode remote"`
-		} `json:"remote"`
+		ProduceTarget  ConfigCommandTargetProduce   `json:"produceTarget"`
+		ConsumeTargets []ConfigCommandTargetConsume `json:"consumeTargets"`
 	} `json:"command"`
 }
 
