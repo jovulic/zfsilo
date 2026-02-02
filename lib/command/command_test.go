@@ -25,7 +25,7 @@ func TestLocalExecutor(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("it executes a successful command", func(t *testing.T) {
-		executor := command.NewLocalExector(command.LocalExecutorConfig{})
+		executor := command.NewLocalExecutor(command.LocalExecutorConfig{})
 		result, err := executor.Exec(ctx, `echo "hello world"`)
 		if err != nil {
 			t.Fatalf("expected no error, but got: %v", err)
@@ -47,7 +47,7 @@ func TestLocalExecutor(t *testing.T) {
 	})
 
 	t.Run("it captures stderr correctly", func(t *testing.T) {
-		executor := command.NewLocalExector(command.LocalExecutorConfig{})
+		executor := command.NewLocalExecutor(command.LocalExecutorConfig{})
 		result, err := executor.Exec(ctx, `echo "error message" >&2`)
 		if err != nil {
 			t.Fatalf("expected no error for successful command with stderr, but got: %v", err)
@@ -66,7 +66,7 @@ func TestLocalExecutor(t *testing.T) {
 	})
 
 	t.Run("it handles non-zero exit codes", func(t *testing.T) {
-		executor := command.NewLocalExector(command.LocalExecutorConfig{})
+		executor := command.NewLocalExecutor(command.LocalExecutorConfig{})
 		result, err := executor.Exec(ctx, `sh -c 'exit 42'`)
 
 		if err == nil {
@@ -87,7 +87,7 @@ func TestLocalExecutor(t *testing.T) {
 	})
 
 	t.Run("it handles command not found", func(t *testing.T) {
-		executor := command.NewLocalExector(command.LocalExecutorConfig{})
+		executor := command.NewLocalExecutor(command.LocalExecutorConfig{})
 		result, err := executor.Exec(ctx, "this-command-should-not-exist-12345")
 
 		if err == nil {
@@ -123,7 +123,7 @@ func TestLocalExecutor(t *testing.T) {
 			t.Skipf("skipping sudo test: passwordless sudo does not appear to be configured for user %s. error: %v", currentUser.Username, err)
 		}
 
-		executor := command.NewLocalExector(command.LocalExecutorConfig{
+		executor := command.NewLocalExecutor(command.LocalExecutorConfig{
 			RunAsRoot: true,
 		})
 

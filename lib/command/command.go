@@ -35,7 +35,7 @@ type LocalExecutor struct {
 	runAsRoot bool
 }
 
-func NewLocalExector(config LocalExecutorConfig) *LocalExecutor {
+func NewLocalExecutor(config LocalExecutorConfig) *LocalExecutor {
 	if err := structutil.Apply(&config); err != nil {
 		message := fmt.Sprintf("command: failed to process config: %s", err)
 		panic(message)
