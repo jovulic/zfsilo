@@ -38,7 +38,7 @@ func newTestExecutor(t *testing.T, config command.RemoteExecutorConfig) command.
 func TestMountAndUmount(t *testing.T) {
 	ctx := context.Background()
 	executor := newTestExecutor(t, testHostConfig)
-	mountClient := mount.NewMount(executor)
+	mountClient := mount.With(executor)
 
 	sourcePath := fmt.Sprintf("/tmp/mount-test-src-%d", time.Now().UnixNano())
 	targetPath := fmt.Sprintf("/tmp/mount-test-target-%d", time.Now().UnixNano())
@@ -85,4 +85,3 @@ func TestMountAndUmount(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, mounted, "target path should not be a mountpoint after umount")
 }
-

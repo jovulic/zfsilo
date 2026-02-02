@@ -42,8 +42,8 @@ func TestFormat(t *testing.T) {
 	ctx := context.Background()
 	executor := newTestExecutor(t, giveHostConfig)
 
-	zfsClient := zfs.NewZFS(executor)
-	mkfsClient := mkfs.NewMkfs(executor)
+	zfsClient := zfs.With(executor)
+	mkfsClient := mkfs.With(executor)
 
 	volName := fmt.Sprintf("tank/test-mkfs-%d", time.Now().UnixNano())
 	volSize := uint64(10 * mb)

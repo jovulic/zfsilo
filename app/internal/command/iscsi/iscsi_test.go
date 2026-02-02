@@ -29,9 +29,9 @@ var takeHostConfig = command.RemoteExecutorConfig{
 }
 
 type testClients struct {
-	giveZfs   *zfs.ZFS
-	giveIscsi *iscsi.ISCSI
-	takeIscsi *iscsi.ISCSI
+	giveZfs   zfs.ZFS
+	giveIscsi iscsi.ISCSI
+	takeIscsi iscsi.ISCSI
 }
 
 func newTestExecutor(t *testing.T, config command.RemoteExecutorConfig) command.Executor {
@@ -54,9 +54,9 @@ func newTestClients(t *testing.T) *testClients {
 	giveExecutor := newTestExecutor(t, giveHostConfig)
 	takeExecutor := newTestExecutor(t, takeHostConfig)
 	return &testClients{
-		giveZfs:   zfs.NewZFS(giveExecutor),
-		giveIscsi: iscsi.NewISCSI(giveExecutor),
-		takeIscsi: iscsi.NewISCSI(takeExecutor),
+		giveZfs:   zfs.With(giveExecutor),
+		giveIscsi: iscsi.With(giveExecutor),
+		takeIscsi: iscsi.With(takeExecutor),
 	}
 }
 
@@ -231,4 +231,3 @@ func TestConnectAndDisconnectTarget(t *testing.T) {
 	})
 	require.NoError(t, err)
 }
-

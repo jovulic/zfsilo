@@ -86,9 +86,9 @@ type ISCSI struct {
 	executor command.Executor
 }
 
-// NewISCSI creates a new ISCSI instance.
-func NewISCSI(executor command.Executor) *ISCSI {
-	return &ISCSI{
+// With creates a new ISCSI instance.
+func With(executor command.Executor) ISCSI {
+	return ISCSI{
 		executor: executor,
 	}
 }
@@ -127,7 +127,7 @@ var publishVolumeTmpl = genericutil.Must(
 	),
 )
 
-func (i *ISCSI) PublishVolume(ctx context.Context, args PublishVolumeArguments) error {
+func (i ISCSI) PublishVolume(ctx context.Context, args PublishVolumeArguments) error {
 	var buf bytes.Buffer
 	if err := publishVolumeTmpl.Execute(&buf, args); err != nil {
 		return fmt.Errorf("failed to render publish volume template: %w", err)
@@ -167,7 +167,7 @@ var unpublishVolumeTmpl = genericutil.Must(
 	),
 )
 
-func (i *ISCSI) UnpublishVolume(ctx context.Context, args UnpublishVolumeArguments) error {
+func (i ISCSI) UnpublishVolume(ctx context.Context, args UnpublishVolumeArguments) error {
 	var buf bytes.Buffer
 	if err := unpublishVolumeTmpl.Execute(&buf, args); err != nil {
 		return fmt.Errorf("failed to render unpublish volume template: %w", err)
@@ -207,7 +207,7 @@ var connectTargetTmpl = genericutil.Must(
 	),
 )
 
-func (i *ISCSI) ConnectTarget(ctx context.Context, args ConnectTargetArguments) error {
+func (i ISCSI) ConnectTarget(ctx context.Context, args ConnectTargetArguments) error {
 	var buf bytes.Buffer
 	if err := connectTargetTmpl.Execute(&buf, args); err != nil {
 		return fmt.Errorf("failed to render connect target template: %w", err)
@@ -241,7 +241,7 @@ var disconnectTargetTmpl = genericutil.Must(
 	),
 )
 
-func (i *ISCSI) DisconnectTarget(ctx context.Context, args DisconnectTargetArguments) error {
+func (i ISCSI) DisconnectTarget(ctx context.Context, args DisconnectTargetArguments) error {
 	var buf bytes.Buffer
 	if err := disconnectTargetTmpl.Execute(&buf, args); err != nil {
 		return fmt.Errorf("failed to render disconnect target template: %w", err)
@@ -274,7 +274,7 @@ var rescanTargetTmpl = genericutil.Must(
 	),
 )
 
-func (i *ISCSI) RescanTarget(ctx context.Context, args RescanTargetArguments) error {
+func (i ISCSI) RescanTarget(ctx context.Context, args RescanTargetArguments) error {
 	var buf bytes.Buffer
 	if err := rescanTargetTmpl.Execute(&buf, args); err != nil {
 		return fmt.Errorf("failed to render rescan target template: %w", err)
@@ -293,4 +293,3 @@ func (i *ISCSI) RescanTarget(ctx context.Context, args RescanTargetArguments) er
 
 	return nil
 }
-

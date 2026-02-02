@@ -14,9 +14,9 @@ type Mount struct {
 	executor command.Executor
 }
 
-// NewMount creates a new Mount instance.
-func NewMount(executor command.Executor) *Mount {
-	return &Mount{
+// With creates a new Mount instance.
+func With(executor command.Executor) Mount {
+	return Mount{
 		executor: executor,
 	}
 }
@@ -29,7 +29,7 @@ type MountArguments struct {
 }
 
 // Mount executes the mount command.
-func (m *Mount) Mount(ctx context.Context, args MountArguments) error {
+func (m Mount) Mount(ctx context.Context, args MountArguments) error {
 	cmd := fmt.Sprintf(
 		"mount -o '%s' '%s' '%s'",
 		strings.Join(args.Options, ","),
@@ -53,7 +53,7 @@ type UmountArguments struct {
 }
 
 // Umount executes the umount command.
-func (m *Mount) Umount(ctx context.Context, args UmountArguments) error {
+func (m Mount) Umount(ctx context.Context, args UmountArguments) error {
 	cmd := fmt.Sprintf("umount '%s'", args.Path)
 	result, err := m.executor.Exec(ctx, cmd)
 	if err != nil {
@@ -69,7 +69,7 @@ func (m *Mount) Umount(ctx context.Context, args UmountArguments) error {
 // IsMounted checks if a directory is a mount point.
 // It uses `mountpoint -q`, which returns 0 if the path is a mountpoint, and a
 // non-zero value otherwise.
-func (m *Mount) IsMounted(ctx context.Context, path string) (bool, error) {
+func (m Mount) IsMounted(ctx context.Context, path string) (bool, error) {
 	cmd := fmt.Sprintf("mountpoint -q %s", path)
 	result, err := m.executor.Exec(ctx, cmd)
 	if err != nil {
@@ -87,4 +87,3 @@ func (m *Mount) IsMounted(ctx context.Context, path string) (bool, error) {
 	// Exit code 0 means it *is* a mountpoint.
 	return true, nil
 }
-

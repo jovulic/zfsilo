@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func getTestZFSClient(t *testing.T) *zfs.ZFS {
+func getTestZFSClient(t *testing.T) zfs.ZFS {
 	// This connects to the 'give' vm, which is tunneled to localhost:9000
 	// by the dev just recipe.
 	// NOTE: This assumes that the test VM is running and accessible.
@@ -36,7 +36,7 @@ func getTestZFSClient(t *testing.T) *zfs.ZFS {
 		executor.Shutdown(context.Background())
 	})
 
-	return zfs.NewZFS(executor)
+	return zfs.With(executor)
 }
 
 func TestCreateAndDestroyVolume(t *testing.T) {

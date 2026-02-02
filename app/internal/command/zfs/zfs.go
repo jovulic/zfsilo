@@ -14,9 +14,9 @@ type ZFS struct {
 	executor command.Executor
 }
 
-// NewZFS creates a new ZFS instance.
-func NewZFS(executor command.Executor) *ZFS {
-	return &ZFS{
+// With creates a new ZFS instance.
+func With(executor command.Executor) ZFS {
+	return ZFS{
 		executor: executor,
 	}
 }
@@ -32,7 +32,7 @@ type CreateVolumeArguments struct {
 // CreateVolume creates a new ZFS volume.
 //
 // zfs create [-p] [-o property=value]... -V <size> <volume>
-func (z *ZFS) CreateVolume(ctx context.Context, args CreateVolumeArguments) error {
+func (z ZFS) CreateVolume(ctx context.Context, args CreateVolumeArguments) error {
 	var cmd strings.Builder
 	cmd.WriteString("zfs create")
 
@@ -67,7 +67,7 @@ type DestroyVolumeArguments struct {
 // DestroyVolume destroys a ZFS volume.
 //
 // zfs destroy [-r] <volume>
-func (z *ZFS) DestroyVolume(ctx context.Context, args DestroyVolumeArguments) error {
+func (z ZFS) DestroyVolume(ctx context.Context, args DestroyVolumeArguments) error {
 	var cmd strings.Builder
 	cmd.WriteString("zfs destroy")
 
@@ -87,7 +87,7 @@ type VolumeExistsArguments struct {
 }
 
 // VolumeExists checks if a ZFS volume exists.
-func (z *ZFS) VolumeExists(ctx context.Context, args VolumeExistsArguments) (bool, error) {
+func (z ZFS) VolumeExists(ctx context.Context, args VolumeExistsArguments) (bool, error) {
 	// Use `zfs list -H -o name` to check for the volume.
 	// The -H flag gives script-friendly output (no headers).
 	// We pipe to grep to check for an exact match.

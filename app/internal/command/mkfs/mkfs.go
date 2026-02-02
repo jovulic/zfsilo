@@ -14,9 +14,9 @@ type Mkfs struct {
 	executor command.Executor
 }
 
-// NewMkfs creates a new Mkfs instance.
-func NewMkfs(executor command.Executor) *Mkfs {
-	return &Mkfs{
+// With creates a new Mkfs instance.
+func With(executor command.Executor) Mkfs {
+	return Mkfs{
 		executor: executor,
 	}
 }
@@ -29,7 +29,7 @@ type ExistsArguments struct {
 }
 
 // Exists checks if a block device exists, polling until a timeout is reached.
-func (m *Mkfs) Exists(ctx context.Context, args ExistsArguments) (bool, error) {
+func (m Mkfs) Exists(ctx context.Context, args ExistsArguments) (bool, error) {
 	timeout := args.Timeout
 	if timeout == 0 {
 		timeout = 10 * time.Second // default timeout
@@ -67,7 +67,7 @@ type FormatArguments struct {
 // Format executes mkfs.ext4 to format a device.
 // The -F option forces overwrite of any existing filesystem.
 // The -m 0 option reserves 0% of the blocks for the super-user.
-func (m *Mkfs) Format(ctx context.Context, args FormatArguments) error {
+func (m Mkfs) Format(ctx context.Context, args FormatArguments) error {
 	if args.WaitForDevice {
 		exists, err := m.Exists(ctx, ExistsArguments{Device: args.Device})
 		if err != nil {
@@ -98,7 +98,7 @@ type ClearArguments struct {
 
 // Clear removes all known filesystem, RAID or partition table signatures from a device.
 // The -a option removes all signatures.
-func (m *Mkfs) Clear(ctx context.Context, args ClearArguments) error {
+func (m Mkfs) Clear(ctx context.Context, args ClearArguments) error {
 	cmd := fmt.Sprintf("wipefs -a %s", args.Device)
 	result, err := m.executor.Exec(ctx, cmd)
 	if err != nil {
