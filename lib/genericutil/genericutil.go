@@ -18,6 +18,13 @@ func Must[T any](v T, err error) T {
 	return v
 }
 
+// Apply executes the apply functions on the value.
+func Apply[T any](value T, applyFns ...func(T)) {
+	for _, fn := range applyFns {
+		fn(value)
+	}
+}
+
 // First returns the first argument.
 // Useful when you want to use the first result of a function call that has more than one return values
 // (e.g. in a composite literal or in a condition).
