@@ -70,3 +70,32 @@ func TestCreateAndDestroyVolume(t *testing.T) {
 	require.NoError(t, err, "failed to check if volume exists after destruction")
 	assert.False(t, exists, "volume should not exist after destruction")
 }
+
+func TestSetProperty(t *testing.T) {
+	client := getTestZFSClient(t)
+
+	volName := "tank/testvol-prop-" + fmt.Sprintf("%d", time.Now().UnixNano())
+	volSize := uint64(1024 * 1024 * 10) // 10MB
+
+	// Create the volume.
+	createArgs := zfs.CreateVolumeArguments{
+		Name: volName,
+		Size: volSize,
+	}
+	err := client.CreateVolume(context.Background(), createArgs)
+	require.NoError(t, err, "failed to create volume")
+
+	// Clean up
+	defer func() {
+		_ = client.DestroyVolume(context.Background(), zfs.DestroyVolumeArguments{Name: volName})
+	}()
+
+	// Set property
+	setArgs := zfs.SetPropertyArguments{
+		Name:          volName,
+		PropertyKey:   "comment",
+		PropertyValue: "hello world",
+	}
+	err = client.SetProperty(context.Background(), setArgs)
+	require.NoError(t, err, "failed to set property")
+}

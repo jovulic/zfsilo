@@ -107,3 +107,24 @@ func (z ZFS) VolumeExists(ctx context.Context, args VolumeExistsArguments) (bool
 	// If grep exits with 0, a match was found.
 	return res.ExitCode == 0, nil
 }
+
+// SetPropertyArguments represents the arguments for setting a ZFS property.
+type SetPropertyArguments struct {
+	Name          string
+	PropertyKey   string
+	PropertyValue string
+}
+
+// SetProperty sets a property on a ZFS dataset.
+//
+// zfs set <property>=<value> <dataset>
+func (z ZFS) SetProperty(ctx context.Context, args SetPropertyArguments) error {
+	cmd := fmt.Sprintf("zfs set '%s'='%s' '%s'", args.PropertyKey, args.PropertyValue, args.Name)
+
+	result, err := z.executor.Exec(ctx, cmd)
+	if err != nil {
+		return fmt.Errorf("failed to set property '%s' on '%s': %w, stderr: %s", args.PropertyKey, args.Name, err, result.Stderr)
+	}
+
+	return nil
+}
