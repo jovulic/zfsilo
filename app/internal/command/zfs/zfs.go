@@ -128,3 +128,38 @@ func (z ZFS) SetProperty(ctx context.Context, args SetPropertyArguments) error {
 
 	return nil
 }
+
+// GetPropertyArguments represents the arguments for getting a ZFS property.
+type GetPropertyArguments struct {
+	Name        string
+	PropertyKey string
+}
+
+// GetProperty gets a property from a ZFS dataset.
+//
+// zfs get -Hp -o value <property> <dataset>
+func (z ZFS) GetProperty(ctx context.Context, args GetPropertyArguments) (string, error) {
+	cmd := fmt.Sprintf("zfs get -Hp -o value '%s' '%s'", args.PropertyKey, args.Name)
+
+	result, err := z.executor.Exec(ctx, cmd)
+	if err != nil {
+		if result != nil {
+			stderr := strings.ReplaceAll(result.Stderr, "\n", "")
+			if strings.Contains(stderr, "dataset does not exist") {
+				return "", fmt.Errorf("dataset does not exist: %s", stderr)
+			}
+			if strings.Contains(stderr, "dataset is busy") {
+				return "", fmt.Errorf("dataset is busy: %s", stderr)
+			}
+			return "", fmt.Errorf("failed to get property '%s' on '%s': %w, stderr: %s", args.PropertyKey, args.Name, err, result.Stderr)
+		}
+		return "", fmt.Errorf("failed to execute command: %w", err)
+	}
+
+	valueString := strings.TrimRight(result.Stdout, "\n")
+	if valueString == "-" {
+		return "", fmt.Errorf("property not set")
+	}
+
+	return valueString, nil
+}

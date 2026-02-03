@@ -30,8 +30,10 @@ var WireSet = wire.NewSet(
 	WireServer,
 )
 
-func WireService() *Service {
-	return NewService()
+func WireService(
+	producer command.ProduceExecutor,
+) *Service {
+	return NewService(producer)
 }
 
 func WireVolumeService(
