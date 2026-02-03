@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"gorm.io/datatypes"
@@ -58,4 +59,24 @@ type Volume struct {
 	TargetIQN     string
 	TargetAddress string
 	MountPath     string
+}
+
+func (v Volume) IsPublished() bool {
+	return v.TargetIQN != ""
+}
+
+func (v Volume) IsConnected() bool {
+	return v.IsPublished() && v.InitiatorIQN != "" || v.TargetAddress != ""
+}
+
+func (v Volume) IsMounted() bool {
+	return v.IsConnected() && v.MountPath != ""
+}
+
+func (v Volume) DevicePathISCSI() string {
+	return fmt.Sprintf("/dev/disk/by-path/ip-%s-iscsi-%s-lun-%d", v.TargetAddress, v.TargetIQN, 0)
+}
+
+func (v Volume) DevicePathZFS() string {
+	return fmt.Sprintf("/dev/zvol/%s", v.DatasetID)
 }
