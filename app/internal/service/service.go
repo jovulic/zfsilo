@@ -40,7 +40,7 @@ func (s *Service) GetCapacity(ctx context.Context, req *connect.Request[zfsilov1
 
 	avail, err := strconv.ParseInt(availString, 10, 64)
 	if err != nil {
-		slogctx.Error(ctx, "failed to prase available capacity", slogctx.Err(err))
+		slogctx.Error(ctx, "failed to parse available capacity", slogctx.Err(err))
 		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to parse dataset available capacity"))
 	}
 
