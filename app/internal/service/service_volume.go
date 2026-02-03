@@ -8,9 +8,13 @@ import (
 	"connectrpc.com/connect"
 	zfsilov1 "github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1"
 	"github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1/zfsilov1connect"
+	"github.com/jovulic/zfsilo/app/internal/command"
+	"github.com/jovulic/zfsilo/app/internal/command/fs"
+	"github.com/jovulic/zfsilo/app/internal/command/iscsi"
 	"github.com/jovulic/zfsilo/app/internal/command/zfs"
 	converteriface "github.com/jovulic/zfsilo/app/internal/converter/iface"
 	"github.com/jovulic/zfsilo/app/internal/database"
+	"github.com/jovulic/zfsilo/lib/try"
 	slogctx "github.com/veqryn/slog-context"
 	structpb "google.golang.org/protobuf/types/known/structpb"
 	"gorm.io/gorm"
@@ -74,18 +78,21 @@ type VolumeService struct {
 
 	database  *gorm.DB
 	converter converteriface.VolumeConverter
-	zfs       *zfs.ZFS
+	producer  command.ProduceExecutor
+	consumers command.ConsumeExecutorMap
 }
 
 func NewVolumeService(
 	database *gorm.DB,
 	converter converteriface.VolumeConverter,
-	zfs *zfs.ZFS,
+	producer command.ProduceExecutor,
+	consumers command.ConsumeExecutorMap,
 ) *VolumeService {
 	return &VolumeService{
 		database:  database,
 		converter: converter,
-		zfs:       zfs,
+		producer:  producer,
+		consumers: consumers,
 	}
 }
 
@@ -192,20 +199,46 @@ func (s *VolumeService) CreateVolume(ctx context.Context, req *connect.Request[z
 			return err
 		}
 
-		// Create ZFS volume.
-		opts := make(map[string]string)
-		for _, option := range req.Msg.Volume.Options {
-			opts[option.Key] = option.Value
-		}
-		err = s.zfs.CreateVolume(ctx, zfs.CreateVolumeArguments{
-			Name:    req.Msg.Volume.DatasetId,
-			Size:    uint64(req.Msg.Volume.CapacityBytes),
-			Options: opts,
-			Sparse:  req.Msg.Volume.Sparse,
+		err = try.Do(ctx, func(stack *try.UndoStack) error {
+			// Create ZFS volume.
+			opts := make(map[string]string)
+			for _, option := range req.Msg.Volume.Options {
+				opts[option.Key] = option.Value
+			}
+			err = zfs.With(s.producer).CreateVolume(ctx, zfs.CreateVolumeArguments{
+				Name:    volumedb.DatasetID,
+				Size:    uint64(volumedb.CapacityBytes),
+				Options: opts,
+				Sparse:  volumedb.Sparse,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create zfs volume: %w", err)
+			}
+			stack.Push(func(ctx context.Context) error {
+				err := zfs.With(s.producer).DestroyVolume(ctx, zfs.DestroyVolumeArguments{
+					Name: volumedb.DatasetID,
+				})
+				if err != nil {
+					return fmt.Errorf("failed to destroy zfs volume: %w", err)
+				}
+				return nil
+			})
+
+			if volumedb.Mode == database.VolumeModeFILESYSTEM {
+				err := fs.With(s.producer).Format(ctx, fs.FormatArguments{
+					Device:        volumedb.DevicePathZFS(),
+					WaitForDevice: true,
+				})
+				if err != nil {
+					return fmt.Errorf("failed to format zfs volume: %w", err)
+				}
+			}
+
+			return nil
 		})
 		if err != nil {
-			slogctx.Error(ctx, "failed to create zfs volume", slogctx.Err(err))
-			return fmt.Errorf("failed to create zfs volume: %w", err)
+			slogctx.Error(ctx, "failed to create the zfs volume", slogctx.Err(err))
+			return fmt.Errorf("failed to create the zfs volume: %w", err)
 		}
 
 		return nil
@@ -269,23 +302,81 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
 	}
 
+	// NOTE: We do not perform the update in a transaction as we have not written
+	// any rollback capability currently.
+
 	_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
 	if err != nil {
-		slogctx.Error(ctx, "failed to update volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		slogctx.Error(ctx, "failed to update volume in database", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to update volume"))
+	}
+
+	// We update the size of the volume by zfs set.
+	err = zfs.With(s.producer).SetProperty(ctx, zfs.SetPropertyArguments{
+		Name:          volumedb.DatasetID,
+		PropertyKey:   "volsize",
+		PropertyValue: fmt.Sprintf("%d", volumedb.CapacityBytes),
+	})
+	if err != nil {
+		slogctx.Error(ctx, "failed to update volume on producer", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to update volume"))
+	}
+
+	// We check if the volume has been published, and if it has, we need to issue
+	// a refresh on the consumer.
+	if volumedb.IsPublished() {
+		target, ok := s.consumers[volumedb.InitiatorIQN]
+		if !ok {
+			slogctx.Error(ctx, "unknown initiator", slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeInternal, errors.New("unknown initiator"))
+		}
+
+		err = iscsi.With(target).RescanTarget(ctx, iscsi.RescanTargetArguments{
+			TargetIQN:     iscsi.IQN(volumedb.TargetIQN),
+			TargetAddress: volumedb.TargetAddress,
+		})
+		if err != nil {
+			slogctx.Error(ctx, "failed to perform rescan on consumer", slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeInternal, errors.New("failed to rescan"))
+		}
+
+		// If the mode is filesystem we also need to resize the filesystem.
+		if volumedb.Mode == database.VolumeModeFILESYSTEM {
+			err = fs.With(target).Resize(ctx, fs.ResizeArguments{
+				Device: volumedb.DevicePathISCSI(),
+			})
+			if err != nil {
+				slogctx.Error(ctx, "failed to perform resize on consumer", slogctx.Err(err))
+				return nil, connect.NewError(connect.CodeInternal, errors.New("failed to resize"))
+			}
+		}
 	}
 
 	return connect.NewResponse(&zfsilov1.UpdateVolumeResponse{Volume: volumeapi}), nil
 }
 
 func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[zfsilov1.DeleteVolumeRequest]) (*connect.Response[zfsilov1.DeleteVolumeResponse], error) {
-	var volumedb database.Volume
-	err := s.database.Transaction(func(tx *gorm.DB) error {
-		// Get volume from DB to find the dataset name.
-		var err error
-		volumedb, err = gorm.G[database.Volume](tx).Where("id = ?", req.Msg.Id).First(ctx)
+	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
+	}
+
+	switch {
+	case volumedb.IsPublished():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is published"))
+	case volumedb.IsConnected():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is connected"))
+	case volumedb.IsMounted():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is mounted"))
+	}
+
+	err = s.database.Transaction(func(tx *gorm.DB) error {
+		// Destroy ZFS volume.
+		err = zfs.With(s.producer).DestroyVolume(ctx, zfs.DestroyVolumeArguments{
+			Name: volumedb.DatasetID,
+		})
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to destroy zfs volume: %w", err)
 		}
 
 		// Delete from database.
@@ -294,20 +385,9 @@ func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[z
 			return err
 		}
 
-		// Destroy ZFS volume.
-		err = s.zfs.DestroyVolume(ctx, zfs.DestroyVolumeArguments{
-			Name: volumedb.DatasetID,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to destroy zfs volume: %w", err)
-		}
-
 		return nil
 	})
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
-		}
 		slogctx.Error(ctx, "failed to delete volume", slogctx.Err(err))
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete volume: %w", err))
 	}

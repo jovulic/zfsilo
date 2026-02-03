@@ -14,7 +14,7 @@ import (
 	"connectrpc.com/grpcreflect"
 	"github.com/google/wire"
 	"github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1/zfsilov1connect"
-	"github.com/jovulic/zfsilo/app/internal/command/zfs"
+	"github.com/jovulic/zfsilo/app/internal/command"
 	"github.com/jovulic/zfsilo/app/internal/config"
 	converteriface "github.com/jovulic/zfsilo/app/internal/converter/iface"
 	"github.com/jovulic/zfsilo/lib/selfcert"
@@ -37,9 +37,10 @@ func WireService() *Service {
 func WireVolumeService(
 	database *gorm.DB,
 	converter converteriface.VolumeConverter,
-	zfs *zfs.ZFS,
+	producer command.ProduceExecutor,
+	consumers command.ConsumeExecutorMap,
 ) *VolumeService {
-	return NewVolumeService(database, converter, zfs)
+	return NewVolumeService(database, converter, producer, consumers)
 }
 
 func WireServer(
