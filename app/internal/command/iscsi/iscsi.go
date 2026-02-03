@@ -262,14 +262,14 @@ func (i ISCSI) DisconnectTarget(ctx context.Context, args DisconnectTargetArgume
 }
 
 type RescanTargetArguments struct {
-	TargetIQN      IQN
-	TargetEndpoint string
+	TargetIQN     IQN
+	TargetAddress string
 }
 
 var rescanTargetTmpl = genericutil.Must(
 	template.New("rescan_target").Parse(
 		stringutil.Multiline(`
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetEndpoint}}" --rescan )
+			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --rescan )
 		`),
 	),
 )
