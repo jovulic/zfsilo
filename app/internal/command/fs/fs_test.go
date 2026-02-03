@@ -1,4 +1,4 @@
-package mkfs_test
+package fs_test
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jovulic/zfsilo/app/internal/command/mkfs"
+	"github.com/jovulic/zfsilo/app/internal/command/fs"
 	"github.com/jovulic/zfsilo/app/internal/command/zfs"
 	"github.com/jovulic/zfsilo/lib/command"
 	"github.com/stretchr/testify/require"
@@ -43,7 +43,7 @@ func TestFormat(t *testing.T) {
 	executor := newTestExecutor(t, giveHostConfig)
 
 	zfsClient := zfs.With(executor)
-	mkfsClient := mkfs.With(executor)
+	mkfsClient := fs.With(executor)
 
 	volName := fmt.Sprintf("tank/test-mkfs-%d", time.Now().UnixNano())
 	volSize := uint64(10 * mb)
@@ -57,14 +57,14 @@ func TestFormat(t *testing.T) {
 		// Use the Mkfs client's Clear method to wipe filesystem signatures
 		// before destroying the ZFS volume. Errors from Clear are ignored
 		// in defer as the goal is to cleanup the volume regardless.
-		_ = mkfsClient.Clear(ctx, mkfs.ClearArguments{Device: devicePath})
+		_ = mkfsClient.Clear(ctx, fs.ClearArguments{Device: devicePath})
 
 		err := zfsClient.DestroyVolume(ctx, zfs.DestroyVolumeArguments{Name: volName})
 		require.NoError(t, err, "failed to destroy zfs volume")
 	}()
 
 	// Format the device with ext4, waiting for it to be ready.
-	err = mkfsClient.Format(ctx, mkfs.FormatArguments{
+	err = mkfsClient.Format(ctx, fs.FormatArguments{
 		Device:        devicePath,
 		WaitForDevice: true,
 	})

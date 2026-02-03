@@ -1,5 +1,6 @@
-// Package mkfs contains lib/command wrappers for executing and working with mkfs.
-package mkfs
+// Package fs contains lib/command wrappers for executing and working with the
+// filesystem.
+package fs
 
 import (
 	"context"
@@ -9,14 +10,14 @@ import (
 	"github.com/jovulic/zfsilo/lib/command"
 )
 
-// Mkfs provides an interface for running mkfs commands.
-type Mkfs struct {
+// FS provides an interface for running mkfs commands.
+type FS struct {
 	executor command.Executor
 }
 
 // With creates a new Mkfs instance.
-func With(executor command.Executor) Mkfs {
-	return Mkfs{
+func With(executor command.Executor) FS {
+	return FS{
 		executor: executor,
 	}
 }
@@ -29,7 +30,7 @@ type ExistsArguments struct {
 }
 
 // Exists checks if a block device exists, polling until a timeout is reached.
-func (m Mkfs) Exists(ctx context.Context, args ExistsArguments) (bool, error) {
+func (m FS) Exists(ctx context.Context, args ExistsArguments) (bool, error) {
 	timeout := args.Timeout
 	if timeout == 0 {
 		timeout = 10 * time.Second // default timeout
@@ -67,7 +68,7 @@ type FormatArguments struct {
 // Format executes mkfs.ext4 to format a device.
 // The -F option forces overwrite of any existing filesystem.
 // The -m 0 option reserves 0% of the blocks for the super-user.
-func (m Mkfs) Format(ctx context.Context, args FormatArguments) error {
+func (m FS) Format(ctx context.Context, args FormatArguments) error {
 	if args.WaitForDevice {
 		exists, err := m.Exists(ctx, ExistsArguments{Device: args.Device})
 		if err != nil {
@@ -98,7 +99,7 @@ type ClearArguments struct {
 
 // Clear removes all known filesystem, RAID or partition table signatures from a device.
 // The -a option removes all signatures.
-func (m Mkfs) Clear(ctx context.Context, args ClearArguments) error {
+func (m FS) Clear(ctx context.Context, args ClearArguments) error {
 	cmd := fmt.Sprintf("wipefs -a %s", args.Device)
 	result, err := m.executor.Exec(ctx, cmd)
 	if err != nil {
@@ -113,6 +114,25 @@ func (m Mkfs) Clear(ctx context.Context, args ClearArguments) error {
 			stderr = result.Stderr
 		}
 		return fmt.Errorf("failed to clear device '%s': %w, stderr: %s", args.Device, err, stderr)
+	}
+	return nil
+}
+
+// ResizeArguments represents the arguments for resizing a filesystem.
+type ResizeArguments struct {
+	Device string
+}
+
+// Resize executes resize2fs to resize a filesystem on a device.
+func (m FS) Resize(ctx context.Context, args ResizeArguments) error {
+	cmd := fmt.Sprintf("resize2fs '%s'", args.Device)
+	result, err := m.executor.Exec(ctx, cmd)
+	if err != nil {
+		stderr := ""
+		if result != nil {
+			stderr = result.Stderr
+		}
+		return fmt.Errorf("failed to resize filesystem on device '%s': %w, stderr: %s", args.Device, err, stderr)
 	}
 	return nil
 }
