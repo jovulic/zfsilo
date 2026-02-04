@@ -156,7 +156,7 @@ func TestPublishAndUnpublishVolume(t *testing.T) {
 
 	// Publish volume.
 	err = clients.giveIscsi.PublishVolume(ctx, iscsi.PublishVolumeArguments{
-		VolumeName:  "test-pub-unpub",
+		VolumeID:    "test-pub-unpub",
 		DevicePath:  devPath,
 		TargetIQN:   targetIQN,
 		Credentials: creds,
@@ -165,8 +165,8 @@ func TestPublishAndUnpublishVolume(t *testing.T) {
 
 	// Unpublish volume.
 	err = clients.giveIscsi.UnpublishVolume(ctx, iscsi.UnpublishVolumeArguments{
-		TargetIQN:  targetIQN,
-		VolumeName: "test-pub-unpub",
+		TargetIQN: targetIQN,
+		VolumeID:  "test-pub-unpub",
 	})
 	require.NoError(t, err)
 }
@@ -200,7 +200,7 @@ func TestConnectAndDisconnectTarget(t *testing.T) {
 
 	// Publish volume.
 	err = clients.giveIscsi.PublishVolume(ctx, iscsi.PublishVolumeArguments{
-		VolumeName:  volIdentifier,
+		VolumeID:    volIdentifier,
 		DevicePath:  devPath,
 		TargetIQN:   targetIQN,
 		Credentials: creds,
@@ -210,8 +210,8 @@ func TestConnectAndDisconnectTarget(t *testing.T) {
 	defer func() {
 		// Cleanup iSCSI publish.
 		err := clients.giveIscsi.UnpublishVolume(ctx, iscsi.UnpublishVolumeArguments{
-			TargetIQN:  targetIQN,
-			VolumeName: volIdentifier,
+			TargetIQN: targetIQN,
+			VolumeID:  volIdentifier,
 		})
 		require.NoError(t, err, "iscsi unpublish cleanup failed")
 	}()

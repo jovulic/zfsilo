@@ -60,9 +60,9 @@ func (h *Host) IQN() IQN {
 	return IQN(value)
 }
 
-func (h *Host) VolumeIQN(volumeName string) IQN {
+func (h *Host) VolumeIQN(volumeID string) IQN {
 	value := h.IQN().String()
-	value = fmt.Sprintf("%s:%s", value, volumeName)
+	value = fmt.Sprintf("%s:%s", value, volumeID)
 	value = strings.ToLower(value)
 	return IQN(value)
 }
@@ -94,7 +94,7 @@ func With(executor command.Executor) ISCSI {
 }
 
 type PublishVolumeArguments struct {
-	VolumeName  string
+	VolumeID    string
 	DevicePath  string
 	TargetIQN   IQN
 	Credentials Credentials
@@ -105,13 +105,13 @@ var publishVolumeTmpl = genericutil.Must(
 		stringutil.Multiline(`
 			# Create a backstore with the block device.
 			cd /backstores/block
-			create {{.VolumeName}} {{.DevicePath}}
+			create {{.VolumeID}} {{.DevicePath}}
 			# Create the iSCSI target.
 			cd /iscsi
 			create {{.TargetIQN}}
 			# Add LUN to the iSCSI target.
 			cd /iscsi/{{.TargetIQN}}/tpg1/luns
-			create /backstores/block/{{.VolumeName}}
+			create /backstores/block/{{.VolumeID}}
 			# Setup TPG authentication.
 			cd /iscsi/{{.TargetIQN}}/tpg1
 			set attribute demo_mode_write_protect=0
@@ -141,15 +141,15 @@ func (i ISCSI) PublishVolume(ctx context.Context, args PublishVolumeArguments) e
 		if result != nil {
 			stderr = result.Stderr
 		}
-		return fmt.Errorf("failed to publish volume '%s': %w, stderr: %s", args.VolumeName, err, stderr)
+		return fmt.Errorf("failed to publish volume '%s': %w, stderr: %s", args.VolumeID, err, stderr)
 	}
 
 	return nil
 }
 
 type UnpublishVolumeArguments struct {
-	TargetIQN  IQN
-	VolumeName string
+	TargetIQN IQN
+	VolumeID  string
 }
 
 var unpublishVolumeTmpl = genericutil.Must(
@@ -160,7 +160,7 @@ var unpublishVolumeTmpl = genericutil.Must(
 			delete {{.TargetIQN}}
 			# Delete backstore device.
 			cd /backstores/block
-			delete {{.VolumeName}}
+			delete {{.VolumeID}}
 			# Navigate back to root.
 			cd /
 		`),
@@ -181,7 +181,7 @@ func (i ISCSI) UnpublishVolume(ctx context.Context, args UnpublishVolumeArgument
 		if result != nil {
 			stderr = result.Stderr
 		}
-		return fmt.Errorf("failed to unpublish volume '%s': %w, stderr: %s", args.VolumeName, err, stderr)
+		return fmt.Errorf("failed to unpublish volume '%s': %w, stderr: %s", args.VolumeID, err, stderr)
 	}
 
 	return nil

@@ -15,6 +15,7 @@ import (
 	"github.com/google/wire"
 	"github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1/zfsilov1connect"
 	"github.com/jovulic/zfsilo/app/internal/command"
+	"github.com/jovulic/zfsilo/app/internal/command/iscsi"
 	"github.com/jovulic/zfsilo/app/internal/config"
 	converteriface "github.com/jovulic/zfsilo/app/internal/converter/iface"
 	"github.com/jovulic/zfsilo/lib/selfcert"
@@ -41,8 +42,10 @@ func WireVolumeService(
 	converter converteriface.VolumeConverter,
 	producer command.ProduceExecutor,
 	consumers command.ConsumeExecutorMap,
+	host *iscsi.Host,
+	credentials iscsi.Credentials,
 ) *VolumeService {
-	return NewVolumeService(database, converter, producer, consumers)
+	return NewVolumeService(database, converter, producer, consumers, host, credentials)
 }
 
 func WireServer(

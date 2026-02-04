@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/google/wire"
+	"github.com/jovulic/zfsilo/app/internal/command/iscsi"
 	"github.com/jovulic/zfsilo/app/internal/config"
 	"github.com/jovulic/zfsilo/lib/command"
 )
@@ -11,6 +12,8 @@ import (
 var WireSet = wire.NewSet(
 	WireProduceTarget,
 	WireConsumeTarget,
+	WireHost,
+	WireCredentials,
 )
 
 func buildExecutor(target config.ConfigCommandTarget) (command.Executor, error) {
@@ -50,4 +53,24 @@ func WireConsumeTarget(conf config.Config) (ConsumeExecutorMap, error) {
 		rets[target.IQN] = ret
 	}
 	return rets, nil
+}
+
+func WireHost(conf config.Config) (*iscsi.Host, error) {
+	if conf.Command.Host.Hostname == "" {
+		return nil, fmt.Errorf("hostname is not set")
+	}
+	return iscsi.NewHost(conf.Command.Host.Domain, conf.Command.Host.OwnerTime, conf.Command.Host.Hostname), nil
+}
+
+func WireCredentials(conf config.Config) (iscsi.Credentials, error) {
+	credentials := iscsi.Credentials{
+		UserID:         conf.Command.Credentials.UserID,
+		Password:       conf.Command.Credentials.Password,
+		MutualUserID:   conf.Command.Credentials.MutualUserID,
+		MutualPassword: conf.Command.Credentials.MutualPassword,
+	}
+	if credentials.IsEmpty() {
+		return iscsi.Credentials{}, fmt.Errorf("credentials are not defined")
+	}
+	return credentials, nil
 }

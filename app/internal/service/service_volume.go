@@ -76,10 +76,12 @@ const (
 type VolumeService struct {
 	zfsilov1connect.UnimplementedVolumeServiceHandler
 
-	database  *gorm.DB
-	converter converteriface.VolumeConverter
-	producer  command.ProduceExecutor
-	consumers command.ConsumeExecutorMap
+	database    *gorm.DB
+	converter   converteriface.VolumeConverter
+	producer    command.ProduceExecutor
+	consumers   command.ConsumeExecutorMap
+	host        *iscsi.Host
+	credentials iscsi.Credentials
 }
 
 func NewVolumeService(
@@ -87,12 +89,16 @@ func NewVolumeService(
 	converter converteriface.VolumeConverter,
 	producer command.ProduceExecutor,
 	consumers command.ConsumeExecutorMap,
+	host *iscsi.Host,
+	credentials iscsi.Credentials,
 ) *VolumeService {
 	return &VolumeService{
-		database:  database,
-		converter: converter,
-		producer:  producer,
-		consumers: consumers,
+		database:    database,
+		converter:   converter,
+		producer:    producer,
+		consumers:   consumers,
+		host:        host,
+		credentials: credentials,
 	}
 }
 
@@ -357,8 +363,14 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 
 func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[zfsilov1.DeleteVolumeRequest]) (*connect.Response[zfsilov1.DeleteVolumeResponse], error) {
 	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
-	if err != nil {
+	switch {
+	case err == nil:
+		// okay
+	case errors.Is(err, gorm.ErrRecordNotFound):
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
+	default:
+		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
 	}
 
 	switch {
@@ -395,8 +407,57 @@ func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[z
 	return connect.NewResponse(&zfsilov1.DeleteVolumeResponse{}), nil
 }
 
-func (s *VolumeService) PublishVolume(context.Context, *connect.Request[zfsilov1.PublishVolumeRequest]) (*connect.Response[zfsilov1.PublishVolumeResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.PublishVolume is not implemented"))
+func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[zfsilov1.PublishVolumeRequest]) (*connect.Response[zfsilov1.PublishVolumeResponse], error) {
+	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	switch {
+	case err == nil:
+		// okay
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
+	default:
+		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+	}
+
+	if volumedb.IsPublished() {
+		volumeapi, err := s.converter.FromDBToAPI(volumedb)
+		if err != nil {
+			slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		}
+		return connect.NewResponse(&zfsilov1.PublishVolumeResponse{Volume: volumeapi}), nil
+	}
+
+	volumedb.TargetIQN = s.host.VolumeIQN(volumedb.ID).String()
+
+	err = s.database.Transaction(func(tx *gorm.DB) error {
+		_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
+		if err != nil {
+			return fmt.Errorf("failed to update volume in database: %w", err)
+		}
+
+		err = iscsi.With(s.producer).PublishVolume(ctx, iscsi.PublishVolumeArguments{
+			VolumeID:    volumedb.ID,
+			DevicePath:  fmt.Sprintf("/dev/zvol/%s", volumedb.DatasetID),
+			TargetIQN:   iscsi.IQN(volumedb.TargetIQN),
+			Credentials: s.credentials,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to publish volume: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		slogctx.Error(ctx, "failed to publish volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to publish volume"))
+	}
+
+	volumeapi, err := s.converter.FromDBToAPI(volumedb)
+	if err != nil {
+		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+	}
+	return connect.NewResponse(&zfsilov1.PublishVolumeResponse{Volume: volumeapi}), nil
 }
 
 func (s *VolumeService) UnpublishVolume(context.Context, *connect.Request[zfsilov1.UnpublishVolumeRequest]) (*connect.Response[zfsilov1.UnpublishVolumeResponse], error) {

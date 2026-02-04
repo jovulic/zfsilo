@@ -13,6 +13,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/go-playground/mold/v4/modifiers"
 	"github.com/go-playground/validator/v10"
@@ -81,6 +82,13 @@ type ConfigCommandTargetConsume struct {
 	IQN string `json:"iqn"`
 }
 
+type ConfigCommandHost struct {
+	// NOTE: The linux-iscsi.org domain establish time of 01 2006.
+	Domain    string    `json:"domain" default:"linux-iscsi.org"`
+	OwnerTime time.Time `json:"ownerTime" mod:"default=2006-01-01T00:00:00Z"`
+	Hostname  string    `json:"hostname" validate:"required"`
+}
+
 type Config struct {
 	Log struct {
 		Mode  string   `json:"mode"  mod:"default=JSON" validate:"oneof=JSON TEXT"`
@@ -100,6 +108,18 @@ type Config struct {
 	Command struct {
 		ProduceTarget  ConfigCommandTargetProduce   `json:"produceTarget"`
 		ConsumeTargets []ConfigCommandTargetConsume `json:"consumeTargets"`
+		Host           struct {
+			// NOTE: The linux-iscsi.org domain establish time of 01 2006.
+			Domain    string    `json:"domain" default:"linux-iscsi.org"`
+			OwnerTime time.Time `json:"ownerTime" mod:"default=2006-01-01T00:00:00Z"`
+			Hostname  string    `json:"hostname" validate:"required"`
+		} `json:"host" `
+		Credentials struct {
+			UserID         string `json:"userId"`
+			Password       string `json:"password"`
+			MutualUserID   string `json:"mutualUserId"`
+			MutualPassword string `json:"mutualPassword"`
+		} `json:"credentials"`
 	} `json:"command"`
 }
 

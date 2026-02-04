@@ -33,7 +33,15 @@ func WireApp(ctx context.Context, conf config.Config, term *graterm.Terminator) 
 	if err != nil {
 		return nil, err
 	}
-	volumeService := service.WireVolumeService(db, volumeConverter, produceExecutor, consumeExecutorMap)
+	host, err := command.WireHost(conf)
+	if err != nil {
+		return nil, err
+	}
+	credentials, err := command.WireCredentials(conf)
+	if err != nil {
+		return nil, err
+	}
+	volumeService := service.WireVolumeService(db, volumeConverter, produceExecutor, consumeExecutorMap, host, credentials)
 	server, err := service.WireServer(ctx, conf, term, serviceService, volumeService)
 	if err != nil {
 		return nil, err
