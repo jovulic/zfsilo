@@ -394,3 +394,39 @@ func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[z
 
 	return connect.NewResponse(&zfsilov1.DeleteVolumeResponse{}), nil
 }
+
+func (s *VolumeService) PublishVolume(context.Context, *connect.Request[zfsilov1.PublishVolumeRequest]) (*connect.Response[zfsilov1.PublishVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.PublishVolume is not implemented"))
+}
+
+func (s *VolumeService) UnpublishVolume(context.Context, *connect.Request[zfsilov1.UnpublishVolumeRequest]) (*connect.Response[zfsilov1.UnpublishVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.UnpublishVolume is not implemented"))
+}
+
+func (s *VolumeService) ConnectVolume(context.Context, *connect.Request[zfsilov1.ConnectVolumeRequest]) (*connect.Response[zfsilov1.ConnectVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.ConnectVolume is not implemented"))
+}
+
+func (s *VolumeService) DisconnectVolume(context.Context, *connect.Request[zfsilov1.DisconnectVolumeRequest]) (*connect.Response[zfsilov1.DisconnectVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.DisconnectVolume is not implemented"))
+}
+
+func (s *VolumeService) MountVolume(context.Context, *connect.Request[zfsilov1.MountVolumeRequest]) (*connect.Response[zfsilov1.MountVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.MountVolume is not implemented"))
+}
+
+func (s *VolumeService) UnmountVolume(context.Context, *connect.Request[zfsilov1.UnmountVolumeRequest]) (*connect.Response[zfsilov1.UnmountVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.UnmountVolume is not implemented"))
+}
+
+func (s *VolumeService) StatsVolume(context.Context, *connect.Request[zfsilov1.StatsVolumeRequest]) (*connect.Response[zfsilov1.StatsVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.StatsVolume is not implemented"))
+}
+
+func (s *VolumeService) SyncVolume(context.Context, *connect.Request[zfsilov1.SyncVolumeRequest]) (*connect.Response[zfsilov1.SyncVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.SyncVolume is not implemented"))
+}
+
+func (s *VolumeService) SyncVolumes(context.Context, *connect.Request[zfsilov1.SyncVolumesRequest]) (*connect.Response[zfsilov1.SyncVolumesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.SyncVolumes is not implemented"))
+}
