@@ -1235,7 +1235,7 @@ func (x *DisconnectVolumeResponse) GetVolume() *Volume {
 type MountVolumeRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	TargetPath    string                 `protobuf:"bytes,2,opt,name=target_path,json=targetPath,proto3" json:"target_path,omitempty"`
+	MountPath     string                 `protobuf:"bytes,2,opt,name=mount_path,json=mountPath,proto3" json:"mount_path,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1277,9 +1277,9 @@ func (x *MountVolumeRequest) GetId() string {
 	return ""
 }
 
-func (x *MountVolumeRequest) GetTargetPath() string {
+func (x *MountVolumeRequest) GetMountPath() string {
 	if x != nil {
-		return x.TargetPath
+		return x.MountPath
 	}
 	return ""
 }
@@ -1903,11 +1903,11 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\x17DisconnectVolumeRequest\x12X\n" +
 	"\x02id\x18\x01 \x01(\tBH\xbaG+\x92\x02(The id of the volume to be disconnected.\xbaH\x17\xc8\x01\x01r\x122\x10^[a-zA-Z0-9-_]+$R\x02id\"E\n" +
 	"\x18DisconnectVolumeResponse\x12)\n" +
-	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"\xfd\x01\n" +
+	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"\xfa\x01\n" +
 	"\x12MountVolumeRequest\x12S\n" +
-	"\x02id\x18\x01 \x01(\tBC\xbaG&\x92\x02#The id of the volume to be mounted.\xbaH\x17\xc8\x01\x01r\x122\x10^[a-zA-Z0-9-_]+$R\x02id\x12O\n" +
-	"\vtarget_path\x18\x02 \x01(\tB.\xbaG\x13\x92\x02\x10The target path.\xbaH\x15\xc8\x01\x01r\x102\x0e^(/[^/ ]*)+/?$R\n" +
-	"targetPath\"A\n" +
+	"\x02id\x18\x01 \x01(\tBC\xbaG&\x92\x02#The id of the volume to be mounted.\xbaH\x17\xc8\x01\x01r\x122\x10^[a-zA-Z0-9-_]+$R\x02id\x12L\n" +
+	"\n" +
+	"mount_path\x18\x02 \x01(\tB-\xbaG\x12\x92\x02\x0fThe mount path.\xbaH\x15\xc8\x01\x01r\x102\x0e^(/[^/ ]*)+/?$R\tmountPath\"A\n" +
 	"\x04Mode\x12\x14\n" +
 	"\x10MODE_UNSPECIFIED\x10\x00\x12\x0e\n" +
 	"\n" +

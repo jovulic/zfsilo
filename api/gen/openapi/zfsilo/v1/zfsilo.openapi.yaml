@@ -891,15 +891,15 @@ components:
           title: id
           pattern: ^[a-zA-Z0-9-_]+$
           description: The id of the volume to be mounted.
-        targetPath:
+        mountPath:
           type: string
-          title: target_path
+          title: mount_path
           pattern: ^(/[^/ ]*)+/?$
-          description: The target path.
+          description: The mount path.
       title: MountVolumeRequest
       required:
         - id
-        - targetPath
+        - mountPath
       additionalProperties: false
     zfsilo.v1.MountVolumeResponse:
       type: object

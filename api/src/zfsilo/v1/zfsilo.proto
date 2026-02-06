@@ -293,8 +293,8 @@ message MountVolumeRequest {
     (buf.validate.field).required = true,
     (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
   ];
-  string target_path = 2 [
-    (gnostic.openapi.v3.property) = {description: "The target path."},
+  string mount_path = 2 [
+    (gnostic.openapi.v3.property) = {description: "The mount path."},
     (buf.validate.field).required = true,
     (buf.validate.field).string.pattern = "^(/[^/ ]*)+/?$"
   ];
