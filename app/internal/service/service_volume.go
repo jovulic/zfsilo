@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"connectrpc.com/connect"
 	zfsilov1 "github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1"
@@ -808,8 +810,135 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 	return connect.NewResponse(&zfsilov1.UnmountVolumeResponse{Volume: volumeapi}), nil
 }
 
-func (s *VolumeService) StatsVolume(context.Context, *connect.Request[zfsilov1.StatsVolumeRequest]) (*connect.Response[zfsilov1.StatsVolumeResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.StatsVolume is not implemented"))
+func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zfsilov1.StatsVolumeRequest]) (*connect.Response[zfsilov1.StatsVolumeResponse], error) {
+	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	switch {
+	case err == nil:
+		// okay
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
+	default:
+		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+	}
+
+	switch {
+	case !volumedb.IsPublished():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not published"))
+	case !volumedb.IsConnected():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not connected"))
+	case !volumedb.IsMounted():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not mounted"))
+	}
+
+	var usage []*zfsilov1.StatsVolumeResponse_Stats_Usage
+	switch volumedb.Mode {
+	case database.VolumeModeBLOCK:
+		var values []int64
+		for _, prop := range []string{"used", "usedds"} {
+			valueString, err := zfs.With(s.producer).GetProperty(ctx, zfs.GetPropertyArguments{
+				Name:        volumedb.DatasetID,
+				PropertyKey: prop,
+			})
+			if err != nil {
+				slogctx.Error(ctx, "failed to get property %s", prop, slogctx.Err(err))
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+			}
+
+			value, err := strconv.ParseInt(valueString, 10, 64)
+			if err != nil {
+				slogctx.Error(ctx, "failed to parse property %s", prop, slogctx.Err(err))
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+			}
+			values = append(values, value)
+		}
+		usage = append(usage, &zfsilov1.StatsVolumeResponse_Stats_Usage{
+			Total:     values[0],
+			Used:      values[1],
+			Available: values[0] - values[1],
+			Unit:      zfsilov1.StatsVolumeResponse_Stats_Usage_UNIT_BYTES,
+		})
+	case database.VolumeModeFILESYSTEM:
+		consumer, ok := s.consumers[volumedb.InitiatorIQN]
+		if !ok {
+			slogctx.Error(ctx, "unable to lookup consumer", slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to lookup consumer"))
+		}
+
+		valueString, err := literal.With(consumer).Run(ctx, fmt.Sprintf(
+			"df '%s' --output=size,used,avail,itotal,iused,iavail | sed 1d",
+			volumedb.MountPath,
+		))
+		if err != nil {
+			slogctx.Error(ctx, "failed to get stats", slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+		}
+
+		valueParts := strings.Fields(valueString)
+
+		totalBytes, err := strconv.ParseInt(valueParts[0], 10, 64)
+		if err != nil {
+			msg := fmt.Sprintf("failed to parse part[0]=%s", valueParts[0])
+			slogctx.Error(ctx, msg, slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+		}
+		totalBytes *= 1000
+		usedBytes, err := strconv.ParseInt(valueParts[1], 10, 64)
+		if err != nil {
+			msg := fmt.Sprintf("failed to parse part[1]=%s", valueParts[1])
+			slogctx.Error(ctx, msg, slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+		}
+		usedBytes *= 1000
+		availableBytes, err := strconv.ParseInt(valueParts[2], 10, 64)
+		if err != nil {
+			msg := fmt.Sprintf("failed to parse part[2]=%s", valueParts[2])
+			slogctx.Error(ctx, msg, slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+		}
+		availableBytes *= 1000
+		totalInodes, err := strconv.ParseInt(valueParts[3], 10, 64)
+		if err != nil {
+			msg := fmt.Sprintf("failed to parse part[3]=%s", valueParts[3])
+			slogctx.Error(ctx, msg, slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+		}
+		usedInodes, err := strconv.ParseInt(valueParts[4], 10, 64)
+		if err != nil {
+			msg := fmt.Sprintf("failed to parse part[4]=%s", valueParts[4])
+			slogctx.Error(ctx, msg, slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+		}
+		availableInodes, err := strconv.ParseInt(valueParts[5], 10, 64)
+		if err != nil {
+			msg := fmt.Sprintf("failed to parse part[5]=%s", valueParts[5])
+			slogctx.Error(ctx, msg, slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+		}
+
+		usage = append(
+			usage,
+			&zfsilov1.StatsVolumeResponse_Stats_Usage{
+				Total:     totalBytes,
+				Used:      usedBytes,
+				Available: availableBytes,
+				Unit:      zfsilov1.StatsVolumeResponse_Stats_Usage_UNIT_BYTES,
+			},
+			&zfsilov1.StatsVolumeResponse_Stats_Usage{
+				Total:     totalInodes,
+				Used:      usedInodes,
+				Available: availableInodes,
+				Unit:      zfsilov1.StatsVolumeResponse_Stats_Usage_UNIT_INODES,
+			},
+		)
+	default:
+		slogctx.Error(ctx, "unsupported volume mode %s", volumedb.Mode)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+	}
+
+	return connect.NewResponse(&zfsilov1.StatsVolumeResponse{Stats: &zfsilov1.StatsVolumeResponse_Stats{
+		Usage: usage,
+	}}), nil
 }
 
 func (s *VolumeService) SyncVolume(context.Context, *connect.Request[zfsilov1.SyncVolumeRequest]) (*connect.Response[zfsilov1.SyncVolumeResponse], error) {
