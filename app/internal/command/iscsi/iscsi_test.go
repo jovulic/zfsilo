@@ -218,16 +218,16 @@ func TestConnectAndDisconnectTarget(t *testing.T) {
 
 	// Connect to target.
 	err = clients.takeIscsi.ConnectTarget(ctx, iscsi.ConnectTargetArguments{
-		TargetIQN:      targetIQN,
-		TargetEndpoint: targetEndpoint,
-		Credentials:    creds,
+		TargetIQN:     targetIQN,
+		TargetAddress: targetEndpoint,
+		Credentials:   creds,
 	})
 	require.NoError(t, err)
 
 	// Disconnect from target.
 	err = clients.takeIscsi.DisconnectTarget(ctx, iscsi.DisconnectTargetArguments{
-		TargetIQN:      targetIQN,
-		TargetEndpoint: targetEndpoint,
+		TargetIQN:     targetIQN,
+		TargetAddress: targetEndpoint,
 	})
 	require.NoError(t, err)
 }
