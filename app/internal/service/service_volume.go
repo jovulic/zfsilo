@@ -245,7 +245,6 @@ func (s *VolumeService) CreateVolume(ctx context.Context, req *connect.Request[z
 			return nil
 		})
 		if err != nil {
-			slogctx.Error(ctx, "failed to create the zfs volume", slogctx.Err(err))
 			return fmt.Errorf("failed to create the zfs volume: %w", err)
 		}
 
