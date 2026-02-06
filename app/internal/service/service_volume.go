@@ -11,6 +11,8 @@ import (
 	"github.com/jovulic/zfsilo/app/internal/command"
 	"github.com/jovulic/zfsilo/app/internal/command/fs"
 	"github.com/jovulic/zfsilo/app/internal/command/iscsi"
+	"github.com/jovulic/zfsilo/app/internal/command/literal"
+	"github.com/jovulic/zfsilo/app/internal/command/mount"
 	"github.com/jovulic/zfsilo/app/internal/command/zfs"
 	converteriface "github.com/jovulic/zfsilo/app/internal/converter/iface"
 	"github.com/jovulic/zfsilo/app/internal/database"
@@ -655,8 +657,96 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 	return connect.NewResponse(&zfsilov1.DisconnectVolumeResponse{Volume: volumeapi}), nil
 }
 
-func (s *VolumeService) MountVolume(context.Context, *connect.Request[zfsilov1.MountVolumeRequest]) (*connect.Response[zfsilov1.MountVolumeResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.MountVolume is not implemented"))
+func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zfsilov1.MountVolumeRequest]) (*connect.Response[zfsilov1.MountVolumeResponse], error) {
+	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	switch {
+	case err == nil:
+		// okay
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
+	default:
+		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+	}
+
+	switch {
+	case !volumedb.IsPublished():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not published"))
+	case !volumedb.IsConnected():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not connected"))
+	case volumedb.IsMounted():
+		volumeapi, err := s.converter.FromDBToAPI(volumedb)
+		if err != nil {
+			slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		}
+		return connect.NewResponse(&zfsilov1.MountVolumeResponse{Volume: volumeapi}), nil
+	}
+
+	volumedb.MountPath = req.Msg.MountPath
+
+	err = s.database.Transaction(func(tx *gorm.DB) error {
+		_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
+		if err != nil {
+			return fmt.Errorf("failed to update volume in database: %w", err)
+		}
+
+		consumer, ok := s.consumers[volumedb.InitiatorIQN]
+		if !ok {
+			return fmt.Errorf("unable to lookup initiator %s", volumedb.InitiatorIQN)
+		}
+
+		switch volumedb.Mode {
+		case database.VolumeModeBLOCK:
+			_, err := literal.With(consumer).Run(ctx, fmt.Sprintf("install -m 0644 /dev/null %s", volumedb.MountPath))
+			if err != nil {
+				return fmt.Errorf("failed to touch mount path: %w", err)
+			}
+
+			err = mount.With(consumer).Mount(ctx, mount.MountArguments{
+				SourcePath: volumedb.DevicePathISCSI(),
+				TargetPath: volumedb.MountPath,
+				Options:    []string{"bind"},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to mount volume: %w", err)
+			}
+		case database.VolumeModeFILESYSTEM:
+			_, err := literal.With(consumer).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", volumedb.MountPath))
+			if err != nil {
+				return fmt.Errorf("failed to touch mount path: %w", err)
+			}
+			err = mount.With(consumer).Mount(ctx, mount.MountArguments{
+				SourcePath: volumedb.DevicePathISCSI(),
+				TargetPath: volumedb.MountPath,
+				Options:    []string{"defaults"},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to mount volume: %w", err)
+			}
+
+			// TODO: I should properly expose the volume to non-root users.
+			_, err = literal.With(consumer).Run(ctx, fmt.Sprintf("chmod 0777 %s", volumedb.MountPath))
+			if err != nil {
+				return fmt.Errorf("failed to chmod mount path: %w", err)
+			}
+		default:
+			return fmt.Errorf("unsupported volume mode %s", volumedb.Mode)
+		}
+
+		return nil
+	})
+	if err != nil {
+		slogctx.Error(ctx, "failed to connect volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to connect volume"))
+	}
+
+	volumeapi, err := s.converter.FromDBToAPI(volumedb)
+	if err != nil {
+		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+	}
+	return connect.NewResponse(&zfsilov1.MountVolumeResponse{Volume: volumeapi}), nil
 }
 
 func (s *VolumeService) UnmountVolume(context.Context, *connect.Request[zfsilov1.UnmountVolumeRequest]) (*connect.Response[zfsilov1.UnmountVolumeResponse], error) {
