@@ -569,7 +569,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 
 		consumer, ok := s.consumers[volumedb.InitiatorIQN]
 		if !ok {
-			return fmt.Errorf("unable to lookup initiator %s", volumedb.InitiatorIQN)
+			return fmt.Errorf("unable to lookup consumer %s", volumedb.InitiatorIQN)
 		}
 		err = iscsi.With(consumer).ConnectTarget(ctx, iscsi.ConnectTargetArguments{
 			TargetIQN:     iscsi.IQN(volumedb.TargetIQN),
@@ -632,7 +632,7 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 
 		consumer, ok := s.consumers[volumedb.InitiatorIQN]
 		if !ok {
-			return fmt.Errorf("unable to lookup initiator %s", volumedb.InitiatorIQN)
+			return fmt.Errorf("unable to lookup consumer %s", volumedb.InitiatorIQN)
 		}
 		err = iscsi.With(consumer).DisconnectTarget(ctx, iscsi.DisconnectTargetArguments{
 			TargetIQN:     iscsi.IQN(volumedb.TargetIQN),
@@ -692,7 +692,7 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 
 		consumer, ok := s.consumers[volumedb.InitiatorIQN]
 		if !ok {
-			return fmt.Errorf("unable to lookup initiator %s", volumedb.InitiatorIQN)
+			return fmt.Errorf("unable to lookup consumer %s", volumedb.InitiatorIQN)
 		}
 
 		switch volumedb.Mode {
@@ -785,7 +785,7 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 
 		consumer, ok := s.consumers[volumedb.InitiatorIQN]
 		if !ok {
-			return fmt.Errorf("unable to lookup initiator %s", volumedb.InitiatorIQN)
+			return fmt.Errorf("unable to lookup consumer %s", volumedb.InitiatorIQN)
 		}
 		err = mount.With(consumer).Umount(ctx, mount.UmountArguments{
 			Path: previousMountPath,
