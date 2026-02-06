@@ -593,8 +593,66 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 	return connect.NewResponse(&zfsilov1.ConnectVolumeResponse{Volume: volumeapi}), nil
 }
 
-func (s *VolumeService) DisconnectVolume(context.Context, *connect.Request[zfsilov1.DisconnectVolumeRequest]) (*connect.Response[zfsilov1.DisconnectVolumeResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.DisconnectVolume is not implemented"))
+func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Request[zfsilov1.DisconnectVolumeRequest]) (*connect.Response[zfsilov1.DisconnectVolumeResponse], error) {
+	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	switch {
+	case err == nil:
+		// okay
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
+	default:
+		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+	}
+
+	switch {
+	case !volumedb.IsPublished():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not published"))
+	case !volumedb.IsConnected():
+		volumeapi, err := s.converter.FromDBToAPI(volumedb)
+		if err != nil {
+			slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		}
+		return connect.NewResponse(&zfsilov1.DisconnectVolumeResponse{Volume: volumeapi}), nil
+	case volumedb.IsMounted():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is mounted"))
+	}
+
+	err = s.database.Transaction(func(tx *gorm.DB) error {
+		previousTargetAddress := volumedb.TargetAddress
+		volumedb.InitiatorIQN = ""
+		volumedb.TargetAddress = ""
+
+		_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
+		if err != nil {
+			return fmt.Errorf("failed to update volume in database: %w", err)
+		}
+
+		consumer, ok := s.consumers[volumedb.InitiatorIQN]
+		if !ok {
+			return fmt.Errorf("unable to lookup initiator %s", volumedb.InitiatorIQN)
+		}
+		err = iscsi.With(consumer).DisconnectTarget(ctx, iscsi.DisconnectTargetArguments{
+			TargetIQN:     iscsi.IQN(volumedb.TargetIQN),
+			TargetAddress: previousTargetAddress,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to disconnect volume: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		slogctx.Error(ctx, "failed to disconnect volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to disconnect volume"))
+	}
+
+	volumeapi, err := s.converter.FromDBToAPI(volumedb)
+	if err != nil {
+		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+	}
+	return connect.NewResponse(&zfsilov1.DisconnectVolumeResponse{Volume: volumeapi}), nil
 }
 
 func (s *VolumeService) MountVolume(context.Context, *connect.Request[zfsilov1.MountVolumeRequest]) (*connect.Response[zfsilov1.MountVolumeResponse], error) {
