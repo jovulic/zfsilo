@@ -419,6 +419,20 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
 	}
 
+	switch {
+	case volumedb.IsPublished():
+		volumeapi, err := s.converter.FromDBToAPI(volumedb)
+		if err != nil {
+			slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		}
+		return connect.NewResponse(&zfsilov1.PublishVolumeResponse{Volume: volumeapi}), nil
+	case volumedb.IsConnected():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is connected"))
+	case volumedb.IsMounted():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is mounted"))
+	}
+
 	if volumedb.IsPublished() {
 		volumeapi, err := s.converter.FromDBToAPI(volumedb)
 		if err != nil {
@@ -472,13 +486,18 @@ func (s *VolumeService) UnpublishVolume(ctx context.Context, req *connect.Reques
 		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
 	}
 
-	if !volumedb.IsPublished() {
+	switch {
+	case !volumedb.IsPublished():
 		volumeapi, err := s.converter.FromDBToAPI(volumedb)
 		if err != nil {
 			slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
 			return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
 		}
 		return connect.NewResponse(&zfsilov1.UnpublishVolumeResponse{Volume: volumeapi}), nil
+	case volumedb.IsConnected():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is connected"))
+	case volumedb.IsMounted():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is mounted"))
 	}
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
@@ -534,6 +553,8 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 			return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
 		}
 		return connect.NewResponse(&zfsilov1.ConnectVolumeResponse{Volume: volumeapi}), nil
+	case volumedb.IsMounted():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is mounted"))
 	}
 
 	volumedb.InitiatorIQN = req.Msg.InitiatorIqn
