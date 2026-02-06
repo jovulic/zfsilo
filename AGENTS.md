@@ -4,44 +4,74 @@ This document provides context for the Gemini code assistant to understand the `
 
 ## Project Overview
 
-`zfsilo` is a ZFS-based network storage layer over iSCSI with CSI integration. It is written in Go and uses a gRPC API for communication. The project is structured as a multi-module Go workspace, with separate modules for the API definitions (`api`), the main application (`app`), and shared libraries (`lib`).
+`zfsilo` is a ZFS-based network storage layer over iSCSI with CSI integration. It is written in Go and uses a gRPC API for communication. The project aims to provide a robust control plane for managing ZFS datasets and exporting them as block devices via iSCSI, primarily for Kubernetes environments.
 
-The project uses [Nix flakes](https://nixos.wiki/wiki/Flakes) to provide a reproducible development environment.
+## Repository Structure
+
+The project is organized as a multi-module Go workspace.
+
+### `api/`
+Contains the schema and generated code for the public API.
+- **Source**: `api/src/zfsilo/v1/zfsilo.proto` defines the gRPC services (`VolumeService`, `Service`).
+- **Generation**: Uses `buf` to generate Go code and OpenAPI specs.
+
+### `app/`
+Contains the main `zfsilo` server application.
+- **Entry Points**: `main.go` / `main_app.go` setup the application lifecycle.
+- **Internal Architecture** (`app/internal/`):
+    - **`command/`**: Typed wrappers around system CLIs (`zfs`, `iscsiadm`, `mount`, `fs`). This is the bridge to the OS.
+    - **`service/`**: Core business logic implementing the gRPC interfaces. Handles complex workflows like volume creation.
+    - **`database/`**: GORM-based database models (e.g., `Volume`) for tracking state.
+    - **`converter/`**: Translates between Protobuf API messages and internal database models.
+
+### `csi/`
+Reserved for the Container Storage Interface (CSI) driver implementation. *Currently empty.*
+
+### `dev/`
+Contains configuration for a reproducible development and testing environment using **MicroVMs**.
+- **`give.nix`**: Defines the "Server" VM (`give`). It runs ZFS, creates a pool named `tank` on startup, and acts as the iSCSI target.
+- **`take.nix`**: Defines the "Client" VM (`take`). It runs `openiscsi` to consume volumes exported by `give`.
+- **`host.nix`**: Host-specific configuration.
+
+### `lib/`
+Shared Go library packages used by `app` and potentially `csi`.
+- **`command/`**: A command execution abstraction to simplify testing and mocking of shell commands.
+- **`try/`**: A utility for handling reversible operations (transactions), essential for robustly handling multi-step system mutations (e.g., "Create ZFS dataset" -> "Fail" -> "Rollback ZFS dataset").
+- **`genericutil/`, `stringutil/`, `structutil/`**: General helpers.
+
+## Key Architecture Concepts
+
+1.  **CLI Wrapping**: The application manages storage by invoking standard CLI tools (`zfs`, `iscsiadm`) rather than using C bindings. This is handled in `app/internal/command`.
+2.  **Reversibility**: Critical operations use the `lib/try` package to ensure that if a step fails (e.g., database write fails after ZFS creation), previous steps are undone (ZFS dataset is destroyed) to prevent inconsistent state.
+3.  **Development Flow**: Developers use the `give` (server) and `take` (client) MicroVMs to test the full storage lifecycle in an isolated environment that mirrors production ZFS/iSCSI setups.
 
 ## Development Environment
 
-The development environment can be activated by running `nix develop` in the project root. This will provide a shell with all the necessary tools, including:
-
-- Go
-- Just
-- Git
-- Bash
+The development environment is managed via Nix Flakes.
+- **`nix develop`**: Drops you into a shell with Go, Just, Git, and other dependencies.
 
 ## Building and Running
 
-The project uses `just` as a command runner. The following commands are available:
+The project uses `just` as a command runner.
 
 ### API
-
-- `just build`: Generates Go code from the Protobuf definitions using `buf generate`.
+- `just build`: Generates Go code from Protobuf definitions (`buf generate`).
 
 ### Application
+- `just run`: Runs the application locally (requires valid config).
+- `just build`: Compiles the binary.
+- `just generate`: Runs `go generate`.
+- `just wire`: Generates dependency injection code using Google Wire.
 
-- `just run`: Runs the application. This will start the `zfsilo` server with the configuration from `config.json`.
-- `just build`: Builds the application binary.
-- `just generate`: Runs `go generate` for the application.
-- `just wire`: Runs `wire` to generate dependency injection code.
+## API Services
+Defined in `api/src/zfsilo/v1/zfsilo.proto`:
+- **`Service`**: General server info (e.g., Capacity).
+- **`VolumeService`**: Full lifecycle management:
+    - `Create`/`Delete`: Manage ZFS datasets and DB entries.
+    - `Publish`: Export a volume via iSCSI (Target).
+    - `Connect`: Connect to an iSCSI target (Initiator).
+    - `Mount`: Mount a connected device to a local path.
 
-## API
-
-The gRPC API is defined in `api/src/zfsilo/v1/zfsilo.proto`. It exposes the following services:
-
-- `Service`: For getting storage capacity.
-- `VolumeService`: For managing volumes (Create, Get, List, Update, Delete).
-- `GreeterService`: A simple service for testing connectivity.
-
-The API is documented using OpenAPI annotations within the Protobuf file.
-
-## Code Style and Linting
-
-The project uses `.golangci.yaml` to configure linting. The configuration is based on the `fast` preset with some additional linters enabled and some disabled. This enforces a consistent code style.
+## Code Style
+- **Linting**: Enforced via `.golangci.yaml`.
+- **Formatting**: Standard Go formatting.
