@@ -737,8 +737,8 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 		return nil
 	})
 	if err != nil {
-		slogctx.Error(ctx, "failed to connect volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to connect volume"))
+		slogctx.Error(ctx, "failed to mount volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to mount volume"))
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
