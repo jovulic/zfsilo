@@ -188,21 +188,21 @@ func (i ISCSI) UnpublishVolume(ctx context.Context, args UnpublishVolumeArgument
 }
 
 type ConnectTargetArguments struct {
-	TargetIQN      IQN
-	TargetEndpoint string
-	Credentials    Credentials
+	TargetIQN     IQN
+	TargetAddress string
+	Credentials   Credentials
 }
 
 var connectTargetTmpl = genericutil.Must(
 	template.New("connect_target").Parse(
 		stringutil.Multiline(`
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetEndpoint}}" --op new ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetEndpoint}}" --op update --name node.session.auth.authmethod --value CHAP ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetEndpoint}}" --op update --name node.session.auth.username --value '{{.Credentials.UserID}}' ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetEndpoint}}" --op update --name node.session.auth.password --value '{{.Credentials.Password}}' ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetEndpoint}}" --op update --name node.session.auth.username_in --value '{{.Credentials.MutualUserID}}' ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetEndpoint}}" --op update --name node.session.auth.password_in --value '{{.Credentials.MutualPassword}}' ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetEndpoint}}" --login )
+			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op new ) &&
+			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.authmethod --value CHAP ) &&
+			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.username --value '{{.Credentials.UserID}}' ) &&
+			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.password --value '{{.Credentials.Password}}' ) &&
+			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.username_in --value '{{.Credentials.MutualUserID}}' ) &&
+			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.password_in --value '{{.Credentials.MutualPassword}}' ) &&
+			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --login )
 		`),
 	),
 )
@@ -228,15 +228,15 @@ func (i ISCSI) ConnectTarget(ctx context.Context, args ConnectTargetArguments) e
 }
 
 type DisconnectTargetArguments struct {
-	TargetIQN      IQN
-	TargetEndpoint string
+	TargetIQN     IQN
+	TargetAddress string
 }
 
 var disconnectTargetTmpl = genericutil.Must(
 	template.New("disconnect_target").Parse(
 		stringutil.Multiline(`
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetEndpoint}}" --logout ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetEndpoint}}" --op delete )
+			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --logout ) &&
+			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op delete )
 		`),
 	),
 )
