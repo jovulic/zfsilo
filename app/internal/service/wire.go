@@ -27,6 +27,7 @@ import (
 
 var WireSet = wire.NewSet(
 	WireService,
+	WireVolumeSyncer,
 	WireVolumeService,
 	WireServer,
 )
@@ -37,6 +38,16 @@ func WireService(
 	return NewService(producer)
 }
 
+func WireVolumeSyncer(
+	database *gorm.DB,
+	producer command.ProduceExecutor,
+	consumers command.ConsumeExecutorMap,
+	host *iscsi.Host,
+	credentials iscsi.Credentials,
+) *VolumeSyncer {
+	return NewVolumeSyncer(database, producer, consumers, host, credentials)
+}
+
 func WireVolumeService(
 	database *gorm.DB,
 	converter converteriface.VolumeConverter,
@@ -44,8 +55,9 @@ func WireVolumeService(
 	consumers command.ConsumeExecutorMap,
 	host *iscsi.Host,
 	credentials iscsi.Credentials,
+	syncer *VolumeSyncer,
 ) *VolumeService {
-	return NewVolumeService(database, converter, producer, consumers, host, credentials)
+	return NewVolumeService(database, converter, producer, consumers, host, credentials, syncer)
 }
 
 func WireServer(

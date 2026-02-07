@@ -19,7 +19,7 @@ func TestVolumeConversion(t *testing.T) {
 	createTime := time.Now().Add(-24 * time.Hour).UTC().Truncate(time.Second)
 	updateTime := time.Now().UTC().Truncate(time.Second)
 
-	dbVolume := database.Volume{
+	dbVolume := &database.Volume{
 		ID:            "vol-12345",
 		Name:          "test-volume",
 		DatasetID:     "ds-abcde",

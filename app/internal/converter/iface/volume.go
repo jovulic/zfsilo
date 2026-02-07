@@ -24,8 +24,8 @@ type VolumeConverter interface {
 	//goverter:map Options | ConvertVolumeOptionsFromDBToAPI
 	//goverter:map Mode | ConvertVolumeModeFromDBToAPI
 	//goverter:map Status | ConvertVolumeStatusFromDBToAPI
-	FromDBToAPI(source database.Volume) (*zfsilov1.Volume, error)
-	FromDBToAPIList(source []database.Volume) ([]*zfsilov1.Volume, error)
+	FromDBToAPI(source *database.Volume) (*zfsilov1.Volume, error)
+	FromDBToAPIList(source []*database.Volume) ([]*zfsilov1.Volume, error)
 
 	//goverter:useZeroValueOnPointerInconsistency
 	//goverter:map Id ID
@@ -35,8 +35,8 @@ type VolumeConverter interface {
 	//goverter:map Options | ConvertVolumeOptionsFromAPIToDB
 	//goverter:map Mode | ConvertVolumeModeFromAPIToDB
 	//goverter:map Status | ConvertVolumeStatusFromAPIToDB
-	FromAPIToDB(source *zfsilov1.Volume) (database.Volume, error)
-	FromAPIToDBList(source []*zfsilov1.Volume) ([]database.Volume, error)
+	FromAPIToDB(source *zfsilov1.Volume) (*database.Volume, error)
+	FromAPIToDBList(source []*zfsilov1.Volume) ([]*database.Volume, error)
 }
 
 func ConvertVolumeOptionsFromAPIToDB(source []*zfsilov1.Volume_Option) datatypes.JSONType[database.VolumeOptionList] {

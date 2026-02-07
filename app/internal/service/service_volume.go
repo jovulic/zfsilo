@@ -86,6 +86,7 @@ type VolumeService struct {
 	consumers   command.ConsumeExecutorMap
 	host        *iscsi.Host
 	credentials iscsi.Credentials
+	syncer      *VolumeSyncer
 }
 
 func NewVolumeService(
@@ -95,6 +96,7 @@ func NewVolumeService(
 	consumers command.ConsumeExecutorMap,
 	host *iscsi.Host,
 	credentials iscsi.Credentials,
+	syncer *VolumeSyncer,
 ) *VolumeService {
 	return &VolumeService{
 		database:    database,
@@ -103,11 +105,12 @@ func NewVolumeService(
 		consumers:   consumers,
 		host:        host,
 		credentials: credentials,
+		syncer:      syncer,
 	}
 }
 
 func (s *VolumeService) GetVolume(ctx context.Context, req *connect.Request[zfsilov1.GetVolumeRequest]) (*connect.Response[zfsilov1.GetVolumeResponse], error) {
-	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	volumedb, err := gorm.G[*database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
 	switch {
 	case err == nil:
 		// okay
@@ -155,7 +158,7 @@ func (s *VolumeService) ListVolumes(ctx context.Context, req *connect.Request[zf
 	}
 
 	// Execute the database query using the determined parameters.
-	volumedbs, err := gorm.G[database.Volume](s.database).
+	volumedbs, err := gorm.G[*database.Volume](s.database).
 		Order("create_time desc").
 		Offset(offset).
 		Limit(limit).
@@ -206,7 +209,7 @@ func (s *VolumeService) CreateVolume(ctx context.Context, req *connect.Request[z
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
 		// Create database entry.
-		err := gorm.G[database.Volume](tx).Create(ctx, &volumedb)
+		err := gorm.G[*database.Volume](tx).Create(ctx, &volumedb)
 		if err != nil {
 			return err
 		}
@@ -280,7 +283,7 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 	}
 	id := idValue.GetStringValue()
 
-	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", id).First(ctx)
+	volumedb, err := gorm.G[*database.Volume](s.database).Where("id = ?", id).First(ctx)
 	switch {
 	case err == nil:
 		// okay
@@ -316,7 +319,7 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 	// NOTE: We do not perform the update in a transaction as we have not written
 	// any rollback capability currently.
 
-	_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
+	_, err = gorm.G[*database.Volume](s.database).Updates(ctx, volumedb)
 	if err != nil {
 		slogctx.Error(ctx, "failed to update volume in database", slogctx.Err(err))
 		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to update volume"))
@@ -354,7 +357,7 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 		// If the mode is filesystem we also need to resize the filesystem.
 		if volumedb.Mode == database.VolumeModeFILESYSTEM {
 			err = fs.With(target).Resize(ctx, fs.ResizeArguments{
-				Device: volumedb.DevicePathISCSI(),
+				Device: volumedb.DevicePathISCSIClient(),
 			})
 			if err != nil {
 				slogctx.Error(ctx, "failed to perform resize on consumer", slogctx.Err(err))
@@ -367,7 +370,7 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 }
 
 func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[zfsilov1.DeleteVolumeRequest]) (*connect.Response[zfsilov1.DeleteVolumeResponse], error) {
-	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	volumedb, err := gorm.G[*database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
 	switch {
 	case err == nil:
 		// okay
@@ -397,7 +400,7 @@ func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[z
 		}
 
 		// Delete from database.
-		_, err = gorm.G[database.Volume](tx).Where("id = ?", req.Msg.Id).Delete(ctx)
+		_, err = gorm.G[*database.Volume](tx).Where("id = ?", req.Msg.Id).Delete(ctx)
 		if err != nil {
 			return err
 		}
@@ -413,7 +416,7 @@ func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[z
 }
 
 func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[zfsilov1.PublishVolumeRequest]) (*connect.Response[zfsilov1.PublishVolumeResponse], error) {
-	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	volumedb, err := gorm.G[*database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
 	switch {
 	case err == nil:
 		// okay
@@ -451,7 +454,7 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 	volumedb.Status = database.VolumeStatusPUBLISHED
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
-		_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
+		_, err = gorm.G[*database.Volume](s.database).Updates(ctx, volumedb)
 		if err != nil {
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
@@ -481,7 +484,7 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 }
 
 func (s *VolumeService) UnpublishVolume(ctx context.Context, req *connect.Request[zfsilov1.UnpublishVolumeRequest]) (*connect.Response[zfsilov1.UnpublishVolumeResponse], error) {
-	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	volumedb, err := gorm.G[*database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
 	switch {
 	case err == nil:
 		// okay
@@ -511,7 +514,7 @@ func (s *VolumeService) UnpublishVolume(ctx context.Context, req *connect.Reques
 		volumedb.TargetIQN = ""
 		volumedb.Status = database.VolumeStatusINITIAL
 
-		_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
+		_, err = gorm.G[*database.Volume](s.database).Updates(ctx, volumedb)
 		if err != nil {
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
@@ -539,7 +542,7 @@ func (s *VolumeService) UnpublishVolume(ctx context.Context, req *connect.Reques
 }
 
 func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[zfsilov1.ConnectVolumeRequest]) (*connect.Response[zfsilov1.ConnectVolumeResponse], error) {
-	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	volumedb, err := gorm.G[*database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
 	switch {
 	case err == nil:
 		// okay
@@ -569,7 +572,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 	volumedb.Status = database.VolumeStatusCONNECTED
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
-		_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
+		_, err = gorm.G[*database.Volume](s.database).Updates(ctx, volumedb)
 		if err != nil {
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
@@ -602,7 +605,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 }
 
 func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Request[zfsilov1.DisconnectVolumeRequest]) (*connect.Response[zfsilov1.DisconnectVolumeResponse], error) {
-	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	volumedb, err := gorm.G[*database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
 	switch {
 	case err == nil:
 		// okay
@@ -633,7 +636,7 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 		volumedb.TargetAddress = ""
 		volumedb.Status = database.VolumeStatusPUBLISHED
 
-		_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
+		_, err = gorm.G[*database.Volume](s.database).Updates(ctx, volumedb)
 		if err != nil {
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
@@ -665,7 +668,7 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 }
 
 func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zfsilov1.MountVolumeRequest]) (*connect.Response[zfsilov1.MountVolumeResponse], error) {
-	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	volumedb, err := gorm.G[*database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
 	switch {
 	case err == nil:
 		// okay
@@ -694,7 +697,7 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 	volumedb.Status = database.VolumeStatusMOUNTED
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
-		_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
+		_, err = gorm.G[*database.Volume](s.database).Updates(ctx, volumedb)
 		if err != nil {
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
@@ -712,7 +715,7 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 			}
 
 			err = mount.With(consumer).Mount(ctx, mount.MountArguments{
-				SourcePath: volumedb.DevicePathISCSI(),
+				SourcePath: volumedb.DevicePathISCSIClient(),
 				TargetPath: volumedb.MountPath,
 				Options:    []string{"bind"},
 			})
@@ -725,7 +728,7 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 				return fmt.Errorf("failed to touch mount path: %w", err)
 			}
 			err = mount.With(consumer).Mount(ctx, mount.MountArguments{
-				SourcePath: volumedb.DevicePathISCSI(),
+				SourcePath: volumedb.DevicePathISCSIClient(),
 				TargetPath: volumedb.MountPath,
 				Options:    []string{"defaults"},
 			})
@@ -758,7 +761,7 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 }
 
 func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[zfsilov1.UnmountVolumeRequest]) (*connect.Response[zfsilov1.UnmountVolumeResponse], error) {
-	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	volumedb, err := gorm.G[*database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
 	switch {
 	case err == nil:
 		// okay
@@ -788,7 +791,7 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 		volumedb.MountPath = ""
 		volumedb.Status = database.VolumeStatusCONNECTED
 
-		_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
+		_, err = gorm.G[*database.Volume](s.database).Updates(ctx, volumedb)
 		if err != nil {
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
@@ -819,7 +822,7 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 }
 
 func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zfsilov1.StatsVolumeRequest]) (*connect.Response[zfsilov1.StatsVolumeResponse], error) {
-	volumedb, err := gorm.G[database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	volumedb, err := gorm.G[*database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
 	switch {
 	case err == nil:
 		// okay
@@ -949,10 +952,43 @@ func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zf
 	}}), nil
 }
 
-func (s *VolumeService) SyncVolume(context.Context, *connect.Request[zfsilov1.SyncVolumeRequest]) (*connect.Response[zfsilov1.SyncVolumeResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.SyncVolume is not implemented"))
+func (s *VolumeService) SyncVolume(ctx context.Context, req *connect.Request[zfsilov1.SyncVolumeRequest]) (*connect.Response[zfsilov1.SyncVolumeResponse], error) {
+	volumedb, err := gorm.G[*database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	switch {
+	case err == nil:
+		// okay
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
+	default:
+		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+	}
+
+	if err = s.syncer.Sync(ctx, volumedb); err != nil {
+		slogctx.Error(ctx, "failed to sync volume", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to sync volume: %w", err))
+	}
+	return connect.NewResponse(&zfsilov1.SyncVolumeResponse{}), nil
 }
 
-func (s *VolumeService) SyncVolumes(context.Context, *connect.Request[zfsilov1.SyncVolumesRequest]) (*connect.Response[zfsilov1.SyncVolumesResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.SyncVolumes is not implemented"))
+func (s *VolumeService) SyncVolumes(ctx context.Context, _ *connect.Request[zfsilov1.SyncVolumesRequest]) (*connect.Response[zfsilov1.SyncVolumesResponse], error) {
+	volumedbs, err := gorm.G[*database.Volume](s.database).Find(ctx)
+	if err != nil {
+		slogctx.Error(ctx, "failed to list volumes for sync", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to list volumes"))
+	}
+
+	var syncErrors []string
+	for _, volumedb := range volumedbs {
+		err := s.syncer.Sync(ctx, volumedb)
+		if err != nil {
+			slogctx.Error(ctx, "failed to sync volume", "volumeId", volumedb.ID, slogctx.Err(err))
+			syncErrors = append(syncErrors, fmt.Sprintf("volume %s: %s", volumedb.ID, err))
+		}
+	}
+
+	if len(syncErrors) > 0 {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to sync volumes: %s", strings.Join(syncErrors, "; ")))
+	}
+	return connect.NewResponse(&zfsilov1.SyncVolumesResponse{}), nil
 }

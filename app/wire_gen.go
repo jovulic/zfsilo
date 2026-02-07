@@ -41,7 +41,8 @@ func WireApp(ctx context.Context, conf config.Config, term *graterm.Terminator) 
 	if err != nil {
 		return nil, err
 	}
-	volumeService := service.WireVolumeService(db, volumeConverter, produceExecutor, consumeExecutorMap, host, credentials)
+	volumeSyncer := service.WireVolumeSyncer(db, produceExecutor, consumeExecutorMap, host, credentials)
+	volumeService := service.WireVolumeService(db, volumeConverter, produceExecutor, consumeExecutorMap, host, credentials, volumeSyncer)
 	server, err := service.WireServer(ctx, conf, term, serviceService, volumeService)
 	if err != nil {
 		return nil, err

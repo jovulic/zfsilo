@@ -11,22 +11,23 @@ import (
 
 type VolumeConverterImpl struct{}
 
-func (c *VolumeConverterImpl) FromAPIToDB(source *v1.Volume) (database.Volume, error) {
-	var databaseVolume database.Volume
+func (c *VolumeConverterImpl) FromAPIToDB(source *v1.Volume) (*database.Volume, error) {
+	var pDatabaseVolume *database.Volume
 	if source != nil {
+		var databaseVolume database.Volume
 		datatypesJSON, err := iface.ConvertFromStructToJSON((*source).Struct)
 		if err != nil {
-			return databaseVolume, err
+			return nil, err
 		}
 		databaseVolume.Struct = datatypesJSON
 		timeTime, err := iface.ConvertTimestampToTime((*source).CreateTime)
 		if err != nil {
-			return databaseVolume, err
+			return nil, err
 		}
 		databaseVolume.CreateTime = timeTime
 		timeTime2, err := iface.ConvertTimestampToTime((*source).UpdateTime)
 		if err != nil {
-			return databaseVolume, err
+			return nil, err
 		}
 		databaseVolume.UpdateTime = timeTime2
 		databaseVolume.ID = (*source).Id
@@ -49,59 +50,64 @@ func (c *VolumeConverterImpl) FromAPIToDB(source *v1.Volume) (database.Volume, e
 		if (*source).MountPath != nil {
 			databaseVolume.MountPath = *(*source).MountPath
 		}
+		pDatabaseVolume = &databaseVolume
 	}
-	return databaseVolume, nil
+	return pDatabaseVolume, nil
 }
-func (c *VolumeConverterImpl) FromAPIToDBList(source []*v1.Volume) ([]database.Volume, error) {
-	var databaseVolumeList []database.Volume
+func (c *VolumeConverterImpl) FromAPIToDBList(source []*v1.Volume) ([]*database.Volume, error) {
+	var pDatabaseVolumeList []*database.Volume
 	if source != nil {
-		databaseVolumeList = make([]database.Volume, len(source))
+		pDatabaseVolumeList = make([]*database.Volume, len(source))
 		for i := 0; i < len(source); i++ {
-			databaseVolume, err := c.FromAPIToDB(source[i])
+			pDatabaseVolume, err := c.FromAPIToDB(source[i])
 			if err != nil {
 				return nil, err
 			}
-			databaseVolumeList[i] = databaseVolume
+			pDatabaseVolumeList[i] = pDatabaseVolume
 		}
 	}
-	return databaseVolumeList, nil
+	return pDatabaseVolumeList, nil
 }
-func (c *VolumeConverterImpl) FromDBToAPI(source database.Volume) (*v1.Volume, error) {
-	var zfsilov1Volume v1.Volume
-	pStructpbStruct, err := iface.ConvertFromJSONToStruct(source.Struct)
-	if err != nil {
-		return nil, err
+func (c *VolumeConverterImpl) FromDBToAPI(source *database.Volume) (*v1.Volume, error) {
+	var pZfsilov1Volume *v1.Volume
+	if source != nil {
+		var zfsilov1Volume v1.Volume
+		pStructpbStruct, err := iface.ConvertFromJSONToStruct((*source).Struct)
+		if err != nil {
+			return nil, err
+		}
+		zfsilov1Volume.Struct = pStructpbStruct
+		pTimestamppbTimestamp, err := iface.ConvertTimeToTimestamp((*source).CreateTime)
+		if err != nil {
+			return nil, err
+		}
+		zfsilov1Volume.CreateTime = pTimestamppbTimestamp
+		pTimestamppbTimestamp2, err := iface.ConvertTimeToTimestamp((*source).UpdateTime)
+		if err != nil {
+			return nil, err
+		}
+		zfsilov1Volume.UpdateTime = pTimestamppbTimestamp2
+		zfsilov1Volume.Id = (*source).ID
+		zfsilov1Volume.Name = (*source).Name
+		zfsilov1Volume.DatasetId = (*source).DatasetID
+		zfsilov1Volume.Options = iface.ConvertVolumeOptionsFromDBToAPI((*source).Options)
+		zfsilov1Volume.Sparse = (*source).Sparse
+		zfsilov1Volume.Mode = iface.ConvertVolumeModeFromDBToAPI((*source).Mode)
+		zfsilov1Volume.CapacityBytes = (*source).CapacityBytes
+		zfsilov1Volume.Status = iface.ConvertVolumeStatusFromDBToAPI((*source).Status)
+		pString := (*source).InitiatorIQN
+		zfsilov1Volume.InitiatorIqn = &pString
+		pString2 := (*source).TargetIQN
+		zfsilov1Volume.TargetIqn = &pString2
+		pString3 := (*source).TargetAddress
+		zfsilov1Volume.TargetAddress = &pString3
+		pString4 := (*source).MountPath
+		zfsilov1Volume.MountPath = &pString4
+		pZfsilov1Volume = &zfsilov1Volume
 	}
-	zfsilov1Volume.Struct = pStructpbStruct
-	pTimestamppbTimestamp, err := iface.ConvertTimeToTimestamp(source.CreateTime)
-	if err != nil {
-		return nil, err
-	}
-	zfsilov1Volume.CreateTime = pTimestamppbTimestamp
-	pTimestamppbTimestamp2, err := iface.ConvertTimeToTimestamp(source.UpdateTime)
-	if err != nil {
-		return nil, err
-	}
-	zfsilov1Volume.UpdateTime = pTimestamppbTimestamp2
-	zfsilov1Volume.Id = source.ID
-	zfsilov1Volume.Name = source.Name
-	zfsilov1Volume.DatasetId = source.DatasetID
-	zfsilov1Volume.Options = iface.ConvertVolumeOptionsFromDBToAPI(source.Options)
-	zfsilov1Volume.Sparse = source.Sparse
-	zfsilov1Volume.Mode = iface.ConvertVolumeModeFromDBToAPI(source.Mode)
-	zfsilov1Volume.CapacityBytes = source.CapacityBytes
-	zfsilov1Volume.Status = iface.ConvertVolumeStatusFromDBToAPI(source.Status)
-	pString := source.InitiatorIQN
-	zfsilov1Volume.InitiatorIqn = &pString
-	pString2 := source.TargetIQN
-	zfsilov1Volume.TargetIqn = &pString2
-	pString3 := source.TargetAddress
-	zfsilov1Volume.TargetAddress = &pString3
-	pString4 := source.MountPath
-	zfsilov1Volume.MountPath = &pString4
-	return &zfsilov1Volume, nil
+	return pZfsilov1Volume, nil
 }
-func (c *VolumeConverterImpl) FromDBToAPIList(source []database.Volume) ([]*v1.Volume, error) {
+func (c *VolumeConverterImpl) FromDBToAPIList(source []*database.Volume) ([]*v1.Volume, error) {
 	var pZfsilov1VolumeList []*v1.Volume
 	if source != nil {
 		pZfsilov1VolumeList = make([]*v1.Volume, len(source))

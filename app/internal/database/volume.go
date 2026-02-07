@@ -73,22 +73,38 @@ type Volume struct {
 	MountPath     string
 }
 
-func (v Volume) IsPublished() bool {
+func (v *Volume) IsPublished() bool {
 	return v.Status >= VolumeStatusPUBLISHED
 }
 
-func (v Volume) IsConnected() bool {
+func (v *Volume) IsConnected() bool {
 	return v.Status >= VolumeStatusCONNECTED
 }
 
-func (v Volume) IsMounted() bool {
+func (v *Volume) IsMounted() bool {
 	return v.Status >= VolumeStatusMOUNTED
 }
 
-func (v Volume) DevicePathISCSI() string {
-	return fmt.Sprintf("/dev/disk/by-path/ip-%s-iscsi-%s-lun-%d", v.TargetAddress, v.TargetIQN, 0)
+func (v *Volume) DevicePathISCSIClient() string {
+	return BuildDevicePathISCSIClient(v.TargetAddress, v.TargetIQN)
 }
 
-func (v Volume) DevicePathZFS() string {
-	return fmt.Sprintf("/dev/zvol/%s", v.DatasetID)
+func (v *Volume) DevicePathISCSIServer() string {
+	return BuildDevicePathISCSIServer(v.TargetIQN)
+}
+
+func (v *Volume) DevicePathZFS() string {
+	return BuildDevicePathZFS(v.DatasetID)
+}
+
+func BuildDevicePathISCSIClient(address string, iqn string) string {
+	return fmt.Sprintf("/dev/disk/by-path/ip-%s-iscsi-%s-lun-%d", address, iqn, 0)
+}
+
+func BuildDevicePathISCSIServer(iqn string) string {
+	return fmt.Sprintf("/sys/kernel/config/target/iscsi/%s", iqn)
+}
+
+func BuildDevicePathZFS(datasetID string) string {
+	return fmt.Sprintf("/dev/zvol/%s", datasetID)
 }
