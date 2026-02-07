@@ -1,5 +1,5 @@
 dev:
-    (cd dev && just start)
+    nix run .#dev-stack
 
 test:
     (cd app && just test)

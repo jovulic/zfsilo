@@ -10,6 +10,12 @@
     flake-parts = {
       url = "github:hercules-ci/flake-parts";
     };
+    process-compose-flake = {
+      url = "github:Platonic-Systems/process-compose-flake";
+    };
+    services-flake = {
+      url = "github:juspay/services-flake";
+    };
   };
 
   outputs =
@@ -29,6 +35,9 @@
         "aarch64-linux"
         "aarch64-darwin"
         "x86_64-darwin"
+      ];
+      imports = [
+        inputs.process-compose-flake.flakeModule
       ];
       perSystem =
         {
@@ -91,6 +100,12 @@
                 nix run .#nixosConfigurations.dev.host.config.microvm.declaredRunner
               '';
             };
+          process-compose."dev-stack" = {
+            imports = [
+              inputs.services-flake.processComposeModules.default
+              ./nix/stacks/dev
+            ];
+          };
         };
       flake = {
         nixosConfigurations =
@@ -100,7 +115,7 @@
               inherit system;
               config.allowUnfree = true;
             };
-            dev = pkgs.callPackage ./dev {
+            dev = pkgs.callPackage ./nix/stacks/dev/cluster.nix {
               inherit nixpkgs;
               inherit system;
               microvm = inputs.microvm;
