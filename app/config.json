@@ -4,7 +4,8 @@
     "level": "INFO"
   },
   "service": {
-    "externalServerUri": "dns:///:8000",
+    "bindAddress": ":8080",
+    "externalServerUri": "dns:///:8080",
     "keys": [
       {
         "identity": "me",
