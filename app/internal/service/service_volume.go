@@ -202,6 +202,8 @@ func (s *VolumeService) CreateVolume(ctx context.Context, req *connect.Request[z
 		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
 	}
 
+	volumedb.Status = database.VolumeStatusINITIAL
+
 	err = s.database.Transaction(func(tx *gorm.DB) error {
 		// Create database entry.
 		err := gorm.G[database.Volume](tx).Create(ctx, &volumedb)
@@ -446,6 +448,7 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 	}
 
 	volumedb.TargetIQN = s.host.VolumeIQN(volumedb.ID).String()
+	volumedb.Status = database.VolumeStatusPUBLISHED
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
 		_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
@@ -506,6 +509,7 @@ func (s *VolumeService) UnpublishVolume(ctx context.Context, req *connect.Reques
 	err = s.database.Transaction(func(tx *gorm.DB) error {
 		previousTargetIQN := volumedb.TargetIQN
 		volumedb.TargetIQN = ""
+		volumedb.Status = database.VolumeStatusINITIAL
 
 		_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
 		if err != nil {
@@ -562,6 +566,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 
 	volumedb.InitiatorIQN = req.Msg.InitiatorIqn
 	volumedb.TargetAddress = req.Msg.TargetAddress
+	volumedb.Status = database.VolumeStatusCONNECTED
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
 		_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
@@ -626,6 +631,7 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 		previousTargetAddress := volumedb.TargetAddress
 		volumedb.InitiatorIQN = ""
 		volumedb.TargetAddress = ""
+		volumedb.Status = database.VolumeStatusPUBLISHED
 
 		_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
 		if err != nil {
@@ -685,6 +691,7 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 	}
 
 	volumedb.MountPath = req.Msg.MountPath
+	volumedb.Status = database.VolumeStatusMOUNTED
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
 		_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
@@ -779,6 +786,7 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 	err = s.database.Transaction(func(tx *gorm.DB) error {
 		previousMountPath := volumedb.MountPath
 		volumedb.MountPath = ""
+		volumedb.Status = database.VolumeStatusCONNECTED
 
 		_, err = gorm.G[database.Volume](s.database).Updates(ctx, volumedb)
 		if err != nil {

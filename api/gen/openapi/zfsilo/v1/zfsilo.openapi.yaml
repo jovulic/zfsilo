@@ -570,6 +570,15 @@ components:
         - MODE_UNSPECIFIED
         - MODE_BLOCK
         - MODE_FILESYSTEM
+    zfsilo.v1.Volume.Status:
+      type: string
+      title: Status
+      enum:
+        - STATUS_UNSPECIFIED
+        - STATUS_INITIAL
+        - STATUS_PUBLISHED
+        - STATUS_CONNECTED
+        - STATUS_MOUNTED
     google.protobuf.ListValue:
       type: object
       properties:
@@ -1121,6 +1130,10 @@ components:
           title: capacity_bytes
           format: int64
           description: The capacity of the volume.
+        status:
+          title: status
+          description: The status of the volume. Immutable.
+          $ref: '#/components/schemas/zfsilo.v1.Volume.Status'
         initiatorIqn:
           type: string
           title: initiator_iqn
@@ -1155,6 +1168,7 @@ components:
         - datasetId
         - sparse
         - mode
+        - status
       additionalProperties: false
       description: The volume resource.
     zfsilo.v1.Volume.Option:

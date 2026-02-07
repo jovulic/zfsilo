@@ -23,6 +23,7 @@ type VolumeConverter interface {
 	//goverter:map TargetIQN TargetIqn
 	//goverter:map Options | ConvertVolumeOptionsFromDBToAPI
 	//goverter:map Mode | ConvertVolumeModeFromDBToAPI
+	//goverter:map Status | ConvertVolumeStatusFromDBToAPI
 	FromDBToAPI(source database.Volume) (*zfsilov1.Volume, error)
 	FromDBToAPIList(source []database.Volume) ([]*zfsilov1.Volume, error)
 
@@ -33,6 +34,7 @@ type VolumeConverter interface {
 	//goverter:map TargetIqn TargetIQN
 	//goverter:map Options | ConvertVolumeOptionsFromAPIToDB
 	//goverter:map Mode | ConvertVolumeModeFromAPIToDB
+	//goverter:map Status | ConvertVolumeStatusFromAPIToDB
 	FromAPIToDB(source *zfsilov1.Volume) (database.Volume, error)
 	FromAPIToDBList(source []*zfsilov1.Volume) ([]database.Volume, error)
 }
@@ -65,4 +67,12 @@ func ConvertVolumeModeFromAPIToDB(source zfsilov1.Volume_Mode) database.VolumeMo
 
 func ConvertVolumeModeFromDBToAPI(source database.VolumeMode) zfsilov1.Volume_Mode {
 	return zfsilov1.Volume_Mode(source)
+}
+
+func ConvertVolumeStatusFromAPIToDB(source zfsilov1.Volume_Status) database.VolumeStatus {
+	return database.VolumeStatus(source)
+}
+
+func ConvertVolumeStatusFromDBToAPI(source database.VolumeStatus) zfsilov1.Volume_Status {
+	return zfsilov1.Volume_Status(source)
 }

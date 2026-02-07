@@ -97,6 +97,14 @@ message Volume {
     MODE_FILESYSTEM = 2;
   }
 
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    STATUS_INITIAL = 1;
+    STATUS_PUBLISHED = 2;
+    STATUS_CONNECTED = 3;
+    STATUS_MOUNTED = 4;
+  }
+
   google.protobuf.Struct struct = 1 [(gnostic.openapi.v3.property) = {description: "Loosely structured data stored with the volume."}];
   google.protobuf.Timestamp create_time = 2 [(gnostic.openapi.v3.property) = {
     description: "When the volume was created."
@@ -134,28 +142,32 @@ message Volume {
     (gnostic.openapi.v3.property) = {description: "The capacity of the volume."},
     (buf.validate.field).int64.gte = 0
   ];
-  optional string initiator_iqn = 11 [
+  Status status = 11 [
+    (gnostic.openapi.v3.property) = {description: "The status of the volume. Immutable."},
+    (buf.validate.field).required = true
+  ];
+  optional string initiator_iqn = 12 [
     (gnostic.openapi.v3.property) = {
       description: "The iSCSI initiator IQN."
       read_only: true
     },
     (buf.validate.field).string = {pattern: "^iqn.*$"}
   ];
-  optional string target_iqn = 12 [
+  optional string target_iqn = 13 [
     (gnostic.openapi.v3.property) = {
       description: "The iSCSI target IQN."
       read_only: true
     },
     (buf.validate.field).string = {pattern: "^iqn.*$"}
   ];
-  optional string target_address = 13 [
+  optional string target_address = 14 [
     (gnostic.openapi.v3.property) = {
       description: "The iSCSI target address (host and port)."
       read_only: true
     },
     (buf.validate.field).string = {host_and_port: true}
   ];
-  optional string mount_path = 14 [
+  optional string mount_path = 15 [
     (gnostic.openapi.v3.property) = {
       description: "The iSCSI mount path."
       read_only: true

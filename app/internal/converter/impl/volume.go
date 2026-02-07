@@ -35,6 +35,7 @@ func (c *VolumeConverterImpl) FromAPIToDB(source *v1.Volume) (database.Volume, e
 		databaseVolume.Options = iface.ConvertVolumeOptionsFromAPIToDB((*source).Options)
 		databaseVolume.Sparse = (*source).Sparse
 		databaseVolume.Mode = iface.ConvertVolumeModeFromAPIToDB((*source).Mode)
+		databaseVolume.Status = iface.ConvertVolumeStatusFromAPIToDB((*source).Status)
 		databaseVolume.CapacityBytes = (*source).CapacityBytes
 		if (*source).InitiatorIqn != nil {
 			databaseVolume.InitiatorIQN = *(*source).InitiatorIqn
@@ -89,6 +90,7 @@ func (c *VolumeConverterImpl) FromDBToAPI(source database.Volume) (*v1.Volume, e
 	zfsilov1Volume.Sparse = source.Sparse
 	zfsilov1Volume.Mode = iface.ConvertVolumeModeFromDBToAPI(source.Mode)
 	zfsilov1Volume.CapacityBytes = source.CapacityBytes
+	zfsilov1Volume.Status = iface.ConvertVolumeStatusFromDBToAPI(source.Status)
 	pString := source.InitiatorIQN
 	zfsilov1Volume.InitiatorIqn = &pString
 	pString2 := source.TargetIQN

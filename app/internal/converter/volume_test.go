@@ -28,6 +28,7 @@ func TestVolumeConversion(t *testing.T) {
 		CapacityBytes: 1073741824,
 		Sparse:        true,
 		Mode:          database.VolumeModeBLOCK,
+		Status:        database.VolumeStatusINITIAL,
 		Options: datatypes.NewJSONType(database.VolumeOptionList{
 			{Key: "snap", Value: "true"},
 			{Key: "atime", Value: "off"},
@@ -44,6 +45,7 @@ func TestVolumeConversion(t *testing.T) {
 		CapacityBytes: 1073741824,
 		Sparse:        true,
 		Mode:          zfsilov1.Volume_MODE_BLOCK,
+		Status:        zfsilov1.Volume_STATUS_INITIAL,
 		Options: []*zfsilov1.Volume_Option{
 			{Key: "snap", Value: "true"},
 			{Key: "atime", Value: "off"},
@@ -68,6 +70,7 @@ func TestVolumeConversion(t *testing.T) {
 		require.Equal(t, expectedAPIVolume.CapacityBytes, actualAPIVolume.CapacityBytes)
 		require.Equal(t, expectedAPIVolume.Sparse, actualAPIVolume.Sparse)
 		require.Equal(t, expectedAPIVolume.Mode, actualAPIVolume.Mode)
+		require.Equal(t, expectedAPIVolume.Status, actualAPIVolume.Status)
 		require.True(t, expectedAPIVolume.CreateTime.AsTime().Equal(actualAPIVolume.CreateTime.AsTime()))
 		require.True(t, expectedAPIVolume.UpdateTime.AsTime().Equal(actualAPIVolume.UpdateTime.AsTime()))
 		require.ElementsMatch(t, expectedAPIVolume.Options, actualAPIVolume.Options)
@@ -86,6 +89,7 @@ func TestVolumeConversion(t *testing.T) {
 		require.Equal(t, dbVolume.CapacityBytes, actualDBVolume.CapacityBytes)
 		require.Equal(t, dbVolume.Sparse, actualDBVolume.Sparse)
 		require.Equal(t, dbVolume.Mode, actualDBVolume.Mode)
+		require.Equal(t, dbVolume.Status, actualDBVolume.Status)
 
 		// Timestamps can have timezone differences, so comparing them with Equal
 		// is best.

@@ -8,7 +8,8 @@ build:
   go build -tags "json1"
 
 generate:
-  GOWORK=off go generate ./...
+  go generate ./...
+  sed -i "s/-mod=mod //g" wire_gen.go
 
 wire:
   wire

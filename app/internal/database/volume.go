@@ -44,6 +44,17 @@ const (
 	VolumeModeFILESYSTEM                    // FILESYSTEM
 )
 
+//go:generate stringer -type=VolumeStatus -linecomment volume.go
+type VolumeStatus int
+
+const (
+	VolumeStatusUNSPECIFIED VolumeStatus = iota // UNSPECIFIED
+	VolumeStatusINITIAL                         // INITIAL
+	VolumeStatusPUBLISHED                       // PUBLISHED
+	VolumeStatusCONNECTED                       // CONNECTED
+	VolumeStatusMOUNTED                         // MOUNTED
+)
+
 type Volume struct {
 	Struct        datatypes.JSON
 	CreateTime    time.Time `gorm:"autoCreateTime"`
@@ -54,6 +65,7 @@ type Volume struct {
 	Options       datatypes.JSONType[VolumeOptionList]
 	Sparse        bool
 	Mode          VolumeMode
+	Status        VolumeStatus
 	CapacityBytes int64 `gorm:"check:capacity_bytes > 0"`
 	InitiatorIQN  string
 	TargetIQN     string
@@ -62,15 +74,15 @@ type Volume struct {
 }
 
 func (v Volume) IsPublished() bool {
-	return v.TargetIQN != ""
+	return v.Status >= VolumeStatusPUBLISHED
 }
 
 func (v Volume) IsConnected() bool {
-	return v.IsPublished() && v.InitiatorIQN != "" || v.TargetAddress != ""
+	return v.Status >= VolumeStatusCONNECTED
 }
 
 func (v Volume) IsMounted() bool {
-	return v.IsConnected() && v.MountPath != ""
+	return v.Status >= VolumeStatusMOUNTED
 }
 
 func (v Volume) DevicePathISCSI() string {
