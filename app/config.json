@@ -14,5 +14,37 @@
   },
   "database": {
     "dsn": "file::memory:?cache=shared"
+  },
+  "command": {
+    "produceTarget": {
+      "mode": "remote",
+      "remote": {
+        "address": "127.0.0.1",
+        "port": 9000,
+        "username": "root",
+        "password": ""
+      }
+    },
+    "consumeTargets": [
+      {
+        "mode": "remote",
+        "remote": {
+          "address": "127.0.0.1",
+          "port": 9100,
+          "username": "root",
+          "password": ""
+        },
+        "iqn": "iqn.2006-01.org.linux-iscsi.take"
+      }
+    ],
+    "host": {
+      "hostname": "give"
+    },
+    "credentials": {
+      "userId": "userid",
+      "password": "password",
+      "mutualUserId": "mutualuserid",
+      "mutualPassword": "mutualpassword"
+    }
   }
 }
