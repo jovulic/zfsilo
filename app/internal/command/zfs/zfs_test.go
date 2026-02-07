@@ -93,7 +93,7 @@ func TestSetProperty(t *testing.T) {
 	// Set property
 	setArgs := zfs.SetPropertyArguments{
 		Name:          volName,
-		PropertyKey:   "comment",
+		PropertyKey:   "zfsilo:comment",
 		PropertyValue: "hello world",
 	}
 	err = client.SetProperty(context.Background(), setArgs)
