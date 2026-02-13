@@ -27,16 +27,19 @@ Contains the main `zfsilo` server application.
 ### `csi/`
 Reserved for the Container Storage Interface (CSI) driver implementation. *Currently empty.*
 
-### `dev/`
+### `nix/stacks/dev/`
 Contains configuration for a reproducible development and testing environment using **MicroVMs**.
 - **`give.nix`**: Defines the "Server" VM (`give`). It runs ZFS, creates a pool named `tank` on startup, and acts as the iSCSI target.
 - **`take.nix`**: Defines the "Client" VM (`take`). It runs `openiscsi` to consume volumes exported by `give`.
 - **`host.nix`**: Host-specific configuration.
+- **`cluster.nix`**: Orchestrates the VM environment.
 
 ### `lib/`
 Shared Go library packages used by `app` and potentially `csi`.
 - **`command/`**: A command execution abstraction to simplify testing and mocking of shell commands.
 - **`try/`**: A utility for handling reversible operations (transactions), essential for robustly handling multi-step system mutations (e.g., "Create ZFS dataset" -> "Fail" -> "Rollback ZFS dataset").
+- **`selfcert/`**: Helpers for generating self-signed certificates.
+- **`tagged/`**: Utilities for working with tagged data or structures.
 - **`genericutil/`, `stringutil/`, `structutil/`**: General helpers.
 
 ## Key Architecture Concepts
@@ -65,12 +68,16 @@ The project uses `just` as a command runner.
 
 ## API Services
 Defined in `api/src/zfsilo/v1/zfsilo.proto`:
-- **`Service`**: General server info (e.g., Capacity).
+- **`Service`**: General server information.
+    - `GetCapacity`: Returns the current free capacity in bytes.
 - **`VolumeService`**: Full lifecycle management:
-    - `Create`/`Delete`: Manage ZFS datasets and DB entries.
-    - `Publish`: Export a volume via iSCSI (Target).
-    - `Connect`: Connect to an iSCSI target (Initiator).
-    - `Mount`: Mount a connected device to a local path.
+    - `GetVolume`/`ListVolumes`: Query volume state and metadata.
+    - `CreateVolume`/`UpdateVolume`/`DeleteVolume`: Manage ZFS datasets and DB entries.
+    - `PublishVolume`/`UnpublishVolume`: Export/Unexport a volume via iSCSI (Target).
+    - `ConnectVolume`/`DisconnectVolume`: Connect to or disconnect from an iSCSI target (Initiator).
+    - `MountVolume`/`UnmountVolume`: Mount/Unmount a connected device to a local path.
+    - `StatsVolume`: Retrieve volume usage statistics.
+    - `SyncVolume`/`SyncVolumes`: Reconcile internal state with the actual system state.
 
 ## Code Style
 - **Linting**: Enforced via `.golangci.yaml`.
