@@ -38,7 +38,7 @@ func main() {
 			kongCtx.FatalIfErrorf(fmt.Errorf("failed to build config: %w", err))
 		}
 
-		logMode, err := mapLogMode(conf.Log.Mode)
+		logMode, err := mapLogMode(conf.Log.Format)
 		if err != nil {
 			kongCtx.FatalIfErrorf(fmt.Errorf("failed to parse log mode: %w", err))
 		}

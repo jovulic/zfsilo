@@ -17,12 +17,12 @@ var WireSet = wire.NewSet(
 )
 
 func buildExecutor(target config.ConfigCommandTarget) (command.Executor, error) {
-	switch target.Mode {
-	case "local":
+	switch target.Type {
+	case "LOCAL":
 		return command.NewLocalExecutor(command.LocalExecutorConfig{
 			RunAsRoot: target.RunAsRoot,
 		}), nil
-	case "remote":
+	case "REMOTE":
 		return command.NewRemoteExecutor(command.RemoteExecutorConfig{
 			RunAsRoot: target.RunAsRoot,
 			Address:   target.Remote.Address,
@@ -31,7 +31,7 @@ func buildExecutor(target config.ConfigCommandTarget) (command.Executor, error) 
 			Password:  target.Remote.Password,
 		}), nil
 	default:
-		return nil, fmt.Errorf("unknown command mode: %s", target.Mode)
+		return nil, fmt.Errorf("unknown command mode: %s", target.Type)
 	}
 }
 

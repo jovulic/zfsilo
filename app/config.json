@@ -1,7 +1,7 @@
 {
   "log": {
-    "mode": "TEXT",
-    "level": "INFO"
+    "level": "INFO",
+    "format": "TEXT"
   },
   "service": {
     "bindAddress": ":8080",
@@ -18,7 +18,7 @@
   },
   "command": {
     "produceTarget": {
-      "mode": "remote",
+      "type": "REMOTE",
       "remote": {
         "address": "127.0.0.1",
         "port": 9000,
@@ -28,7 +28,7 @@
     },
     "consumeTargets": [
       {
-        "mode": "remote",
+        "type": "REMOTE",
         "remote": {
           "address": "127.0.0.1",
           "port": 9100,

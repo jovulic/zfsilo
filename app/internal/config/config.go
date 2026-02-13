@@ -63,11 +63,11 @@ func (SecretValue) MarshalJSON() ([]byte, error) {
 }
 
 type ConfigCommandTarget struct {
-	Mode      string `json:"mode"      mod:"default=local" validate:"oneof=local remote"`
+	Type      string `json:"type"      mod:"default=LOCAL" validate:"oneof=LOCAL REMOTE"`
 	RunAsRoot bool   `json:"runAsRoot"`
 	Remote    struct {
 		Address  string `json:"address"  validate:"required_if=Mode remote"`
-		Port     uint16 `json:"port"     mod:"default=22"                   validate:"required_if=Mode remote"`
+		Port     uint16 `json:"port"     mod:"default=22"                   validate:"required_if=Mode REMOTE"`
 		Username string `json:"username" validate:"required_if=Mode remote"`
 		Password string `json:"password" validate:"required_if=Mode remote"`
 	} `json:"remote"`
@@ -91,8 +91,8 @@ type ConfigCommandHost struct {
 
 type Config struct {
 	Log struct {
-		Mode  string   `json:"mode"  mod:"default=JSON" validate:"oneof=JSON TEXT"`
-		Level LogLevel `json:"level" mod:"default=INFO" validate:"oneof=DEBUG INFO WARN ERROR"`
+		Level  LogLevel `json:"level" mod:"default=INFO" validate:"oneof=DEBUG INFO WARN ERROR"`
+		Format string   `json:"format"  mod:"default=JSON" validate:"oneof=JSON TEXT"`
 	} `json:"log"`
 	Service struct {
 		BindAddress       string `json:"bindAddress"       mod:"default=:8080"`
