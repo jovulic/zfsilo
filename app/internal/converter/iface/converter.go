@@ -28,6 +28,9 @@ func ConvertFromStructToJSON(source *structpb.Struct) (datatypes.JSON, error) {
 }
 
 func ConvertTimeToTimestamp(source time.Time) (*timestamppb.Timestamp, error) {
+	if source.IsZero() {
+		return nil, nil
+	}
 	destination := timestamppb.New(source)
 	if err := destination.CheckValid(); err != nil {
 		return nil, fmt.Errorf("failed to convert %T to %T: %w", source, destination, err)
@@ -36,6 +39,9 @@ func ConvertTimeToTimestamp(source time.Time) (*timestamppb.Timestamp, error) {
 }
 
 func ConvertTimestampToTime(source *timestamppb.Timestamp) (time.Time, error) {
+	if source == nil {
+		return time.Time{}, nil
+	}
 	if err := source.CheckValid(); err != nil {
 		return time.Time{}, fmt.Errorf("invalid %T: %w", source, err)
 	}
