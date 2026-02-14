@@ -48,7 +48,11 @@ func newLogInterceptor(log *slog.Logger) connect.UnaryInterceptorFunc {
 			endTime := time.Now()
 
 			responseTime := endTime.Sub(startTime)
-			slogctx.Info(ctx, "request completed", slog.Duration("responseTime", responseTime))
+			if err != nil {
+				slogctx.Error(ctx, "request failed", slog.Duration("responseTime", responseTime), slogctx.Err(err))
+			} else {
+				slogctx.Info(ctx, "request completed", slog.Duration("responseTime", responseTime))
+			}
 
 			return res, err
 		}
