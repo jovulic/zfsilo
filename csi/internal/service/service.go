@@ -423,11 +423,41 @@ func (s *CSIService) ListVolumes(ctx context.Context, req *csi.ListVolumesReques
 		return nil, err
 	}
 
-	// TODO: Pagination Logic
-	// TODO: Fetch volumes from backend
-	// TODO: Encode NextToken
+	zreq := &zfsilov1.ListVolumesRequest{
+		PageSize:  req.GetMaxEntries(),
+		PageToken: req.GetStartingToken(),
+	}
 
-	return nil, status.Errorf(codes.Unimplemented, "method ListVolumes not implemented")
+	resp, err := s.volumeClient.ListVolumes(ctx, connect.NewRequest(zreq))
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeInvalidArgument {
+			return nil, status.Errorf(codes.Aborted, "invalid starting token: %v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to list volumes: %v", err)
+	}
+
+	entries := make([]*csi.ListVolumesResponse_Entry, 0, len(resp.Msg.Volumes))
+	for _, vol := range resp.Msg.Volumes {
+		var publishedNodeIds []string
+		if vol.InitiatorIqn != nil && *vol.InitiatorIqn != "" {
+			publishedNodeIds = []string{*vol.InitiatorIqn}
+		}
+
+		entries = append(entries, &csi.ListVolumesResponse_Entry{
+			Volume: &csi.Volume{
+				VolumeId:      vol.Id,
+				CapacityBytes: vol.CapacityBytes,
+			},
+			Status: &csi.ListVolumesResponse_VolumeStatus{
+				PublishedNodeIds: publishedNodeIds,
+			},
+		})
+	}
+
+	return &csi.ListVolumesResponse{
+		Entries:   entries,
+		NextToken: resp.Msg.NextPageToken,
+	}, nil
 }
 
 func (s *CSIService) GetCapacity(ctx context.Context, req *csi.GetCapacityRequest) (*csi.GetCapacityResponse, error) {
