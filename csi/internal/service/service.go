@@ -18,6 +18,7 @@ import (
 	"github.com/jovulic/zfsilo/lib/structutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -545,12 +546,49 @@ func (s *CSIService) ControllerExpandVolume(ctx context.Context, req *csi.Contro
 		return nil, err
 	}
 
-	// TODO: Idempotency Check (Is volume already >= requested size?)
-	// TODO: Check if volume is online/offline (capabilities check)
-	// TODO: Backend expansion logic
-	// TODO: Determine if node expansion is required
+	id := req.GetVolumeId()
+	capacityRange := req.GetCapacityRange()
+	requiredBytes := capacityRange.GetRequiredBytes()
 
-	return nil, status.Errorf(codes.Unimplemented, "method ControllerExpandVolume not implemented")
+	// Get current volume status.
+	getResp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			return nil, status.Errorf(codes.NotFound, "volume %s not found", id)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get volume: %v", err)
+	}
+
+	vol := getResp.Msg.Volume
+
+	// If the current volume is already large enough, return success.
+	if vol.CapacityBytes >= requiredBytes {
+		return &csi.ControllerExpandVolumeResponse{
+			CapacityBytes:         vol.CapacityBytes,
+			NodeExpansionRequired: true,
+		}, nil
+	}
+
+	// Perform expansion via update volume.
+	updateStruct, err := structpb.NewStruct(map[string]any{
+		"id":             id,
+		"capacity_bytes": float64(requiredBytes),
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create update struct: %v", err)
+	}
+
+	updateResp, err := s.volumeClient.UpdateVolume(ctx, connect.NewRequest(&zfsilov1.UpdateVolumeRequest{
+		Volume: updateStruct,
+	}))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to expand volume: %v", err)
+	}
+
+	return &csi.ControllerExpandVolumeResponse{
+		CapacityBytes:         updateResp.Msg.Volume.CapacityBytes,
+		NodeExpansionRequired: true,
+	}, nil
 }
 
 func (s *CSIService) ControllerGetVolume(ctx context.Context, req *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
