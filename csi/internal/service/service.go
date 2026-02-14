@@ -764,11 +764,43 @@ func (s *CSIService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVol
 		return nil, err
 	}
 
-	// TODO: Check if path exists
-	// TODO: Run 'df' or 'statfs' syscall on the path
-	// TODO: Run inode check
+	id := req.GetVolumeId()
+	volumePath := req.GetVolumePath()
 
-	return nil, status.Errorf(codes.Unimplemented, "method NodeGetVolumeStats not implemented")
+	// Get volume status.
+	getResp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			return nil, status.Errorf(codes.NotFound, "volume %s not found", id)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get volume: %v", err)
+	}
+
+	vol := getResp.Msg.Volume
+	if vol.MountPath == nil || *vol.MountPath != volumePath {
+		return nil, status.Errorf(codes.NotFound, "volume %s is not mounted at %s", id, volumePath)
+	}
+
+	// Get volume stats.
+	statsResp, err := s.volumeClient.StatsVolume(ctx, connect.NewRequest(&zfsilov1.StatsVolumeRequest{Id: id}))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get volume stats: %v", err)
+	}
+
+	stats := statsResp.Msg.Stats
+	usage := make([]*csi.VolumeUsage, 0, len(stats.Usage))
+	for _, u := range stats.Usage {
+		usage = append(usage, &csi.VolumeUsage{
+			Total:     u.Total,
+			Used:      u.Used,
+			Available: u.Available,
+			Unit:      csi.VolumeUsage_Unit(u.Unit),
+		})
+	}
+
+	return &csi.NodeGetVolumeStatsResponse{
+		Usage: usage,
+	}, nil
 }
 
 func (s *CSIService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
