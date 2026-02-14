@@ -42,7 +42,7 @@ var _ = Describe("CSIService Sanity", func() {
 
 		targetPortalAddress := os.Getenv("ZFSILO_TARGET_PORTAL_ADDRESS")
 		if targetPortalAddress == "" {
-			targetPortalAddress = "127.0.0.1"
+			targetPortalAddress = "127.0.0.1:3260"
 		}
 
 		initiatorIQN := os.Getenv("ZFSILO_INITIATOR_IQN")
