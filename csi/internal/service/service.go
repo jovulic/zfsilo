@@ -34,6 +34,7 @@ func (dict Parameters) ParentDatasetID() string {
 }
 
 func (dict Parameters) Options() []ParameterOption {
+	// NOTE: Options are defined as parameters that have an o_ prefix.
 	var options []ParameterOption
 	for key, value := range dict {
 		if key, ok := strings.CutPrefix(key, "o_"); ok {
