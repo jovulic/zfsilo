@@ -56,6 +56,8 @@ type CSIServiceConfig struct {
 	KnownInitiatorIQNs  []string `validate:"required"`
 }
 
+// CSIService implements the CSI specification.
+//
 // specification: https://github.com/container-storage-interface/spec/blob/master/spec.md
 type CSIService struct {
 	csi.UnimplementedIdentityServer
