@@ -63,6 +63,33 @@ func applyVolumeUpdate(
 				}
 			}
 			existingVolume.CapacityBytes = int64(numValue.NumberValue)
+		case "options":
+			listValue, ok := value.GetKind().(*structpb.Value_ListValue)
+			if !ok {
+				return &FieldTypeError{
+					FieldName:    key,
+					ExpectedType: "list",
+					ActualType:   fmt.Sprintf("%T", value.GetKind()),
+				}
+			}
+
+			newOptions := make([]*zfsilov1.Volume_Option, 0, len(listValue.ListValue.Values))
+			for i, v := range listValue.ListValue.Values {
+				structValue, ok := v.GetKind().(*structpb.Value_StructValue)
+				if !ok {
+					return &FieldTypeError{
+						FieldName:    fmt.Sprintf("%s[%d]", key, i),
+						ExpectedType: "object",
+						ActualType:   fmt.Sprintf("%T", v.GetKind()),
+					}
+				}
+				fields := structValue.StructValue.GetFields()
+				newOptions = append(newOptions, &zfsilov1.Volume_Option{
+					Key:   fields["key"].GetStringValue(),
+					Value: fields["value"].GetStringValue(),
+				})
+			}
+			existingVolume.Options = newOptions
 		default:
 			// Silently ignore immutable, read-only, or unknown fields.
 			// skip
@@ -332,8 +359,21 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 		PropertyValue: fmt.Sprintf("%d", volumedb.CapacityBytes),
 	})
 	if err != nil {
-		slogctx.Error(ctx, "failed to update volume on producer", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to update volume"))
+		slogctx.Error(ctx, "failed to update volume size on producer", slogctx.Err(err))
+		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to update volume size"))
+	}
+
+	// We update the options by zfs set.
+	for _, opt := range volumedb.Options.Data() {
+		err = zfs.With(s.producer).SetProperty(ctx, zfs.SetPropertyArguments{
+			Name:          volumedb.DatasetID,
+			PropertyKey:   opt.Key,
+			PropertyValue: opt.Value,
+		})
+		if err != nil {
+			slogctx.Error(ctx, "failed to update volume property on producer", "key", opt.Key, slogctx.Err(err))
+			return nil, connect.NewError(connect.CodeInternal, errors.New("failed to update volume property"))
+		}
 	}
 
 	// We check if the volume has been published, and if it has, we need to issue
