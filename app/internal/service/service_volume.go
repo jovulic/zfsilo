@@ -19,7 +19,6 @@ import (
 	converteriface "github.com/jovulic/zfsilo/app/internal/converter/iface"
 	"github.com/jovulic/zfsilo/app/internal/database"
 	"github.com/jovulic/zfsilo/lib/try"
-	slogctx "github.com/veqryn/slog-context"
 	structpb "google.golang.org/protobuf/types/known/structpb"
 	"gorm.io/gorm"
 )
@@ -144,14 +143,12 @@ func (s *VolumeService) GetVolume(ctx context.Context, req *connect.Request[zfsi
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
 	default:
-		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to get volume: %w", err))
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
 	if err != nil {
-		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 	}
 
 	return connect.NewResponse(&zfsilov1.GetVolumeResponse{Volume: volumeapi}), nil
@@ -177,8 +174,7 @@ func (s *VolumeService) ListVolumes(ctx context.Context, req *connect.Request[zf
 	} else {
 		pageToken, err := UnmarshalPageToken(req.Msg.PageToken)
 		if err != nil {
-			slogctx.Error(ctx, "failed to unmarshal page token", slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid page token"))
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("failed to unmarshal page token: %w", err))
 		}
 		offset = pageToken.Offset
 		limit = pageToken.Limit
@@ -191,15 +187,13 @@ func (s *VolumeService) ListVolumes(ctx context.Context, req *connect.Request[zf
 		Limit(limit).
 		Find(ctx)
 	if err != nil {
-		slogctx.Error(ctx, "failed to get volumes from database", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to retrieve volumes"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get volumes from database: %w", err))
 	}
 
 	// Convert database models to API models.
 	volumeapis, err := s.converter.FromDBToAPIList(volumedbs)
 	if err != nil {
-		slogctx.Error(ctx, "failed to map database volumes to API", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to process volumes"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to map database volumes to API: %w", err))
 	}
 
 	// Determine the next page token and build the response. If we are at the
@@ -213,8 +207,7 @@ func (s *VolumeService) ListVolumes(ctx context.Context, req *connect.Request[zf
 		}
 		tokenStr, err := nextPageToken.Marshal()
 		if err != nil {
-			slogctx.Error(ctx, "failed to marshal next page token", slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeInternal, errors.New("failed to create next page token"))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to marshal next page token: %w", err))
 		}
 		nextPageTokenString = tokenStr
 	}
@@ -228,8 +221,7 @@ func (s *VolumeService) ListVolumes(ctx context.Context, req *connect.Request[zf
 func (s *VolumeService) CreateVolume(ctx context.Context, req *connect.Request[zfsilov1.CreateVolumeRequest]) (*connect.Response[zfsilov1.CreateVolumeResponse], error) {
 	volumedb, err := s.converter.FromAPIToDB(req.Msg.Volume)
 	if err != nil {
-		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 	}
 
 	volumedb.Status = database.VolumeStatusINITIAL
@@ -290,14 +282,12 @@ func (s *VolumeService) CreateVolume(ctx context.Context, req *connect.Request[z
 			return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("volume already exists"))
 		}
 		// For ZFS errors or other DB errors, return internal error.
-		slogctx.Error(ctx, "failed to create volume", slogctx.Err(err))
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create volume: %w", err))
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
 	if err != nil {
-		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 	}
 
 	return connect.NewResponse(&zfsilov1.CreateVolumeResponse{Volume: volumeapi}), nil
@@ -317,14 +307,12 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
 	default:
-		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to get volume: %w", err))
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
 	if err != nil {
-		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 	}
 
 	err = applyVolumeUpdate(volumeapi, req.Msg.Volume)
@@ -333,14 +321,12 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 		if errors.As(err, &errField) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("failed to update volume: %w", errField))
 		}
-		slogctx.Error(ctx, "failed to apply update to volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to apply update to volume: %w", err))
 	}
 
 	volumedb, err = s.converter.FromAPIToDB(volumeapi)
 	if err != nil {
-		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 	}
 
 	// NOTE: We do not perform the update in a transaction as we have not written
@@ -348,8 +334,7 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 
 	_, err = gorm.G[*database.Volume](s.database).Updates(ctx, volumedb)
 	if err != nil {
-		slogctx.Error(ctx, "failed to update volume in database", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to update volume"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update volume in database: %w", err))
 	}
 
 	// We update the size of the volume by zfs set.
@@ -359,8 +344,7 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 		PropertyValue: fmt.Sprintf("%d", volumedb.CapacityBytes),
 	})
 	if err != nil {
-		slogctx.Error(ctx, "failed to update volume size on producer", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to update volume size"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update volume size on producer: %w", err))
 	}
 
 	// We update the options by zfs set.
@@ -371,8 +355,7 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 			PropertyValue: opt.Value,
 		})
 		if err != nil {
-			slogctx.Error(ctx, "failed to update volume property on producer", "key", opt.Key, slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeInternal, errors.New("failed to update volume property"))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update volume property %s on producer: %w", opt.Key, err))
 		}
 	}
 
@@ -381,8 +364,7 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 	if volumedb.IsPublished() {
 		target, ok := s.consumers[volumedb.InitiatorIQN]
 		if !ok {
-			slogctx.Error(ctx, "unknown initiator", slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeInternal, errors.New("unknown initiator"))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("unknown initiator: %s", volumedb.InitiatorIQN))
 		}
 
 		err = iscsi.With(target).RescanTarget(ctx, iscsi.RescanTargetArguments{
@@ -390,8 +372,7 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 			TargetAddress: volumedb.TargetAddress,
 		})
 		if err != nil {
-			slogctx.Error(ctx, "failed to perform rescan on consumer", slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeInternal, errors.New("failed to rescan"))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to perform rescan on consumer: %w", err))
 		}
 
 		// If the mode is filesystem we also need to resize the filesystem.
@@ -400,8 +381,7 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 				Device: volumedb.DevicePathISCSIClient(),
 			})
 			if err != nil {
-				slogctx.Error(ctx, "failed to perform resize on consumer", slogctx.Err(err))
-				return nil, connect.NewError(connect.CodeInternal, errors.New("failed to resize"))
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to perform resize on consumer: %w", err))
 			}
 		}
 	}
@@ -417,8 +397,7 @@ func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[z
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
 	default:
-		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to get volume: %w", err))
 	}
 
 	switch {
@@ -448,7 +427,6 @@ func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[z
 		return nil
 	})
 	if err != nil {
-		slogctx.Error(ctx, "failed to delete volume", slogctx.Err(err))
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete volume: %w", err))
 	}
 
@@ -463,16 +441,14 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
 	default:
-		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to get volume: %w", err))
 	}
 
 	switch {
 	case volumedb.IsPublished():
 		volumeapi, err := s.converter.FromDBToAPI(volumedb)
 		if err != nil {
-			slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+			return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 		}
 		return connect.NewResponse(&zfsilov1.PublishVolumeResponse{Volume: volumeapi}), nil
 	case volumedb.IsConnected():
@@ -484,8 +460,7 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 	if volumedb.IsPublished() {
 		volumeapi, err := s.converter.FromDBToAPI(volumedb)
 		if err != nil {
-			slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+			return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 		}
 		return connect.NewResponse(&zfsilov1.PublishVolumeResponse{Volume: volumeapi}), nil
 	}
@@ -511,14 +486,12 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 		return nil
 	})
 	if err != nil {
-		slogctx.Error(ctx, "failed to publish volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to publish volume"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to publish volume: %w", err))
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
 	if err != nil {
-		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 	}
 	return connect.NewResponse(&zfsilov1.PublishVolumeResponse{Volume: volumeapi}), nil
 }
@@ -531,16 +504,14 @@ func (s *VolumeService) UnpublishVolume(ctx context.Context, req *connect.Reques
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
 	default:
-		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to get volume: %w", err))
 	}
 
 	switch {
 	case !volumedb.IsPublished():
 		volumeapi, err := s.converter.FromDBToAPI(volumedb)
 		if err != nil {
-			slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+			return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 		}
 		return connect.NewResponse(&zfsilov1.UnpublishVolumeResponse{Volume: volumeapi}), nil
 	case volumedb.IsConnected():
@@ -569,14 +540,12 @@ func (s *VolumeService) UnpublishVolume(ctx context.Context, req *connect.Reques
 		return nil
 	})
 	if err != nil {
-		slogctx.Error(ctx, "failed to unpublish volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to unpublish volume"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to unpublish volume: %w", err))
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
 	if err != nil {
-		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 	}
 	return connect.NewResponse(&zfsilov1.UnpublishVolumeResponse{Volume: volumeapi}), nil
 }
@@ -589,8 +558,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
 	default:
-		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to get volume: %w", err))
 	}
 
 	switch {
@@ -599,8 +567,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 	case volumedb.IsConnected():
 		volumeapi, err := s.converter.FromDBToAPI(volumedb)
 		if err != nil {
-			slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+			return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 		}
 		return connect.NewResponse(&zfsilov1.ConnectVolumeResponse{Volume: volumeapi}), nil
 	case volumedb.IsMounted():
@@ -632,14 +599,12 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 		return nil
 	})
 	if err != nil {
-		slogctx.Error(ctx, "failed to connect volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to connect volume"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to connect volume: %w", err))
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
 	if err != nil {
-		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 	}
 	return connect.NewResponse(&zfsilov1.ConnectVolumeResponse{Volume: volumeapi}), nil
 }
@@ -652,8 +617,7 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
 	default:
-		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to get volume: %w", err))
 	}
 
 	switch {
@@ -662,8 +626,7 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 	case !volumedb.IsConnected():
 		volumeapi, err := s.converter.FromDBToAPI(volumedb)
 		if err != nil {
-			slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+			return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 		}
 		return connect.NewResponse(&zfsilov1.DisconnectVolumeResponse{Volume: volumeapi}), nil
 	case volumedb.IsMounted():
@@ -695,14 +658,12 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 		return nil
 	})
 	if err != nil {
-		slogctx.Error(ctx, "failed to disconnect volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to disconnect volume"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to disconnect volume: %w", err))
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
 	if err != nil {
-		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 	}
 	return connect.NewResponse(&zfsilov1.DisconnectVolumeResponse{Volume: volumeapi}), nil
 }
@@ -715,8 +676,7 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
 	default:
-		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to get volume: %w", err))
 	}
 
 	switch {
@@ -727,8 +687,7 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 	case volumedb.IsMounted():
 		volumeapi, err := s.converter.FromDBToAPI(volumedb)
 		if err != nil {
-			slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+			return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 		}
 		return connect.NewResponse(&zfsilov1.MountVolumeResponse{Volume: volumeapi}), nil
 	}
@@ -788,14 +747,12 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 		return nil
 	})
 	if err != nil {
-		slogctx.Error(ctx, "failed to mount volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to mount volume"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to mount volume: %w", err))
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
 	if err != nil {
-		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 	}
 	return connect.NewResponse(&zfsilov1.MountVolumeResponse{Volume: volumeapi}), nil
 }
@@ -808,8 +765,7 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
 	default:
-		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to get volume: %w", err))
 	}
 
 	switch {
@@ -820,8 +776,7 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 	case !volumedb.IsMounted():
 		volumeapi, err := s.converter.FromDBToAPI(volumedb)
 		if err != nil {
-			slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+			return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 		}
 		return connect.NewResponse(&zfsilov1.UnmountVolumeResponse{Volume: volumeapi}), nil
 	}
@@ -849,14 +804,12 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 		return nil
 	})
 	if err != nil {
-		slogctx.Error(ctx, "failed to unmount volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to unmount volume"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to unmount volume: %w", err))
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
 	if err != nil {
-		slogctx.Error(ctx, "failed to map volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 	}
 	return connect.NewResponse(&zfsilov1.UnmountVolumeResponse{Volume: volumeapi}), nil
 }
@@ -869,8 +822,7 @@ func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zf
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
 	default:
-		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to get volume: %w", err))
 	}
 
 	switch {
@@ -892,14 +844,12 @@ func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zf
 				PropertyKey: prop,
 			})
 			if err != nil {
-				slogctx.Error(ctx, "failed to get property %s", prop, slogctx.Err(err))
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats property %s: %w", prop, err))
 			}
 
 			value, err := strconv.ParseInt(valueString, 10, 64)
 			if err != nil {
-				slogctx.Error(ctx, "failed to parse property %s", prop, slogctx.Err(err))
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse property %s: %w", prop, err))
 			}
 			values = append(values, value)
 		}
@@ -912,8 +862,7 @@ func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zf
 	case database.VolumeModeFILESYSTEM:
 		consumer, ok := s.consumers[volumedb.InitiatorIQN]
 		if !ok {
-			slogctx.Error(ctx, "unable to lookup consumer", slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to lookup consumer"))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to lookup consumer: %s", volumedb.InitiatorIQN))
 		}
 
 		valueString, err := literal.With(consumer).Run(ctx, fmt.Sprintf(
@@ -921,50 +870,37 @@ func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zf
 			volumedb.MountPath,
 		))
 		if err != nil {
-			slogctx.Error(ctx, "failed to get stats", slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats: %w", err))
 		}
 
 		valueParts := strings.Fields(valueString)
 
 		totalBytes, err := strconv.ParseInt(valueParts[0], 10, 64)
 		if err != nil {
-			msg := fmt.Sprintf("failed to parse part[0]=%s", valueParts[0])
-			slogctx.Error(ctx, msg, slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse part[0]=%s: %w", valueParts[0], err))
 		}
 		totalBytes *= 1000
 		usedBytes, err := strconv.ParseInt(valueParts[1], 10, 64)
 		if err != nil {
-			msg := fmt.Sprintf("failed to parse part[1]=%s", valueParts[1])
-			slogctx.Error(ctx, msg, slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse part[1]=%s: %w", valueParts[1], err))
 		}
 		usedBytes *= 1000
 		availableBytes, err := strconv.ParseInt(valueParts[2], 10, 64)
 		if err != nil {
-			msg := fmt.Sprintf("failed to parse part[2]=%s", valueParts[2])
-			slogctx.Error(ctx, msg, slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse part[2]=%s: %w", valueParts[2], err))
 		}
 		availableBytes *= 1000
 		totalInodes, err := strconv.ParseInt(valueParts[3], 10, 64)
 		if err != nil {
-			msg := fmt.Sprintf("failed to parse part[3]=%s", valueParts[3])
-			slogctx.Error(ctx, msg, slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse part[3]=%s: %w", valueParts[3], err))
 		}
 		usedInodes, err := strconv.ParseInt(valueParts[4], 10, 64)
 		if err != nil {
-			msg := fmt.Sprintf("failed to parse part[4]=%s", valueParts[4])
-			slogctx.Error(ctx, msg, slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse part[4]=%s: %w", valueParts[4], err))
 		}
 		availableInodes, err := strconv.ParseInt(valueParts[5], 10, 64)
 		if err != nil {
-			msg := fmt.Sprintf("failed to parse part[5]=%s", valueParts[5])
-			slogctx.Error(ctx, msg, slogctx.Err(err))
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse part[5]=%s: %w", valueParts[5], err))
 		}
 
 		usage = append(
@@ -983,8 +919,7 @@ func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zf
 			},
 		)
 	default:
-		slogctx.Error(ctx, "unsupported volume mode %s", volumedb.Mode)
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("unsupported volume mode: %s", volumedb.Mode))
 	}
 
 	return connect.NewResponse(&zfsilov1.StatsVolumeResponse{Stats: &zfsilov1.StatsVolumeResponse_Stats{
@@ -1000,12 +935,10 @@ func (s *VolumeService) SyncVolume(ctx context.Context, req *connect.Request[zfs
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
 	default:
-		slogctx.Error(ctx, "failed to get volume", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeUnknown, errors.New("unknown error"))
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to get volume: %w", err))
 	}
 
 	if err = s.syncer.Sync(ctx, volumedb); err != nil {
-		slogctx.Error(ctx, "failed to sync volume", slogctx.Err(err))
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to sync volume: %w", err))
 	}
 	return connect.NewResponse(&zfsilov1.SyncVolumeResponse{}), nil
@@ -1014,15 +947,13 @@ func (s *VolumeService) SyncVolume(ctx context.Context, req *connect.Request[zfs
 func (s *VolumeService) SyncVolumes(ctx context.Context, _ *connect.Request[zfsilov1.SyncVolumesRequest]) (*connect.Response[zfsilov1.SyncVolumesResponse], error) {
 	volumedbs, err := gorm.G[*database.Volume](s.database).Find(ctx)
 	if err != nil {
-		slogctx.Error(ctx, "failed to list volumes for sync", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to list volumes"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to list volumes for sync: %w", err))
 	}
 
 	var syncErrors []string
 	for _, volumedb := range volumedbs {
 		err := s.syncer.Sync(ctx, volumedb)
 		if err != nil {
-			slogctx.Error(ctx, "failed to sync volume", "volumeId", volumedb.ID, slogctx.Err(err))
 			syncErrors = append(syncErrors, fmt.Sprintf("volume %s: %s", volumedb.ID, err))
 		}
 	}

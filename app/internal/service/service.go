@@ -3,7 +3,7 @@ package service
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"strconv"
 
 	"connectrpc.com/connect"
@@ -11,7 +11,6 @@ import (
 	"github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1/zfsilov1connect"
 	"github.com/jovulic/zfsilo/app/internal/command"
 	"github.com/jovulic/zfsilo/app/internal/command/zfs"
-	slogctx "github.com/veqryn/slog-context"
 )
 
 type Service struct {
@@ -34,14 +33,12 @@ func (s *Service) GetCapacity(ctx context.Context, req *connect.Request[zfsilov1
 		PropertyKey: "avail",
 	})
 	if err != nil {
-		slogctx.Error(ctx, "failed to get dataset available capacity", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to get dataset available capacity"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get dataset available capacity: %w", err))
 	}
 
 	avail, err := strconv.ParseInt(availString, 10, 64)
 	if err != nil {
-		slogctx.Error(ctx, "failed to parse available capacity", slogctx.Err(err))
-		return nil, connect.NewError(connect.CodeInternal, errors.New("failed to parse dataset available capacity"))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse dataset available capacity: %w", err))
 	}
 
 	return connect.NewResponse(&zfsilov1.GetCapacityResponse{AvailableCapacityBytes: avail}), nil
