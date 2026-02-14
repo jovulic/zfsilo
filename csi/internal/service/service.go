@@ -596,10 +596,31 @@ func (s *CSIService) ControllerGetVolume(ctx context.Context, req *csi.Controlle
 		return nil, err
 	}
 
-	// TODO: Fetch volume status
-	// TODO: Return volume status (including condition if supported)
+	id := req.GetVolumeId()
 
-	return nil, status.Errorf(codes.Unimplemented, "method ControllerGetVolume not implemented")
+	resp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			return nil, status.Errorf(codes.NotFound, "volume %s not found", id)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get volume: %v", err)
+	}
+
+	vol := resp.Msg.Volume
+	var publishedNodeIds []string
+	if vol.InitiatorIqn != nil && *vol.InitiatorIqn != "" {
+		publishedNodeIds = []string{*vol.InitiatorIqn}
+	}
+
+	return &csi.ControllerGetVolumeResponse{
+		Volume: &csi.Volume{
+			VolumeId:      vol.Id,
+			CapacityBytes: vol.CapacityBytes,
+		},
+		Status: &csi.ControllerGetVolumeResponse_VolumeStatus{
+			PublishedNodeIds: publishedNodeIds,
+		},
+	}, nil
 }
 
 func (s *CSIService) ControllerModifyVolume(ctx context.Context, req *csi.ControllerModifyVolumeRequest) (*csi.ControllerModifyVolumeResponse, error) {
