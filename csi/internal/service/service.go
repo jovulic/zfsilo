@@ -294,19 +294,19 @@ func (s *CSIService) ControllerGetCapabilities(ctx context.Context, req *csi.Con
 }
 
 func (s *CSIService) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateSnapshot not supported")
+	return nil, status.Errorf(codes.InvalidArgument, "method CreateSnapshot not supported")
 }
 
 func (s *CSIService) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteSnapshot not supported")
+	return nil, status.Errorf(codes.InvalidArgument, "method DeleteSnapshot not supported")
 }
 
 func (s *CSIService) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListSnapshots not supported")
+	return nil, status.Errorf(codes.InvalidArgument, "method ListSnapshots not supported")
 }
 
 func (s *CSIService) GetSnapshot(ctx context.Context, req *csi.GetSnapshotRequest) (*csi.GetSnapshotResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSnapshot not supported")
+	return nil, status.Errorf(codes.InvalidArgument, "method GetSnapshot not supported")
 }
 
 func (s *CSIService) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
@@ -346,11 +346,11 @@ func (s *CSIService) ControllerModifyVolume(ctx context.Context, req *csi.Contro
 }
 
 func (s *CSIService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method NodeStageVolume not supported")
+	return nil, status.Errorf(codes.InvalidArgument, "method NodeStageVolume not supported")
 }
 
 func (s *CSIService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method NodeUnstageVolume not supported")
+	return nil, status.Errorf(codes.InvalidArgument, "method NodeUnstageVolume not supported")
 }
 
 func (s *CSIService) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
