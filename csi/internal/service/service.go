@@ -18,6 +18,7 @@ import (
 	"github.com/jovulic/zfsilo/lib/structutil"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -248,7 +249,7 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 			getResp, getErr := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
 			if getErr != nil {
 				// Return original "already exists" error if GetVolume fails.
-				return nil, err
+				return nil, mapError(err)
 			}
 
 			vol := getResp.Msg.Volume
@@ -262,7 +263,7 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 			}
 			return nil, status.Error(codes.AlreadyExists, "volume already exists with different parameters")
 		}
-		return nil, status.Errorf(codes.Internal, "failed to create volume: %v", err)
+		return nil, mapError(err)
 	}
 
 	return &csi.CreateVolumeResponse{
@@ -284,10 +285,10 @@ func (s *CSIService) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequ
 		Id: id,
 	}))
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound {
+		if connect.CodeOf(err) == connect.CodeNotFound || isErrorID(err) {
 			return &csi.DeleteVolumeResponse{}, nil
 		}
-		return nil, status.Errorf(codes.Internal, "failed to delete volume: %v", err)
+		return nil, mapError(err)
 	}
 
 	return &csi.DeleteVolumeResponse{}, nil
@@ -309,10 +310,7 @@ func (s *CSIService) ControllerPublishVolume(ctx context.Context, req *csi.Contr
 	// Publish (make target available).
 	_, err := s.volumeClient.PublishVolume(ctx, connect.NewRequest(&zfsilov1.PublishVolumeRequest{Id: id}))
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound {
-			return nil, status.Errorf(codes.NotFound, "volume %s not found", id)
-		}
-		return nil, status.Errorf(codes.Internal, "failed to publish volume: %v", err)
+		return nil, mapErrorID(err)
 	}
 
 	// Connect (associate with node and login).
@@ -322,7 +320,7 @@ func (s *CSIService) ControllerPublishVolume(ctx context.Context, req *csi.Contr
 		TargetAddress: s.targetPortalAddress,
 	}))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to connect volume to node: %v", err)
+		return nil, mapError(err)
 	}
 
 	// Verify it's connected to the right node.
@@ -344,10 +342,10 @@ func (s *CSIService) ControllerUnpublishVolume(ctx context.Context, req *csi.Con
 	// Get volume status.
 	getResp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound {
+		if connect.CodeOf(err) == connect.CodeNotFound || isErrorID(err) {
 			return &csi.ControllerUnpublishVolumeResponse{}, nil
 		}
-		return nil, status.Errorf(codes.Internal, "failed to get volume: %v", err)
+		return nil, mapError(err)
 	}
 
 	vol := getResp.Msg.Volume
@@ -362,7 +360,7 @@ func (s *CSIService) ControllerUnpublishVolume(ctx context.Context, req *csi.Con
 	if vol.Status >= zfsilov1.Volume_STATUS_CONNECTED {
 		_, err := s.volumeClient.DisconnectVolume(ctx, connect.NewRequest(&zfsilov1.DisconnectVolumeRequest{Id: id}))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to disconnect volume: %v", err)
+			return nil, mapError(err)
 		}
 	}
 
@@ -370,7 +368,7 @@ func (s *CSIService) ControllerUnpublishVolume(ctx context.Context, req *csi.Con
 	if vol.Status >= zfsilov1.Volume_STATUS_PUBLISHED {
 		_, err := s.volumeClient.UnpublishVolume(ctx, connect.NewRequest(&zfsilov1.UnpublishVolumeRequest{Id: id}))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to unpublish volume: %v", err)
+			return nil, mapError(err)
 		}
 	}
 
@@ -387,10 +385,7 @@ func (s *CSIService) ValidateVolumeCapabilities(ctx context.Context, req *csi.Va
 	// Fetch volume metadata.
 	resp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound {
-			return nil, status.Errorf(codes.NotFound, "volume %s not found", id)
-		}
-		return nil, status.Errorf(codes.Internal, "failed to get volume: %v", err)
+		return nil, mapErrorID(err)
 	}
 
 	vol := resp.Msg.Volume
@@ -433,9 +428,9 @@ func (s *CSIService) ListVolumes(ctx context.Context, req *csi.ListVolumesReques
 	resp, err := s.volumeClient.ListVolumes(ctx, connect.NewRequest(zreq))
 	if err != nil {
 		if connect.CodeOf(err) == connect.CodeInvalidArgument {
-			return nil, status.Errorf(codes.Aborted, "invalid starting token: %v", err)
+			return nil, status.Error(codes.Aborted, err.Error())
 		}
-		return nil, status.Errorf(codes.Internal, "failed to list volumes: %v", err)
+		return nil, mapError(err)
 	}
 
 	entries := make([]*csi.ListVolumesResponse_Entry, 0, len(resp.Msg.Volumes))
@@ -469,7 +464,7 @@ func (s *CSIService) GetCapacity(ctx context.Context, req *csi.GetCapacityReques
 
 	resp, err := s.serviceClient.GetCapacity(ctx, connect.NewRequest(&zfsilov1.GetCapacityRequest{}))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get capacity: %v", err)
+		return nil, mapError(err)
 	}
 
 	return &csi.GetCapacityResponse{
@@ -576,14 +571,14 @@ func (s *CSIService) ControllerExpandVolume(ctx context.Context, req *csi.Contro
 		"capacity_bytes": float64(requiredBytes),
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create update struct: %v", err)
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	updateResp, err := s.volumeClient.UpdateVolume(ctx, connect.NewRequest(&zfsilov1.UpdateVolumeRequest{
 		Volume: updateStruct,
 	}))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to expand volume: %v", err)
+		return nil, mapError(err)
 	}
 
 	return &csi.ControllerExpandVolumeResponse{
@@ -601,10 +596,7 @@ func (s *CSIService) ControllerGetVolume(ctx context.Context, req *csi.Controlle
 
 	resp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound {
-			return nil, status.Errorf(codes.NotFound, "volume %s not found", id)
-		}
-		return nil, status.Errorf(codes.Internal, "failed to get volume: %v", err)
+		return nil, mapErrorID(err)
 	}
 
 	vol := resp.Msg.Volume
@@ -649,17 +641,14 @@ func (s *CSIService) ControllerModifyVolume(ctx context.Context, req *csi.Contro
 
 	updateStruct, err := structpb.NewStruct(updateMap)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create update struct: %v", err)
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	_, err = s.volumeClient.UpdateVolume(ctx, connect.NewRequest(&zfsilov1.UpdateVolumeRequest{
 		Volume: updateStruct,
 	}))
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound {
-			return nil, status.Errorf(codes.NotFound, "volume %s not found", id)
-		}
-		return nil, status.Errorf(codes.Internal, "failed to modify volume: %v", err)
+		return nil, mapErrorID(err)
 	}
 
 	return &csi.ControllerModifyVolumeResponse{}, nil
@@ -684,10 +673,7 @@ func (s *CSIService) NodePublishVolume(ctx context.Context, req *csi.NodePublish
 	// Get volume.
 	getResp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound {
-			return nil, status.Errorf(codes.NotFound, "volume %s not found", id)
-		}
-		return nil, status.Errorf(codes.Internal, "failed to get volume: %v", err)
+		return nil, mapErrorID(err)
 	}
 	vol := getResp.Msg.Volume
 
@@ -707,7 +693,7 @@ func (s *CSIService) NodePublishVolume(ctx context.Context, req *csi.NodePublish
 			TargetAddress: s.targetPortalAddress,
 		}))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to connect volume: %v", err)
+			return nil, mapError(err)
 		}
 	}
 
@@ -717,7 +703,7 @@ func (s *CSIService) NodePublishVolume(ctx context.Context, req *csi.NodePublish
 		MountPath: targetPath,
 	}))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to mount volume: %v", err)
+		return nil, mapError(err)
 	}
 
 	return &csi.NodePublishVolumeResponse{}, nil
@@ -733,10 +719,10 @@ func (s *CSIService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpub
 	// Get volume status.
 	getResp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound {
+		if connect.CodeOf(err) == connect.CodeNotFound || isErrorID(err) {
 			return &csi.NodeUnpublishVolumeResponse{}, nil
 		}
-		return nil, status.Errorf(codes.Internal, "failed to get volume: %v", err)
+		return nil, mapError(err)
 	}
 
 	vol := getResp.Msg.Volume
@@ -745,7 +731,7 @@ func (s *CSIService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpub
 	if vol.Status >= zfsilov1.Volume_STATUS_MOUNTED {
 		_, err := s.volumeClient.UnmountVolume(ctx, connect.NewRequest(&zfsilov1.UnmountVolumeRequest{Id: id}))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to unmount volume: %v", err)
+			return nil, mapError(err)
 		}
 	}
 
@@ -753,7 +739,7 @@ func (s *CSIService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpub
 	if vol.Status >= zfsilov1.Volume_STATUS_CONNECTED && vol.InitiatorIqn != nil && *vol.InitiatorIqn == s.initiatorIQN {
 		_, err := s.volumeClient.DisconnectVolume(ctx, connect.NewRequest(&zfsilov1.DisconnectVolumeRequest{Id: id}))
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to disconnect volume: %v", err)
+			return nil, mapError(err)
 		}
 	}
 
@@ -771,10 +757,7 @@ func (s *CSIService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVol
 	// Get volume status.
 	getResp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound {
-			return nil, status.Errorf(codes.NotFound, "volume %s not found", id)
-		}
-		return nil, status.Errorf(codes.Internal, "failed to get volume: %v", err)
+		return nil, mapErrorID(err)
 	}
 
 	vol := getResp.Msg.Volume
@@ -785,7 +768,7 @@ func (s *CSIService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVol
 	// Get volume stats.
 	statsResp, err := s.volumeClient.StatsVolume(ctx, connect.NewRequest(&zfsilov1.StatsVolumeRequest{Id: id}))
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get volume stats: %v", err)
+		return nil, mapError(err)
 	}
 
 	stats := statsResp.Msg.Stats
@@ -816,10 +799,7 @@ func (s *CSIService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVo
 	// UpdateVolume call which is triggered by ControllerExpandVolume.
 	resp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound {
-			return nil, status.Errorf(codes.NotFound, "volume %s not found", id)
-		}
-		return nil, status.Errorf(codes.Internal, "failed to get volume: %v", err)
+		return nil, mapErrorID(err)
 	}
 
 	return &csi.NodeExpandVolumeResponse{
