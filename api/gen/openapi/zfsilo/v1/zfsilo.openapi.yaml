@@ -736,7 +736,7 @@ components:
         id:
           type: string
           title: id
-          pattern: ^[a-zA-Z0-9-_]+$
+          pattern: ^vol_[a-zA-Z0-9-_]+$
           description: The id of the volume to be connected.
         initiatorIqn:
           type: string
@@ -802,7 +802,7 @@ components:
         id:
           type: string
           title: id
-          pattern: ^[a-zA-Z0-9-_]+$
+          pattern: ^vol_[a-zA-Z0-9-_]+$
           description: The id of the volume to be disconnected.
       title: DisconnectVolumeRequest
       required:
@@ -898,7 +898,7 @@ components:
         id:
           type: string
           title: id
-          pattern: ^[a-zA-Z0-9-_]+$
+          pattern: ^vol_[a-zA-Z0-9-_]+$
           description: The id of the volume to be mounted.
         mountPath:
           type: string
@@ -924,7 +924,7 @@ components:
         id:
           type: string
           title: id
-          pattern: ^[a-zA-Z0-9-_]+$
+          pattern: ^vol_[a-zA-Z0-9-_]+$
           description: The id of the volume to be published.
       title: PublishVolumeRequest
       required:
@@ -944,7 +944,7 @@ components:
         id:
           type: string
           title: id
-          pattern: ^[a-zA-Z0-9-_]+$
+          pattern: ^vol_[a-zA-Z0-9-_]+$
           description: The id of the volume.
       title: StatsVolumeRequest
       required:
@@ -1000,7 +1000,7 @@ components:
         id:
           type: string
           title: id
-          pattern: ^[a-zA-Z0-9-_]+$
+          pattern: ^vol_[a-zA-Z0-9-_]+$
           description: The id of the volume to sync.
       title: SyncVolumeRequest
       required:
@@ -1024,7 +1024,7 @@ components:
         id:
           type: string
           title: id
-          pattern: ^[a-zA-Z0-9-_]+$
+          pattern: ^vol_[a-zA-Z0-9-_]+$
           description: The id of the volume to be unmounted.
       title: UnmountVolumeRequest
       required:
@@ -1044,7 +1044,7 @@ components:
         id:
           type: string
           title: id
-          pattern: ^[a-zA-Z0-9-_]+$
+          pattern: ^vol_[a-zA-Z0-9-_]+$
           description: The id of the volume to be unpublished.
       title: UnpublishVolumeRequest
       required:

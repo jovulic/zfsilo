@@ -1955,27 +1955,27 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"Y\n" +
 	"\x13DeleteVolumeRequest\x12B\n" +
 	"\x02id\x18\x01 \x01(\tB2\xbaG\x11\x92\x02\x0eThe volume id.\xbaH\x1b\xc8\x01\x01r\x162\x14^vol_[a-zA-Z0-9-_]+$R\x02id\"\x16\n" +
-	"\x14DeleteVolumeResponse\"m\n" +
-	"\x14PublishVolumeRequest\x12U\n" +
-	"\x02id\x18\x01 \x01(\tBE\xbaG(\x92\x02%The id of the volume to be published.\xbaH\x17\xc8\x01\x01r\x122\x10^[a-zA-Z0-9-_]+$R\x02id\"B\n" +
+	"\x14DeleteVolumeResponse\"q\n" +
+	"\x14PublishVolumeRequest\x12Y\n" +
+	"\x02id\x18\x01 \x01(\tBI\xbaG(\x92\x02%The id of the volume to be published.\xbaH\x1b\xc8\x01\x01r\x162\x14^vol_[a-zA-Z0-9-_]+$R\x02id\"B\n" +
 	"\x15PublishVolumeResponse\x12)\n" +
-	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"q\n" +
-	"\x16UnpublishVolumeRequest\x12W\n" +
-	"\x02id\x18\x01 \x01(\tBG\xbaG*\x92\x02'The id of the volume to be unpublished.\xbaH\x17\xc8\x01\x01r\x122\x10^[a-zA-Z0-9-_]+$R\x02id\"D\n" +
+	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"u\n" +
+	"\x16UnpublishVolumeRequest\x12[\n" +
+	"\x02id\x18\x01 \x01(\tBK\xbaG*\x92\x02'The id of the volume to be unpublished.\xbaH\x1b\xc8\x01\x01r\x162\x14^vol_[a-zA-Z0-9-_]+$R\x02id\"D\n" +
 	"\x17UnpublishVolumeResponse\x12)\n" +
-	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"\x8a\x02\n" +
-	"\x14ConnectVolumeRequest\x12U\n" +
-	"\x02id\x18\x01 \x01(\tBE\xbaG(\x92\x02%The id of the volume to be connected.\xbaH\x17\xc8\x01\x01r\x122\x10^[a-zA-Z0-9-_]+$R\x02id\x12N\n" +
+	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"\x8e\x02\n" +
+	"\x14ConnectVolumeRequest\x12Y\n" +
+	"\x02id\x18\x01 \x01(\tBI\xbaG(\x92\x02%The id of the volume to be connected.\xbaH\x1b\xc8\x01\x01r\x162\x14^vol_[a-zA-Z0-9-_]+$R\x02id\x12N\n" +
 	"\rinitiator_iqn\x18\x02 \x01(\tB)\xbaG\x15\x92\x02\x12The initiator iqn.\xbaH\x0e\xc8\x01\x01r\t2\a^iqn.*$R\finitiatorIqn\x12K\n" +
 	"\x0etarget_address\x18\x03 \x01(\tB$\xbaG\x16\x92\x02\x13The target address.\xbaH\b\xc8\x01\x01r\x03\x80\x02\x01R\rtargetAddress\"B\n" +
 	"\x15ConnectVolumeResponse\x12)\n" +
-	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"s\n" +
-	"\x17DisconnectVolumeRequest\x12X\n" +
-	"\x02id\x18\x01 \x01(\tBH\xbaG+\x92\x02(The id of the volume to be disconnected.\xbaH\x17\xc8\x01\x01r\x122\x10^[a-zA-Z0-9-_]+$R\x02id\"E\n" +
+	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"w\n" +
+	"\x17DisconnectVolumeRequest\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaG+\x92\x02(The id of the volume to be disconnected.\xbaH\x1b\xc8\x01\x01r\x162\x14^vol_[a-zA-Z0-9-_]+$R\x02id\"E\n" +
 	"\x18DisconnectVolumeResponse\x12)\n" +
-	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"\xfa\x01\n" +
-	"\x12MountVolumeRequest\x12S\n" +
-	"\x02id\x18\x01 \x01(\tBC\xbaG&\x92\x02#The id of the volume to be mounted.\xbaH\x17\xc8\x01\x01r\x122\x10^[a-zA-Z0-9-_]+$R\x02id\x12L\n" +
+	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"\xfe\x01\n" +
+	"\x12MountVolumeRequest\x12W\n" +
+	"\x02id\x18\x01 \x01(\tBG\xbaG&\x92\x02#The id of the volume to be mounted.\xbaH\x1b\xc8\x01\x01r\x162\x14^vol_[a-zA-Z0-9-_]+$R\x02id\x12L\n" +
 	"\n" +
 	"mount_path\x18\x02 \x01(\tB-\xbaG\x12\x92\x02\x0fThe mount path.\xbaH\x15\xc8\x01\x01r\x102\x0e^(/[^/ ]*)+/?$R\tmountPath\"A\n" +
 	"\x04Mode\x12\x14\n" +
@@ -1984,13 +1984,13 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"MODE_BLOCK\x10\x01\x12\x13\n" +
 	"\x0fMODE_FILESYSTEM\x10\x02\"@\n" +
 	"\x13MountVolumeResponse\x12)\n" +
-	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"m\n" +
-	"\x14UnmountVolumeRequest\x12U\n" +
-	"\x02id\x18\x01 \x01(\tBE\xbaG(\x92\x02%The id of the volume to be unmounted.\xbaH\x17\xc8\x01\x01r\x122\x10^[a-zA-Z0-9-_]+$R\x02id\"B\n" +
+	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"q\n" +
+	"\x14UnmountVolumeRequest\x12Y\n" +
+	"\x02id\x18\x01 \x01(\tBI\xbaG(\x92\x02%The id of the volume to be unmounted.\xbaH\x1b\xc8\x01\x01r\x162\x14^vol_[a-zA-Z0-9-_]+$R\x02id\"B\n" +
 	"\x15UnmountVolumeResponse\x12)\n" +
-	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"[\n" +
-	"\x12StatsVolumeRequest\x12E\n" +
-	"\x02id\x18\x01 \x01(\tB5\xbaG\x18\x92\x02\x15The id of the volume.\xbaH\x17\xc8\x01\x01r\x122\x10^[a-zA-Z0-9-_]+$R\x02id\"\xf3\x02\n" +
+	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"_\n" +
+	"\x12StatsVolumeRequest\x12I\n" +
+	"\x02id\x18\x01 \x01(\tB9\xbaG\x18\x92\x02\x15The id of the volume.\xbaH\x1b\xc8\x01\x01r\x162\x14^vol_[a-zA-Z0-9-_]+$R\x02id\"\xf3\x02\n" +
 	"\x13StatsVolumeResponse\x12:\n" +
 	"\x05stats\x18\x01 \x01(\v2$.zfsilo.v1.StatsVolumeResponse.StatsR\x05stats\x1a\x9f\x02\n" +
 	"\x05Stats\x12@\n" +
@@ -2004,9 +2004,9 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\x10UNIT_UNSPECIFIED\x10\x00\x12\x0e\n" +
 	"\n" +
 	"UNIT_BYTES\x10\x01\x12\x0f\n" +
-	"\vUNIT_INODES\x10\x02\"b\n" +
-	"\x11SyncVolumeRequest\x12M\n" +
-	"\x02id\x18\x01 \x01(\tB=\xbaG \x92\x02\x1dThe id of the volume to sync.\xbaH\x17\xc8\x01\x01r\x122\x10^[a-zA-Z0-9-_]+$R\x02id\"\x14\n" +
+	"\vUNIT_INODES\x10\x02\"f\n" +
+	"\x11SyncVolumeRequest\x12Q\n" +
+	"\x02id\x18\x01 \x01(\tBA\xbaG \x92\x02\x1dThe id of the volume to sync.\xbaH\x1b\xc8\x01\x01r\x162\x14^vol_[a-zA-Z0-9-_]+$R\x02id\"\x14\n" +
 	"\x12SyncVolumeResponse\"\x14\n" +
 	"\x12SyncVolumesRequest\"\x15\n" +
 	"\x13SyncVolumesResponse2\x90\x02\n" +

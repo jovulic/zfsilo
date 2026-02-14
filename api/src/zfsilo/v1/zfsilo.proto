@@ -239,7 +239,7 @@ message PublishVolumeRequest {
   string id = 1 [
     (gnostic.openapi.v3.property) = {description: "The id of the volume to be published."},
     (buf.validate.field).required = true,
-    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
+    (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
   ];
 }
 
@@ -251,7 +251,7 @@ message UnpublishVolumeRequest {
   string id = 1 [
     (gnostic.openapi.v3.property) = {description: "The id of the volume to be unpublished."},
     (buf.validate.field).required = true,
-    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
+    (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
   ];
 }
 
@@ -263,7 +263,7 @@ message ConnectVolumeRequest {
   string id = 1 [
     (gnostic.openapi.v3.property) = {description: "The id of the volume to be connected."},
     (buf.validate.field).required = true,
-    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
+    (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
   ];
   string initiator_iqn = 2 [
     (gnostic.openapi.v3.property) = {description: "The initiator iqn."},
@@ -285,7 +285,7 @@ message DisconnectVolumeRequest {
   string id = 1 [
     (gnostic.openapi.v3.property) = {description: "The id of the volume to be disconnected."},
     (buf.validate.field).required = true,
-    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
+    (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
   ];
 }
 
@@ -303,7 +303,7 @@ message MountVolumeRequest {
   string id = 1 [
     (gnostic.openapi.v3.property) = {description: "The id of the volume to be mounted."},
     (buf.validate.field).required = true,
-    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
+    (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
   ];
   string mount_path = 2 [
     (gnostic.openapi.v3.property) = {description: "The mount path."},
@@ -320,7 +320,7 @@ message UnmountVolumeRequest {
   string id = 1 [
     (gnostic.openapi.v3.property) = {description: "The id of the volume to be unmounted."},
     (buf.validate.field).required = true,
-    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
+    (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
   ];
 }
 
@@ -332,7 +332,7 @@ message StatsVolumeRequest {
   string id = 1 [
     (gnostic.openapi.v3.property) = {description: "The id of the volume."},
     (buf.validate.field).required = true,
-    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
+    (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
   ];
 }
 
@@ -361,7 +361,7 @@ message SyncVolumeRequest {
   string id = 1 [
     (gnostic.openapi.v3.property) = {description: "The id of the volume to sync."},
     (buf.validate.field).required = true,
-    (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+$"
+    (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
   ];
 }
 
