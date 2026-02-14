@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 
@@ -295,11 +296,39 @@ func (s *CSIService) ControllerPublishVolume(ctx context.Context, req *csi.Contr
 		return nil, err
 	}
 
-	// TODO: Idempotency check (Has this volume already been published to this node?)
-	// TODO: Max volumes per node check
-	// TODO: Backend attach logic
+	nodeID := req.GetNodeId()
+	found := slices.Contains(s.knownInitiatorIQNs, nodeID)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "node %s not found", nodeID)
+	}
 
-	return nil, status.Errorf(codes.Unimplemented, "method ControllerPublishVolume not implemented")
+	id := req.GetVolumeId()
+
+	// Publish (make target available).
+	_, err := s.volumeClient.PublishVolume(ctx, connect.NewRequest(&zfsilov1.PublishVolumeRequest{Id: id}))
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			return nil, status.Errorf(codes.NotFound, "volume %s not found", id)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to publish volume: %v", err)
+	}
+
+	// Connect (associate with node and login).
+	connectResp, err := s.volumeClient.ConnectVolume(ctx, connect.NewRequest(&zfsilov1.ConnectVolumeRequest{
+		Id:            id,
+		InitiatorIqn:  nodeID,
+		TargetAddress: s.targetPortalAddress,
+	}))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to connect volume to node: %v", err)
+	}
+
+	// Verify it's connected to the right node.
+	if connectResp.Msg.Volume.InitiatorIqn != nil && *connectResp.Msg.Volume.InitiatorIqn != "" && *connectResp.Msg.Volume.InitiatorIqn != nodeID {
+		return nil, status.Errorf(codes.FailedPrecondition, "volume %s is already connected to another node: %s", id, *connectResp.Msg.Volume.InitiatorIqn)
+	}
+
+	return &csi.ControllerPublishVolumeResponse{}, nil
 }
 
 func (s *CSIService) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
