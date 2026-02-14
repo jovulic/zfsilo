@@ -199,10 +199,75 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 		return nil, err
 	}
 
-	// TODO: Check if the volume already exists.
-	// TODO: Provision the volume.
+	params := Parameters(req.GetParameters())
+	name := req.GetName()
+	id := s.toVolumeID(name)
+	datasetID := s.toDatasetID(name, params.ParentDatasetID())
 
-	return nil, status.Errorf(codes.Unimplemented, "method CreateVolume not implemented")
+	// Determine mode. Default to filesystem if not specified.
+	mode := zfsilov1.Volume_MODE_FILESYSTEM
+	for _, cap := range req.GetVolumeCapabilities() {
+		if cap.GetBlock() != nil {
+			mode = zfsilov1.Volume_MODE_BLOCK
+			break
+		}
+	}
+
+	// Determine capacity. Defaults to 1GB.
+	capacityBytes := req.GetCapacityRange().GetRequiredBytes()
+	if capacityBytes == 0 {
+		capacityBytes = 1 * 1024 * 1024 * 1024
+	}
+
+	options := params.Options()
+	zfsOptions := make([]*zfsilov1.Volume_Option, 0, len(options))
+	for _, opt := range options {
+		zfsOptions = append(zfsOptions, &zfsilov1.Volume_Option{
+			Key:   opt.Key,
+			Value: opt.Value,
+		})
+	}
+
+	resp, err := s.volumeClient.CreateVolume(ctx, connect.NewRequest(&zfsilov1.CreateVolumeRequest{
+		Volume: &zfsilov1.Volume{
+			Id:            id,
+			Name:          s.toVolumeName(name),
+			DatasetId:     datasetID,
+			Mode:          mode,
+			CapacityBytes: capacityBytes,
+			Sparse:        params.Sparse(),
+			Options:       zfsOptions,
+		},
+	}))
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeAlreadyExists {
+			// Check if the volume already exists and is compatible.
+			getResp, getErr := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
+			if getErr != nil {
+				// Return original "already exists" error if GetVolume fails.
+				return nil, err
+			}
+
+			vol := getResp.Msg.Volume
+			if vol.CapacityBytes == capacityBytes && vol.DatasetId == datasetID {
+				return &csi.CreateVolumeResponse{
+					Volume: &csi.Volume{
+						VolumeId:      id,
+						CapacityBytes: vol.CapacityBytes,
+					},
+				}, nil
+			}
+			return nil, status.Error(codes.AlreadyExists, "volume already exists with different parameters")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to create volume: %v", err)
+	}
+
+	return &csi.CreateVolumeResponse{
+		Volume: &csi.Volume{
+			VolumeId:      id,
+			CapacityBytes: resp.Msg.Volume.CapacityBytes,
+		},
+	}, nil
 }
 
 func (s *CSIService) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
