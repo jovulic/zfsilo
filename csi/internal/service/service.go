@@ -239,7 +239,8 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 			DatasetId:     datasetID,
 			Mode:          mode,
 			CapacityBytes: capacityBytes,
-			Sparse:        params.Sparse(),
+			Sparse:        proto.Bool(params.Sparse()),
+			Status:        zfsilov1.Volume_STATUS_INITIAL,
 			Options:       zfsOptions,
 		},
 	}))
