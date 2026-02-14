@@ -465,12 +465,14 @@ func (s *CSIService) GetCapacity(ctx context.Context, req *csi.GetCapacityReques
 		return nil, err
 	}
 
-	// TODO: Filter available capacity by provided Capabilities (if any)
-	// TODO: Filter available capacity by provided Parameters (if any)
-	// TODO: Filter available capacity by Topology (if provided)
-	// TODO: Calculate available bytes
+	resp, err := s.serviceClient.GetCapacity(ctx, connect.NewRequest(&zfsilov1.GetCapacityRequest{}))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get capacity: %v", err)
+	}
 
-	return nil, status.Errorf(codes.Unimplemented, "method GetCapacity not implemented")
+	return &csi.GetCapacityResponse{
+		AvailableCapacity: resp.Msg.AvailableCapacityBytes,
+	}, nil
 }
 
 func (s *CSIService) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
