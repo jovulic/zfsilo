@@ -2,10 +2,15 @@ package service
 
 import (
 	"path/filepath"
+	"regexp"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+)
+
+var (
+	volumeNameRegex = regexp.MustCompile(`^[a-zA-Z0-9-_]+$`)
 )
 
 // validateVolumeCapability checks a single capability for valid access mode and type.
@@ -82,9 +87,9 @@ func validateVolumeName(name string) error {
 	if name == "" {
 		return status.Error(codes.InvalidArgument, "volume name cannot be empty")
 	}
-	// Note: The spec mentions specific banned unicode characters.
-	// A strictly compliant implementation might check for those here
-	// (U+0000-U+0008, etc.), but emptiness is the primary check.
+	if !volumeNameRegex.MatchString(name) {
+		return status.Errorf(codes.InvalidArgument, "volume name contains invalid characters: %s", name)
+	}
 	return nil
 }
 
@@ -249,11 +254,6 @@ func validateControllerGetVolumeRequest(req *csi.ControllerGetVolumeRequest) err
 func validateControllerModifyVolumeRequest(req *csi.ControllerModifyVolumeRequest) error {
 	if err := validateVolumeID(req.GetVolumeId()); err != nil {
 		return err
-	}
-
-	// The map must be non-nil and contain at least one key-value pair.
-	if len(req.GetMutableParameters()) == 0 {
-		return status.Error(codes.InvalidArgument, "mutable parameters must be provided")
 	}
 
 	return nil
