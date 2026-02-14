@@ -5,15 +5,17 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 
+	"connectrpc.com/connect"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	zfsilov1 "github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1"
+	"github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1/zfsilov1connect"
 	"github.com/jovulic/zfsilo/csi/internal/extvar"
 	"github.com/jovulic/zfsilo/lib/structutil"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -70,9 +72,33 @@ type CSIService struct {
 	initiatorIQN        string
 	knownInitiatorIQNs  []string
 
-	lock    sync.Mutex
-	started bool
-	conn    *grpc.ClientConn
+	lock          sync.Mutex
+	started       bool
+	volumeClient  zfsilov1connect.VolumeServiceClient
+	serviceClient zfsilov1connect.ServiceClient
+}
+
+func (s *CSIService) toVolumeID(name string) string {
+	return "vol_" + name
+}
+
+func (s *CSIService) toVolumeName(name string) string {
+	return "volumes/" + s.toVolumeID(name)
+}
+
+func (s *CSIService) toDatasetID(name string, parentDatasetID string) string {
+	return parentDatasetID + "/" + s.toVolumeID(name)
+}
+
+func (s *CSIService) authInterceptor() connect.Interceptor {
+	return connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			if s.secret != "" {
+				req.Header().Set("Authorization", "Bearer "+s.secret)
+			}
+			return next(ctx, req)
+		}
+	})
 }
 
 func NewCSIService(config CSIServiceConfig) *CSIService {
@@ -97,16 +123,22 @@ func (s *CSIService) Start(ctx context.Context) error {
 		return nil
 	}
 
-	{
-		conn, err := grpc.NewClient(
-			s.zfsiloAddress,
-			grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})),
-		)
-		if err != nil {
-			return fmt.Errorf("failed to dial %s: %w", s.zfsiloAddress, err)
-		}
-		s.conn = conn
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
 	}
+
+	s.volumeClient = zfsilov1connect.NewVolumeServiceClient(
+		httpClient,
+		s.zfsiloAddress,
+		connect.WithInterceptors(s.authInterceptor()),
+	)
+	s.serviceClient = zfsilov1connect.NewServiceClient(
+		httpClient,
+		s.zfsiloAddress,
+		connect.WithInterceptors(s.authInterceptor()),
+	)
 
 	s.started = true
 	return nil
@@ -120,10 +152,8 @@ func (s *CSIService) Stop(ctx context.Context) error {
 		return nil
 	}
 
-	if err := s.conn.Close(); err != nil {
-		return fmt.Errorf("failed to close client conn: %w", err)
-	}
-	s.conn = nil
+	s.volumeClient = nil
+	s.serviceClient = nil
 
 	s.started = false
 	return nil
