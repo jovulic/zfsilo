@@ -130,9 +130,8 @@ message Volume {
     (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+(/?[a-zA-Z0-9-_]+)*$"
   ];
   repeated Option options = 7 [(gnostic.openapi.v3.property) = {description: "The options applied to the volume. Immutable."}];
-  bool sparse = 8 [
-    (gnostic.openapi.v3.property) = {description: "Whether the volume is sparse. Immutable."},
-    (buf.validate.field).required = true
+  optional bool sparse = 8 [
+    (gnostic.openapi.v3.property) = {description: "Whether the volume is sparse. Immutable."}
   ];
   Mode mode = 9 [
     (gnostic.openapi.v3.property) = {description: "The mode of the volume. Immutable."},

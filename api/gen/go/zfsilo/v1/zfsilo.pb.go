@@ -316,7 +316,7 @@ type Volume struct {
 	Name          string                 `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"`
 	DatasetId     string                 `protobuf:"bytes,6,opt,name=dataset_id,json=datasetId,proto3" json:"dataset_id,omitempty"`
 	Options       []*Volume_Option       `protobuf:"bytes,7,rep,name=options,proto3" json:"options,omitempty"`
-	Sparse        bool                   `protobuf:"varint,8,opt,name=sparse,proto3" json:"sparse,omitempty"`
+	Sparse        *bool                  `protobuf:"varint,8,opt,name=sparse,proto3,oneof" json:"sparse,omitempty"`
 	Mode          Volume_Mode            `protobuf:"varint,9,opt,name=mode,proto3,enum=zfsilo.v1.Volume_Mode" json:"mode,omitempty"`
 	CapacityBytes int64                  `protobuf:"varint,10,opt,name=capacity_bytes,json=capacityBytes,proto3" json:"capacity_bytes,omitempty"`
 	Status        Volume_Status          `protobuf:"varint,11,opt,name=status,proto3,enum=zfsilo.v1.Volume_Status" json:"status,omitempty"`
@@ -408,8 +408,8 @@ func (x *Volume) GetOptions() []*Volume_Option {
 }
 
 func (x *Volume) GetSparse() bool {
-	if x != nil {
-		return x.Sparse
+	if x != nil && x.Sparse != nil {
+		return *x.Sparse
 	}
 	return false
 }
@@ -1890,7 +1890,7 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\x16zfsilo/v1/zfsilo.proto\x12\tzfsilo.v1\x1a\x1bbuf/validate/validate.proto\x1a$gnostic/openapi/v3/annotations.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"5\n" +
 	"\x12GetCapacityRequest:\x1f\xbaG\x1c\x92\x02\x19The get capacity request.\"\x99\x01\n" +
 	"\x13GetCapacityResponse\x12`\n" +
-	"\x18available_capacity_bytes\x18\x01 \x01(\x03B&\xbaG#\x92\x02 The available capacity in bytes.R\x16availableCapacityBytes: \xbaG\x1d\x92\x02\x1aThe get capacity response.\"\xd5\x0e\n" +
+	"\x18available_capacity_bytes\x18\x01 \x01(\x03B&\xbaG#\x92\x02 The available capacity in bytes.R\x16availableCapacityBytes: \xbaG\x1d\x92\x02\x1aThe get capacity response.\"\xdf\x0e\n" +
 	"\x06Volume\x12f\n" +
 	"\x06struct\x18\x01 \x01(\v2\x17.google.protobuf.StructB5\xbaG2\x92\x02/Loosely structured data stored with the volume.R\x06struct\x12a\n" +
 	"\vcreate_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampB$\xbaG!\x18\x01\x92\x02\x1cWhen the volume was created.R\n" +
@@ -1901,18 +1901,18 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\x04name\x18\x05 \x01(\tBI\xbaG \x92\x02\x1dThe resource name. Immutable.\xbaH#\xc8\x01\x01r\x1e2\x1c^volumes/vol_[a-zA-Z0-9-_]+$R\x04name\x12p\n" +
 	"\n" +
 	"dataset_id\x18\x06 \x01(\tBQ\xbaG!\x92\x02\x1eThe ZFS dataset id. Immutable.\xbaH*\xc8\x01\x01r%2#^[a-zA-Z0-9-_]+(/?[a-zA-Z0-9-_]+)*$R\tdatasetId\x12g\n" +
-	"\aoptions\x18\a \x03(\v2\x18.zfsilo.v1.Volume.OptionB3\xbaG0\x92\x02-The options applied to the volume. Immutable.R\aoptions\x12L\n" +
-	"\x06sparse\x18\b \x01(\bB4\xbaG+\x92\x02(Whether the volume is sparse. Immutable.\xbaH\x03\xc8\x01\x01R\x06sparse\x12Z\n" +
+	"\aoptions\x18\a \x03(\v2\x18.zfsilo.v1.Volume.OptionB3\xbaG0\x92\x02-The options applied to the volume. Immutable.R\aoptions\x12K\n" +
+	"\x06sparse\x18\b \x01(\bB.\xbaG+\x92\x02(Whether the volume is sparse. Immutable.H\x00R\x06sparse\x88\x01\x01\x12Z\n" +
 	"\x04mode\x18\t \x01(\x0e2\x16.zfsilo.v1.Volume.ModeB.\xbaG%\x92\x02\"The mode of the volume. Immutable.\xbaH\x03\xc8\x01\x01R\x04mode\x12O\n" +
 	"\x0ecapacity_bytes\x18\n" +
 	" \x01(\x03B(\xbaG\x1e\x92\x02\x1bThe capacity of the volume.\xbaH\x04\"\x02(\x00R\rcapacityBytes\x12b\n" +
 	"\x06status\x18\v \x01(\x0e2\x18.zfsilo.v1.Volume.StatusB0\xbaG'\x92\x02$The status of the volume. Immutable.\xbaH\x03\xc8\x01\x01R\x06status\x12X\n" +
-	"\rinitiator_iqn\x18\f \x01(\tB.\xbaG\x1d\x18\x01\x92\x02\x18The iSCSI initiator IQN.\xbaH\vr\t2\a^iqn.*$H\x00R\finitiatorIqn\x88\x01\x01\x12O\n" +
+	"\rinitiator_iqn\x18\f \x01(\tB.\xbaG\x1d\x18\x01\x92\x02\x18The iSCSI initiator IQN.\xbaH\vr\t2\a^iqn.*$H\x01R\finitiatorIqn\x88\x01\x01\x12O\n" +
 	"\n" +
-	"target_iqn\x18\r \x01(\tB+\xbaG\x1a\x18\x01\x92\x02\x15The iSCSI target IQN.\xbaH\vr\t2\a^iqn.*$H\x01R\ttargetIqn\x88\x01\x01\x12e\n" +
-	"\x0etarget_address\x18\x0e \x01(\tB9\xbaG.\x18\x01\x92\x02)The iSCSI target address (host and port).\xbaH\x05r\x03\x80\x02\x01H\x02R\rtargetAddress\x88\x01\x01\x12V\n" +
+	"target_iqn\x18\r \x01(\tB+\xbaG\x1a\x18\x01\x92\x02\x15The iSCSI target IQN.\xbaH\vr\t2\a^iqn.*$H\x02R\ttargetIqn\x88\x01\x01\x12e\n" +
+	"\x0etarget_address\x18\x0e \x01(\tB9\xbaG.\x18\x01\x92\x02)The iSCSI target address (host and port).\xbaH\x05r\x03\x80\x02\x01H\x03R\rtargetAddress\x88\x01\x01\x12V\n" +
 	"\n" +
-	"mount_path\x18\x0f \x01(\tB2\xbaG\x1a\x18\x01\x92\x02\x15The iSCSI mount path.\xbaH\x12r\x102\x0e^(/[^/ ]*)+/?$H\x03R\tmountPath\x88\x01\x01\x1a0\n" +
+	"mount_path\x18\x0f \x01(\tB2\xbaG\x1a\x18\x01\x92\x02\x15The iSCSI mount path.\xbaH\x12r\x102\x0e^(/[^/ ]*)+/?$H\x04R\tmountPath\x88\x01\x01\x1a0\n" +
 	"\x06Option\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\"A\n" +
@@ -1927,7 +1927,8 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\x10STATUS_PUBLISHED\x10\x02\x12\x14\n" +
 	"\x10STATUS_CONNECTED\x10\x03\x12\x12\n" +
 	"\x0eSTATUS_MOUNTED\x10\x04:\x95\x01\xbaG\x17\x92\x02\x14The volume resource.\xbaHx\x1av\n" +
-	"\x1avolume.name_id_consistency\x125The 'name' field must be in the format 'volumes/{id}'\x1a!this.name == 'volumes/' + this.idB\x10\n" +
+	"\x1avolume.name_id_consistency\x125The 'name' field must be in the format 'volumes/{id}'\x1a!this.name == 'volumes/' + this.idB\t\n" +
+	"\a_sparseB\x10\n" +
 	"\x0e_initiator_iqnB\r\n" +
 	"\v_target_iqnB\x11\n" +
 	"\x0f_target_addressB\r\n" +

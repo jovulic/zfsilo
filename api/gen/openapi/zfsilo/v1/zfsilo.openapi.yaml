@@ -1119,6 +1119,7 @@ components:
           type: boolean
           title: sparse
           description: Whether the volume is sparse. Immutable.
+          nullable: true
         mode:
           title: mode
           description: The mode of the volume. Immutable.
@@ -1166,7 +1167,6 @@ components:
         - id
         - name
         - datasetId
-        - sparse
         - mode
         - status
       additionalProperties: false
