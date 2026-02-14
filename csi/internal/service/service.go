@@ -336,11 +336,43 @@ func (s *CSIService) ControllerUnpublishVolume(ctx context.Context, req *csi.Con
 		return nil, err
 	}
 
-	// TODO: Idempotency Check (Is volume already detached?)
-	// TODO: Check if NodeID is empty -> Detach from ALL nodes.
-	// TODO: Check if NodeID is set -> Detach from specific node.
+	id := req.GetVolumeId()
+	nodeID := req.GetNodeId()
 
-	return nil, status.Errorf(codes.Unimplemented, "method ControllerUnpublishVolume not implemented")
+	// Get volume status.
+	getResp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			return &csi.ControllerUnpublishVolumeResponse{}, nil
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get volume: %v", err)
+	}
+
+	vol := getResp.Msg.Volume
+
+	// Check node id. If it is published to a different node, it's already
+	// "unpublished".
+	if nodeID != "" && vol.InitiatorIqn != nil && *vol.InitiatorIqn != "" && *vol.InitiatorIqn != nodeID {
+		return &csi.ControllerUnpublishVolumeResponse{}, nil
+	}
+
+	// Disconnect if connected.
+	if vol.Status >= zfsilov1.Volume_STATUS_CONNECTED {
+		_, err := s.volumeClient.DisconnectVolume(ctx, connect.NewRequest(&zfsilov1.DisconnectVolumeRequest{Id: id}))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to disconnect volume: %v", err)
+		}
+	}
+
+	// Unpublish if published.
+	if vol.Status >= zfsilov1.Volume_STATUS_PUBLISHED {
+		_, err := s.volumeClient.UnpublishVolume(ctx, connect.NewRequest(&zfsilov1.UnpublishVolumeRequest{Id: id}))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to unpublish volume: %v", err)
+		}
+	}
+
+	return &csi.ControllerUnpublishVolumeResponse{}, nil
 }
 
 func (s *CSIService) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
