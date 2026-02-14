@@ -82,18 +82,6 @@ type CSIService struct {
 	serviceClient zfsilov1connect.ServiceClient
 }
 
-func (s *CSIService) toVolumeID(name string) string {
-	return "vol_" + name
-}
-
-func (s *CSIService) toVolumeName(name string) string {
-	return "volumes/" + s.toVolumeID(name)
-}
-
-func (s *CSIService) toDatasetID(name string, parentDatasetID string) string {
-	return parentDatasetID + "/" + s.toVolumeID(name)
-}
-
 func (s *CSIService) authInterceptor() connect.Interceptor {
 	return connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
@@ -205,8 +193,8 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 
 	params := Parameters(req.GetParameters())
 	name := req.GetName()
-	id := s.toVolumeID(name)
-	datasetID := s.toDatasetID(name, params.ParentDatasetID())
+	id := toVolumeID(name)
+	datasetID := toDatasetID(name, params.ParentDatasetID())
 
 	// Determine mode. Default to filesystem if not specified.
 	mode := zfsilov1.Volume_MODE_FILESYSTEM
@@ -235,7 +223,7 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 	resp, err := s.volumeClient.CreateVolume(ctx, connect.NewRequest(&zfsilov1.CreateVolumeRequest{
 		Volume: &zfsilov1.Volume{
 			Id:            id,
-			Name:          s.toVolumeName(name),
+			Name:          toVolumeName(name),
 			DatasetId:     datasetID,
 			Mode:          mode,
 			CapacityBytes: capacityBytes,
