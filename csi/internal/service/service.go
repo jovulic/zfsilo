@@ -808,11 +808,22 @@ func (s *CSIService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVo
 		return nil, err
 	}
 
-	// TODO: Resize the filesystem (e.g. resize2fs, xfs_growfs)
-	// TODO: Check if volume is block or mount
-	// TODO: Handle offline expansion if necessary
+	id := req.GetVolumeId()
 
-	return nil, status.Errorf(codes.Unimplemented, "method NodeExpandVolume not implemented")
+	// Fetch current volume status to get the updated capacity.
+	// NOTE: The actual expansion (iscsi rescan and fs resize) is handled by the
+	// UpdateVolume call which is triggered by ControllerExpandVolume.
+	resp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			return nil, status.Errorf(codes.NotFound, "volume %s not found", id)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get volume: %v", err)
+	}
+
+	return &csi.NodeExpandVolumeResponse{
+		CapacityBytes: resp.Msg.Volume.CapacityBytes,
+	}, nil
 }
 
 func (s *CSIService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
