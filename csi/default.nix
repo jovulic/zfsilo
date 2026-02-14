@@ -9,7 +9,6 @@
     packages = [
       pkgs.go
       pkgs.wire
-      pkgs.sqlite
       pkgs.goverter
     ];
   };
@@ -18,7 +17,7 @@
       zfsiloVersion = "${version}-${commitHashShort}";
     in
     pkgs.stdenv.mkDerivation {
-      pname = "zfsilo";
+      pname = "zfsilo-csi";
       version = zfsiloVersion;
       src =
         let
@@ -63,7 +62,11 @@
       buildPhase = ''
         runHook preBuild
 
-        go build -ldflags="-X main.Version=${zfsiloVersion}" -v -o zfsilo ./app
+        go build \
+          -ldflags="-X github.com/jovulic/zfsilo/csi/internal/extvar.Version=${zfsiloVersion}" \
+          -v \
+          -o zfsilo-csi \
+          ./csi
 
         runHook postBuild
       '';
@@ -71,7 +74,7 @@
         runHook preInstall
 
         mkdir -p $out/bin
-        install -m 755 zfsilo $out/bin/
+        install -m 755 zfsilo-csi $out/bin/
 
         runHook postInstall
       '';

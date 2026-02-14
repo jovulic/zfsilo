@@ -1,0 +1,15 @@
+run:
+  go run -ldflags "-X 'github.com/jovulic/zfsilo/csi/internal/extvar.Version=local'" . start --config ./config.json 
+
+test:
+  go test ./...
+
+build:
+  go build -tags "json1"
+
+generate:
+  go generate ./...
+  sed -i "s/-mod=mod //g" wire_gen.go
+
+wire:
+  wire

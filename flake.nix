@@ -67,6 +67,9 @@
             }).shell.packages
             ++ (pkgs.callPackage ./app {
               inherit version commitHashShort;
+            }).shell.packages
+            ++ (pkgs.callPackage ./csi {
+              inherit version commitHashShort;
             }).shell.packages;
           };
           packages = {
@@ -76,6 +79,10 @@
               }).package;
             app =
               (pkgs.callPackage ./app {
+                inherit version commitHashShort;
+              }).package;
+            csi =
+              (pkgs.callPackage ./csi {
                 inherit version commitHashShort;
               }).package;
           };
@@ -95,6 +102,10 @@
               app = createApp ''
                 # shellcheck disable=SC2068
                 nix run .#packages.${system}.app -- $@
+              '';
+              csi = createApp ''
+                # shellcheck disable=SC2068
+                nix run .#packages.${system}.csi -- $@
               '';
               dev = createApp ''
                 nix run .#nixosConfigurations.dev.host.config.microvm.declaredRunner

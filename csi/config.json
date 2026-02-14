@@ -1,0 +1,14 @@
+{
+  "service": {
+    "secret": "password",
+    "storeAddress": "127.0.0.1:9001",
+    "targetPortalAddress": "10.0.0.123:3260",
+    "initiatorIqn": {
+      "type": "VALUE",
+      "value": "iqn.2006-01.org.linux-iscsi.take"
+    },
+    "knownInitiatorIqns": [
+      "iqn.2006-01.org.linux-iscsi.take"
+    ]
+  }
+}
