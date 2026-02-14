@@ -278,7 +278,9 @@ func (s *VolumeService) CreateVolume(ctx context.Context, req *connect.Request[z
 	})
 	if err != nil {
 		// Check for specific database errors to return correct connect codes.
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
+		// NOTE: GORM with SQLite may not always return ErrDuplicatedKey as a
+		// wrapped error, so we also check the message.
+		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("volume already exists"))
 		}
 		// For ZFS errors or other DB errors, return internal error.
