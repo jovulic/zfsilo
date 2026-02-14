@@ -727,10 +727,36 @@ func (s *CSIService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpub
 		return nil, err
 	}
 
-	// TODO: Idempotency Check (Is it already unmounted?)
-	// TODO: Unmount Logic (syscall.Unmount, remove mount point directory)
+	id := req.GetVolumeId()
 
-	return nil, status.Errorf(codes.Unimplemented, "method NodeUnpublishVolume not implemented")
+	// Get volume status.
+	getResp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			return &csi.NodeUnpublishVolumeResponse{}, nil
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get volume: %v", err)
+	}
+
+	vol := getResp.Msg.Volume
+
+	// Unmount if mounted.
+	if vol.Status >= zfsilov1.Volume_STATUS_MOUNTED {
+		_, err := s.volumeClient.UnmountVolume(ctx, connect.NewRequest(&zfsilov1.UnmountVolumeRequest{Id: id}))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to unmount volume: %v", err)
+		}
+	}
+
+	// Disconnect if connected to this node.
+	if vol.Status >= zfsilov1.Volume_STATUS_CONNECTED && vol.InitiatorIqn != nil && *vol.InitiatorIqn == s.initiatorIQN {
+		_, err := s.volumeClient.DisconnectVolume(ctx, connect.NewRequest(&zfsilov1.DisconnectVolumeRequest{Id: id}))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to disconnect volume: %v", err)
+		}
+	}
+
+	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
 func (s *CSIService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
