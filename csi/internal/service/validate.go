@@ -136,17 +136,9 @@ func validateCreateVolumeRequest(req *csi.CreateVolumeRequest) error {
 		return err
 	}
 
-	// TODO: Validate paramters
-	// func(thing *csi.CreateVolumeRequest) (api.ValidateCheckError, error) {
-	// 	if Parameters(request.GetParameters()).ParentDatasetID() == "" {
-	// 		return api.ValidateCheckError{
-	// 			Valid:       true,
-	// 			Field:       "parameters[parent_dataset_id]",
-	// 			Description: "parameters[parent_dataset_id] is empty",
-	// 		}, nil
-	// 	}
-	// 	return api.ValidateCheckError{}, nil
-	// },
+	if Parameters(req.GetParameters()).ParentDatasetID() == "" {
+		return status.Error(codes.InvalidArgument, "parameters[parent_dataset_id] is empty")
+	}
 
 	return nil
 }
