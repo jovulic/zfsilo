@@ -380,11 +380,42 @@ func (s *CSIService) ValidateVolumeCapabilities(ctx context.Context, req *csi.Va
 		return nil, err
 	}
 
-	// TODO: Fetch volume metadata.
-	// TODO: Compare requested capabilities against actual volume capabilities.
-	// TODO: Compare requested context against actual context.
+	id := req.GetVolumeId()
 
-	return nil, status.Errorf(codes.Unimplemented, "method ValidateVolumeCapabilities not implemented")
+	// Fetch volume metadata.
+	resp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			return nil, status.Errorf(codes.NotFound, "volume %s not found", id)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get volume: %v", err)
+	}
+
+	vol := resp.Msg.Volume
+
+	// Compare requested capabilities against actual volume capabilities.
+	for _, cap := range req.GetVolumeCapabilities() {
+		if cap.GetBlock() != nil {
+			if vol.Mode != zfsilov1.Volume_MODE_BLOCK {
+				return &csi.ValidateVolumeCapabilitiesResponse{
+					Message: fmt.Sprintf("volume %s is not in block mode", id),
+				}, nil
+			}
+		}
+		if cap.GetMount() != nil {
+			if vol.Mode != zfsilov1.Volume_MODE_FILESYSTEM {
+				return &csi.ValidateVolumeCapabilitiesResponse{
+					Message: fmt.Sprintf("volume %s is not in filesystem mode", id),
+				}, nil
+			}
+		}
+	}
+
+	return &csi.ValidateVolumeCapabilitiesResponse{
+		Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
+			VolumeCapabilities: req.GetVolumeCapabilities(),
+		},
+	}, nil
 }
 
 func (s *CSIService) ListVolumes(ctx context.Context, req *csi.ListVolumesRequest) (*csi.ListVolumesResponse, error) {
