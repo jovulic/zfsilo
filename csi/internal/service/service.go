@@ -628,11 +628,40 @@ func (s *CSIService) ControllerModifyVolume(ctx context.Context, req *csi.Contro
 		return nil, err
 	}
 
-	// TODO: Idempotency Check (Are these parameters already applied?)
-	// TODO: Verify support for specific keys (Are "iops" or "tier" supported?)
-	// TODO: Backend modification logic
+	id := req.GetVolumeId()
+	mutableParams := req.GetMutableParameters()
+	options := Parameters(mutableParams).Options()
 
-	return nil, status.Errorf(codes.Unimplemented, "method ControllerModifyVolume not implemented")
+	// Convert options to backend format (list of objects with key/value).
+	zfsOptions := make([]any, 0, len(options))
+	for _, opt := range options {
+		zfsOptions = append(zfsOptions, map[string]any{
+			"key":   opt.Key,
+			"value": opt.Value,
+		})
+	}
+
+	updateMap := map[string]any{
+		"id":      id,
+		"options": zfsOptions,
+	}
+
+	updateStruct, err := structpb.NewStruct(updateMap)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create update struct: %v", err)
+	}
+
+	_, err = s.volumeClient.UpdateVolume(ctx, connect.NewRequest(&zfsilov1.UpdateVolumeRequest{
+		Volume: updateStruct,
+	}))
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			return nil, status.Errorf(codes.NotFound, "volume %s not found", id)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to modify volume: %v", err)
+	}
+
+	return &csi.ControllerModifyVolumeResponse{}, nil
 }
 
 func (s *CSIService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
