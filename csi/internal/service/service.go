@@ -49,59 +49,22 @@ func (dict Parameters) Sparse() bool {
 	return value == "true"
 }
 
-func validateCapacityRange(capacityRange *csi.CapacityRange) error {
-	if capacityRange == nil {
-		return nil
-	}
-
-	requiredBytes := capacityRange.RequiredBytes
-	limitBytes := capacityRange.LimitBytes
-
-	if limitBytes > 0 && requiredBytes > limitBytes {
-		return errors.New("required bytes is greater than limit bytes")
-	}
-
-	return nil
-}
-
-func validateVolumeCapabilities(volumeCapabilities []*csi.VolumeCapability) error {
-	for _, volumeCapability := range volumeCapabilities {
-		switch t := volumeCapability.AccessType.(type) {
-		case *csi.VolumeCapability_Mount:
-			// okay
-		case *csi.VolumeCapability_Block:
-			// okay
-		default:
-			return fmt.Errorf("unsupported access type %T", t)
-		}
-
-		accessMode := volumeCapability.AccessMode.Mode
-		switch accessMode {
-		case csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER:
-			// okay
-		default:
-			return fmt.Errorf("unsupported access mode =%s", accessMode.String())
-		}
-	}
-
-	return nil
-}
-
 type CSIServiceConfig struct {
 	Secret              string   `validate:"required"`
-	StoreAddress        string   `validate:"required"`
+	ZFSiloAddress       string   `validate:"required"`
 	TargetPortalAddress string   `validate:"required"`
 	InitiatorIQN        string   `validate:"required"`
 	KnownInitiatorIQNs  []string `validate:"required"`
 }
 
+// specification: https://github.com/container-storage-interface/spec/blob/master/spec.md
 type CSIService struct {
 	csi.UnimplementedIdentityServer
 	csi.UnimplementedControllerServer
 	csi.UnimplementedNodeServer
 
 	secret              string
-	storeAddress        string
+	zfsiloAddress       string
 	targetPortalAddress string
 	initiatorIQN        string
 	knownInitiatorIQNs  []string
@@ -118,7 +81,7 @@ func NewCSIService(config CSIServiceConfig) *CSIService {
 	}
 	return &CSIService{
 		secret:              config.Secret,
-		storeAddress:        config.StoreAddress,
+		zfsiloAddress:       config.ZFSiloAddress,
 		targetPortalAddress: config.TargetPortalAddress,
 		initiatorIQN:        config.InitiatorIQN,
 		knownInitiatorIQNs:  config.KnownInitiatorIQNs,
@@ -135,11 +98,11 @@ func (s *CSIService) Start(ctx context.Context) error {
 
 	{
 		conn, err := grpc.NewClient(
-			s.storeAddress,
+			s.zfsiloAddress,
 			grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})),
 		)
 		if err != nil {
-			return fmt.Errorf("failed to dial %s: %w", s.storeAddress, err)
+			return fmt.Errorf("failed to dial %s: %w", s.zfsiloAddress, err)
 		}
 		s.conn = conn
 	}
@@ -200,94 +163,263 @@ func (s *CSIService) Probe(context.Context, *csi.ProbeRequest) (*csi.ProbeRespon
 	}, nil
 }
 
-func (s *CSIService) CreateVolume(context.Context, *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
+func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
+	if err := validateCreateVolumeRequest(req); err != nil {
+		return nil, err
+	}
+
+	// TODO: Check if the volume already exists.
+	// TODO: Provision the volume.
+
 	return nil, status.Errorf(codes.Unimplemented, "method CreateVolume not implemented")
 }
 
-func (s *CSIService) DeleteVolume(context.Context, *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
+func (s *CSIService) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
+	if err := validateDeleteVolumeRequest(req); err != nil {
+		return nil, err
+	}
+
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteVolume not implemented")
 }
 
-func (s *CSIService) ControllerPublishVolume(context.Context, *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
+func (s *CSIService) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
+	if err := validateControllerPublishVolumeRequest(req); err != nil {
+		return nil, err
+	}
+
+	// TODO: Idempotency check (Has this volume already been published to this node?)
+	// TODO: Max volumes per node check
+	// TODO: Backend attach logic
+
 	return nil, status.Errorf(codes.Unimplemented, "method ControllerPublishVolume not implemented")
 }
 
-func (s *CSIService) ControllerUnpublishVolume(context.Context, *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
+func (s *CSIService) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
+	if err := validateControllerUnpublishVolumeRequest(req); err != nil {
+		return nil, err
+	}
+
+	// TODO: Idempotency Check (Is volume already detached?)
+	// TODO: Check if NodeID is empty -> Detach from ALL nodes.
+	// TODO: Check if NodeID is set -> Detach from specific node.
+
 	return nil, status.Errorf(codes.Unimplemented, "method ControllerUnpublishVolume not implemented")
 }
 
-func (s *CSIService) ValidateVolumeCapabilities(context.Context, *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
+func (s *CSIService) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
+	if err := validateValidateVolumeCapabilitiesRequest(req); err != nil {
+		return nil, err
+	}
+
+	// TODO: Fetch volume metadata.
+	// TODO: Compare requested capabilities against actual volume capabilities.
+	// TODO: Compare requested context against actual context.
+
 	return nil, status.Errorf(codes.Unimplemented, "method ValidateVolumeCapabilities not implemented")
 }
 
-func (s *CSIService) ListVolumes(context.Context, *csi.ListVolumesRequest) (*csi.ListVolumesResponse, error) {
+func (s *CSIService) ListVolumes(ctx context.Context, req *csi.ListVolumesRequest) (*csi.ListVolumesResponse, error) {
+	if err := validateListVolumesRequest(req); err != nil {
+		return nil, err
+	}
+
+	// TODO: Pagination Logic
+	// TODO: Fetch volumes from backend
+	// TODO: Encode NextToken
+
 	return nil, status.Errorf(codes.Unimplemented, "method ListVolumes not implemented")
 }
 
-func (s *CSIService) GetCapacity(context.Context, *csi.GetCapacityRequest) (*csi.GetCapacityResponse, error) {
+func (s *CSIService) GetCapacity(ctx context.Context, req *csi.GetCapacityRequest) (*csi.GetCapacityResponse, error) {
+	if err := validateGetCapacityRequest(req); err != nil {
+		return nil, err
+	}
+
+	// TODO: Filter available capacity by provided Capabilities (if any)
+	// TODO: Filter available capacity by provided Parameters (if any)
+	// TODO: Filter available capacity by Topology (if provided)
+	// TODO: Calculate available bytes
+
 	return nil, status.Errorf(codes.Unimplemented, "method GetCapacity not implemented")
 }
 
-func (s *CSIService) ControllerGetCapabilities(context.Context, *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ControllerGetCapabilities not implemented")
+func (s *CSIService) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
+	return &csi.ControllerGetCapabilitiesResponse{
+		Capabilities: []*csi.ControllerServiceCapability{
+			{
+				Type: &csi.ControllerServiceCapability_Rpc{
+					Rpc: &csi.ControllerServiceCapability_RPC{
+						Type: csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
+					},
+				},
+			},
+			{
+				Type: &csi.ControllerServiceCapability_Rpc{
+					Rpc: &csi.ControllerServiceCapability_RPC{
+						Type: csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
+					},
+				},
+			},
+			{
+				Type: &csi.ControllerServiceCapability_Rpc{
+					Rpc: &csi.ControllerServiceCapability_RPC{
+						Type: csi.ControllerServiceCapability_RPC_LIST_VOLUMES,
+					},
+				},
+			},
+			{
+				Type: &csi.ControllerServiceCapability_Rpc{
+					Rpc: &csi.ControllerServiceCapability_RPC{
+						Type: csi.ControllerServiceCapability_RPC_GET_CAPACITY,
+					},
+				},
+			},
+			{
+				Type: &csi.ControllerServiceCapability_Rpc{
+					Rpc: &csi.ControllerServiceCapability_RPC{
+						Type: csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
+					},
+				},
+			},
+			{
+				Type: &csi.ControllerServiceCapability_Rpc{
+					Rpc: &csi.ControllerServiceCapability_RPC{
+						Type: csi.ControllerServiceCapability_RPC_MODIFY_VOLUME,
+					},
+				},
+			},
+		},
+	}, nil
 }
 
-func (s *CSIService) CreateSnapshot(context.Context, *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateSnapshot not implemented")
+func (s *CSIService) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateSnapshot not supported")
 }
 
-func (s *CSIService) DeleteSnapshot(context.Context, *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteSnapshot not implemented")
+func (s *CSIService) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteSnapshot not supported")
 }
 
-func (s *CSIService) ListSnapshots(context.Context, *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListSnapshots not implemented")
+func (s *CSIService) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListSnapshots not supported")
 }
 
-func (s *CSIService) GetSnapshot(context.Context, *csi.GetSnapshotRequest) (*csi.GetSnapshotResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSnapshot not implemented")
+func (s *CSIService) GetSnapshot(ctx context.Context, req *csi.GetSnapshotRequest) (*csi.GetSnapshotResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSnapshot not supported")
 }
 
-func (s *CSIService) ControllerExpandVolume(context.Context, *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
+func (s *CSIService) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
+	if err := validateControllerExpandVolumeRequest(req); err != nil {
+		return nil, err
+	}
+
+	// TODO: Idempotency Check (Is volume already >= requested size?)
+	// TODO: Check if volume is online/offline (capabilities check)
+	// TODO: Backend expansion logic
+	// TODO: Determine if node expansion is required
+
 	return nil, status.Errorf(codes.Unimplemented, "method ControllerExpandVolume not implemented")
 }
 
-func (s *CSIService) ControllerGetVolume(context.Context, *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
+func (s *CSIService) ControllerGetVolume(ctx context.Context, req *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
+	if err := validateControllerGetVolumeRequest(req); err != nil {
+		return nil, err
+	}
+
+	// TODO: Fetch volume status
+	// TODO: Return volume status (including condition if supported)
+
 	return nil, status.Errorf(codes.Unimplemented, "method ControllerGetVolume not implemented")
 }
 
-func (s *CSIService) ControllerModifyVolume(context.Context, *csi.ControllerModifyVolumeRequest) (*csi.ControllerModifyVolumeResponse, error) {
+func (s *CSIService) ControllerModifyVolume(ctx context.Context, req *csi.ControllerModifyVolumeRequest) (*csi.ControllerModifyVolumeResponse, error) {
+	if err := validateControllerModifyVolumeRequest(req); err != nil {
+		return nil, err
+	}
+
+	// TODO: Idempotency Check (Are these parameters already applied?)
+	// TODO: Verify support for specific keys (Are "iops" or "tier" supported?)
+	// TODO: Backend modification logic
+
 	return nil, status.Errorf(codes.Unimplemented, "method ControllerModifyVolume not implemented")
 }
 
-func (s *CSIService) NodeStageVolume(context.Context, *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method NodeStageVolume not implemented")
+func (s *CSIService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NodeStageVolume not supported")
 }
 
-func (s *CSIService) NodeUnstageVolume(context.Context, *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method NodeUnstageVolume not implemented")
+func (s *CSIService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NodeUnstageVolume not supported")
 }
 
-func (s *CSIService) NodePublishVolume(context.Context, *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
+func (s *CSIService) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
+	if err := validateNodePublishVolumeRequest(req); err != nil {
+		return nil, err
+	}
+
+	// TODO: Check if StagingTargetPath is required (based on Plugin Capabilities)
+	// TODO: Idempotency Check (Is it already mounted?)
+	// TODO: Mount Logic (Bind mount, format, etc.)
+
 	return nil, status.Errorf(codes.Unimplemented, "method NodePublishVolume not implemented")
 }
 
-func (s *CSIService) NodeUnpublishVolume(context.Context, *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
+func (s *CSIService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
+	if err := validateNodeUnpublishVolumeRequest(req); err != nil {
+		return nil, err
+	}
+
+	// TODO: Idempotency Check (Is it already unmounted?)
+	// TODO: Unmount Logic (syscall.Unmount, remove mount point directory)
+
 	return nil, status.Errorf(codes.Unimplemented, "method NodeUnpublishVolume not implemented")
 }
 
-func (s *CSIService) NodeGetVolumeStats(context.Context, *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
+func (s *CSIService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
+	if err := validateNodeGetVolumeStatsRequest(req); err != nil {
+		return nil, err
+	}
+
+	// TODO: Check if path exists
+	// TODO: Run 'df' or 'statfs' syscall on the path
+	// TODO: Run inode check
+
 	return nil, status.Errorf(codes.Unimplemented, "method NodeGetVolumeStats not implemented")
 }
 
-func (s *CSIService) NodeExpandVolume(context.Context, *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
+func (s *CSIService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
+	if err := validateNodeExpandVolumeRequest(req); err != nil {
+		return nil, err
+	}
+
+	// TODO: Resize the filesystem (e.g. resize2fs, xfs_growfs)
+	// TODO: Check if volume is block or mount
+	// TODO: Handle offline expansion if necessary
+
 	return nil, status.Errorf(codes.Unimplemented, "method NodeExpandVolume not implemented")
 }
 
-func (s *CSIService) NodeGetCapabilities(context.Context, *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method NodeGetCapabilities not implemented")
+func (s *CSIService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
+	return &csi.NodeGetCapabilitiesResponse{
+		Capabilities: []*csi.NodeServiceCapability{
+			{
+				Type: &csi.NodeServiceCapability_Rpc{
+					Rpc: &csi.NodeServiceCapability_RPC{
+						Type: csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
+					},
+				},
+			},
+			{
+				Type: &csi.NodeServiceCapability_Rpc{
+					Rpc: &csi.NodeServiceCapability_RPC{
+						Type: csi.NodeServiceCapability_RPC_EXPAND_VOLUME,
+					},
+				},
+			},
+		},
+	}, nil
 }
 
-func (s *CSIService) NodeGetInfo(context.Context, *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method NodeGetInfo not implemented")
+func (s *CSIService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
+	return &csi.NodeGetInfoResponse{NodeId: s.initiatorIQN}, nil
 }
