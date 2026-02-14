@@ -275,7 +275,19 @@ func (s *CSIService) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequ
 		return nil, err
 	}
 
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteVolume not implemented")
+	id := req.GetVolumeId()
+
+	_, err := s.volumeClient.DeleteVolume(ctx, connect.NewRequest(&zfsilov1.DeleteVolumeRequest{
+		Id: id,
+	}))
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			return &csi.DeleteVolumeResponse{}, nil
+		}
+		return nil, status.Errorf(codes.Internal, "failed to delete volume: %v", err)
+	}
+
+	return &csi.DeleteVolumeResponse{}, nil
 }
 
 func (s *CSIService) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
