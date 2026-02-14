@@ -70,7 +70,7 @@ type Config struct {
 	Service struct {
 		BindAddress         string                    `json:"bindAddress"       mod:"default=:9090"`
 		Secret              SecretValue               `json:"secret" validate:"required"`
-		StoreAddress        string                    `json:"storeAddress" validate:"required"`
+		ZFSiloAddress       string                    `json:"zfsiloAddress" validate:"required"`
 		TargetPortalAddress string                    `json:"targetPortalAddress" validate:"required"`
 		InitiatorIQN        ConfigServiceInitiatorIQN `json:"initiatorIqn"`
 		KnownInitiatorIQNs  []string                  `json:"knownInitiatorIqns" validate:"min=1"`

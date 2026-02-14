@@ -63,7 +63,7 @@ func WireCSIService(
 	}
 	service := NewCSIService(CSIServiceConfig{
 		Secret:              string(conf.Service.Secret),
-		StoreAddress:        conf.Service.StoreAddress,
+		ZFSiloAddress:       conf.Service.ZFSiloAddress,
 		TargetPortalAddress: conf.Service.TargetPortalAddress,
 		InitiatorIQN:        initiatorIQN,
 		KnownInitiatorIQNs:  conf.Service.KnownInitiatorIQNs,
