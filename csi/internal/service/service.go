@@ -677,11 +677,49 @@ func (s *CSIService) NodePublishVolume(ctx context.Context, req *csi.NodePublish
 		return nil, err
 	}
 
-	// TODO: Check if StagingTargetPath is required (based on Plugin Capabilities)
-	// TODO: Idempotency Check (Is it already mounted?)
-	// TODO: Mount Logic (Bind mount, format, etc.)
+	id := req.GetVolumeId()
+	targetPath := req.GetTargetPath()
 
-	return nil, status.Errorf(codes.Unimplemented, "method NodePublishVolume not implemented")
+	// Get volume.
+	getResp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound {
+			return nil, status.Errorf(codes.NotFound, "volume %s not found", id)
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get volume: %v", err)
+	}
+	vol := getResp.Msg.Volume
+
+	// If already mounted, check if path matches.
+	if vol.Status >= zfsilov1.Volume_STATUS_MOUNTED {
+		if vol.MountPath != nil && *vol.MountPath == targetPath {
+			return &csi.NodePublishVolumeResponse{}, nil
+		}
+		return nil, status.Errorf(codes.FailedPrecondition, "volume %s is already mounted at %s", id, *vol.MountPath)
+	}
+
+	// Ensure connected to this node.
+	if vol.Status < zfsilov1.Volume_STATUS_CONNECTED || vol.InitiatorIqn == nil || *vol.InitiatorIqn != s.initiatorIQN {
+		_, err := s.volumeClient.ConnectVolume(ctx, connect.NewRequest(&zfsilov1.ConnectVolumeRequest{
+			Id:            id,
+			InitiatorIqn:  s.initiatorIQN,
+			TargetAddress: s.targetPortalAddress,
+		}))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to connect volume: %v", err)
+		}
+	}
+
+	// Mount volume.
+	_, err = s.volumeClient.MountVolume(ctx, connect.NewRequest(&zfsilov1.MountVolumeRequest{
+		Id:        id,
+		MountPath: targetPath,
+	}))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to mount volume: %v", err)
+	}
+
+	return &csi.NodePublishVolumeResponse{}, nil
 }
 
 func (s *CSIService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
