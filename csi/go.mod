@@ -3,11 +3,13 @@ module github.com/jovulic/zfsilo/csi
 go 1.24.4
 
 require (
+	connectrpc.com/connect v1.19.1
 	github.com/alecthomas/kong v1.14.0
 	github.com/container-storage-interface/spec v1.12.0
 	github.com/go-playground/mold/v4 v4.5.1
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/google/wire v0.7.0
+	github.com/jovulic/zfsilo/api v0.0.0-20260214211555-c344c9e51763
 	github.com/jovulic/zfsilo/lib v0.0.0-20260213230626-fd53eb2609a2
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/skovtunenko/graterm v1.2.0
@@ -17,6 +19,7 @@ require (
 )
 
 require (
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.6-20250717185734-6c6e0d3c608e.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
