@@ -8,6 +8,7 @@ import (
 	converter "github.com/jovulic/zfsilo/app/internal/converter/impl"
 	"github.com/jovulic/zfsilo/app/internal/database"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gorm.io/datatypes"
@@ -43,7 +44,7 @@ func TestVolumeConversion(t *testing.T) {
 		CreateTime:    timestamppb.New(createTime),
 		UpdateTime:    timestamppb.New(updateTime),
 		CapacityBytes: 1073741824,
-		Sparse:        true,
+		Sparse:        proto.Bool(true),
 		Mode:          zfsilov1.Volume_MODE_BLOCK,
 		Status:        zfsilov1.Volume_STATUS_INITIAL,
 		Options: []*zfsilov1.Volume_Option{

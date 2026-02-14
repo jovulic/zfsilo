@@ -34,7 +34,9 @@ func (c *VolumeConverterImpl) FromAPIToDB(source *v1.Volume) (*database.Volume, 
 		databaseVolume.Name = (*source).Name
 		databaseVolume.DatasetID = (*source).DatasetId
 		databaseVolume.Options = iface.ConvertVolumeOptionsFromAPIToDB((*source).Options)
-		databaseVolume.Sparse = (*source).Sparse
+		if (*source).Sparse != nil {
+			databaseVolume.Sparse = *(*source).Sparse
+		}
 		databaseVolume.Mode = iface.ConvertVolumeModeFromAPIToDB((*source).Mode)
 		databaseVolume.Status = iface.ConvertVolumeStatusFromAPIToDB((*source).Status)
 		databaseVolume.CapacityBytes = (*source).CapacityBytes
@@ -91,7 +93,8 @@ func (c *VolumeConverterImpl) FromDBToAPI(source *database.Volume) (*v1.Volume, 
 		zfsilov1Volume.Name = (*source).Name
 		zfsilov1Volume.DatasetId = (*source).DatasetID
 		zfsilov1Volume.Options = iface.ConvertVolumeOptionsFromDBToAPI((*source).Options)
-		zfsilov1Volume.Sparse = (*source).Sparse
+		pBool := (*source).Sparse
+		zfsilov1Volume.Sparse = &pBool
 		zfsilov1Volume.Mode = iface.ConvertVolumeModeFromDBToAPI((*source).Mode)
 		zfsilov1Volume.CapacityBytes = (*source).CapacityBytes
 		zfsilov1Volume.Status = iface.ConvertVolumeStatusFromDBToAPI((*source).Status)
