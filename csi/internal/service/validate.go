@@ -3,15 +3,14 @@ package service
 import (
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-var (
-	volumeNameRegex = regexp.MustCompile(`^[a-zA-Z0-9-_]+$`)
-)
+var volumeNameRegex = regexp.MustCompile(`^[a-zA-Z0-9-_]+$`)
 
 // validateVolumeCapability checks a single capability for valid access mode and type.
 func validateVolumeCapability(c *csi.VolumeCapability) error {
@@ -142,7 +141,7 @@ func validateCreateVolumeRequest(req *csi.CreateVolumeRequest) error {
 	}
 
 	if Parameters(req.GetParameters()).ParentDatasetID() == "" {
-		return status.Error(codes.InvalidArgument, "parameters[parent_dataset_id] is empty")
+		return status.Error(codes.InvalidArgument, "parameters parent dataset id is empty")
 	}
 
 	return nil
@@ -256,6 +255,12 @@ func validateControllerModifyVolumeRequest(req *csi.ControllerModifyVolumeReques
 		return err
 	}
 
+	for key := range req.GetMutableParameters() {
+		if !strings.HasPrefix(key, "o_") {
+			return status.Errorf(codes.InvalidArgument, "unsupported mutable parameter: %s", key)
+		}
+	}
+
 	return nil
 }
 
@@ -302,7 +307,7 @@ func validateNodeGetVolumeStatsRequest(req *csi.NodeGetVolumeStatsRequest) error
 
 	// The path where the volume is mounted.
 	if err := validateTargetPath(req.GetVolumePath()); err != nil {
-		return status.Errorf(codes.InvalidArgument, "invalid volume path: %v", err)
+		return status.Errorf(codes.NotFound, "invalid volume path: %v", err)
 	}
 
 	// StagingTargetPath is OPTIONAL, if set, it must be a valid absolute path.
@@ -322,7 +327,7 @@ func validateNodeExpandVolumeRequest(req *csi.NodeExpandVolumeRequest) error {
 
 	// The path where the volume is currently published.
 	if err := validateTargetPath(req.GetVolumePath()); err != nil {
-		return status.Errorf(codes.InvalidArgument, "Invalid volume_path: %v", err)
+		return status.Errorf(codes.NotFound, "Invalid volume path: %v", err)
 	}
 
 	// CapacityRange is OPTIONAL, if set, it must be logically valid.
@@ -335,7 +340,7 @@ func validateNodeExpandVolumeRequest(req *csi.NodeExpandVolumeRequest) error {
 	// StagingTargetPath is OPTIONAL, if set, it must be a valid absolute path.
 	if req.GetStagingTargetPath() != "" {
 		if err := validateTargetPath(req.GetStagingTargetPath()); err != nil {
-			return status.Errorf(codes.InvalidArgument, "Invalid staging_target_path: %v", err)
+			return status.Errorf(codes.InvalidArgument, "Invalid staging target path: %v", err)
 		}
 	}
 
