@@ -261,6 +261,7 @@ func (s *VolumeSyncer) syncMount(ctx context.Context, volumedb *database.Volume)
 				err = mount.With(consumer).Mount(ctx, mount.MountArguments{
 					SourcePath: volumedb.DevicePathISCSIClient(),
 					TargetPath: volumedb.MountPath,
+					FSType:     "ext4",
 					Options:    []string{"defaults"},
 				})
 				if err != nil {
