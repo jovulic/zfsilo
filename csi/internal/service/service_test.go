@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/jovulic/zfsilo/lib/command"
 	"github.com/kubernetes-csi/csi-test/v5/pkg/sanity"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,6 +35,10 @@ var _ = Describe("CSIService Sanity", func() {
 	BeforeEach(func() {
 		ctx := context.Background()
 
+		// Clean up any existing directories from previous failed runs.
+		_ = os.RemoveAll("/tmp/csi-mount")
+		_ = os.RemoveAll("/tmp/csi-staging")
+
 		// Use environment variables for configuration, with sensible defaults for
 		// dev environment.
 		zfsiloAddress := os.Getenv("ZFSILO_ADDRESS")
@@ -42,12 +48,28 @@ var _ = Describe("CSIService Sanity", func() {
 
 		targetPortalAddress := os.Getenv("ZFSILO_TARGET_PORTAL_ADDRESS")
 		if targetPortalAddress == "" {
-			targetPortalAddress = "127.0.0.1:3260"
+			// Dynamically resolve 'give' address from 'take' host perspective.
+			takeExecutor := command.NewRemoteExecutor(command.RemoteExecutorConfig{
+				Address:  "localhost",
+				Port:     9100,
+				Username: "root",
+				Password: "",
+			})
+			err := takeExecutor.Startup(ctx)
+			Expect(err).NotTo(HaveOccurred(), "failed to startup take executor")
+			defer takeExecutor.Shutdown(ctx)
+
+			result, err := takeExecutor.Exec(ctx, "dig +short give")
+			Expect(err).NotTo(HaveOccurred(), "failed to resolve give address")
+			address := strings.TrimSpace(result.Stdout)
+			Expect(address).NotTo(BeEmpty(), "resolved give address is empty")
+
+			targetPortalAddress = address + ":3260"
 		}
 
 		initiatorIQN := os.Getenv("ZFSILO_INITIATOR_IQN")
 		if initiatorIQN == "" {
-			initiatorIQN = "iqn.2006-01.org.linux-iscsi.test"
+			initiatorIQN = "iqn.2006-01.org.linux-iscsi.take"
 		}
 
 		secret := os.Getenv("ZFSILO_SECRET")
