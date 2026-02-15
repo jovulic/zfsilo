@@ -317,8 +317,9 @@ func (s *CSIService) ControllerPublishVolume(ctx context.Context, req *csi.Contr
 	}
 
 	// Verify it's connected to the right node.
-	if connectResp.Msg.Volume.InitiatorIqn != nil && *connectResp.Msg.Volume.InitiatorIqn != "" && *connectResp.Msg.Volume.InitiatorIqn != nodeID {
-		return nil, status.Errorf(codes.FailedPrecondition, "volume %s is already connected to another node: %s", id, *connectResp.Msg.Volume.InitiatorIqn)
+	initiatorIQN := connectResp.Msg.Volume.InitiatorIqn
+	if initiatorIQN != nil && *initiatorIQN != "" && *initiatorIQN != nodeID {
+		return nil, status.Errorf(codes.FailedPrecondition, "volume %s is already connected to another node: %s", id, *initiatorIQN)
 	}
 
 	return &csi.ControllerPublishVolumeResponse{}, nil
@@ -345,7 +346,8 @@ func (s *CSIService) ControllerUnpublishVolume(ctx context.Context, req *csi.Con
 
 	// Check node id. If it is published to a different node, it's already
 	// "unpublished".
-	if nodeID != "" && vol.InitiatorIqn != nil && *vol.InitiatorIqn != "" && *vol.InitiatorIqn != nodeID {
+	initiatorIQN := vol.InitiatorIqn
+	if nodeID != "" && initiatorIQN != nil && *initiatorIQN != "" && *initiatorIQN != nodeID {
 		return &csi.ControllerUnpublishVolumeResponse{}, nil
 	}
 
