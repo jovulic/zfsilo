@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"maps"
 	"net/http"
 	"slices"
 	"strings"
@@ -192,12 +193,8 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 	}
 
 	params := make(Parameters)
-	for k, v := range req.GetParameters() {
-		params[k] = v
-	}
-	for k, v := range req.GetMutableParameters() {
-		params[k] = v
-	}
+	maps.Copy(params, req.GetParameters())
+	maps.Copy(params, req.GetMutableParameters())
 
 	name := req.GetName()
 	id := toVolumeID(name)
