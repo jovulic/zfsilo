@@ -474,7 +474,7 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 	volumedb.Status = database.VolumeStatusPUBLISHED
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
-		_, err = gorm.G[*database.Volume](s.database).Updates(ctx, volumedb)
+		_, err = gorm.G[*database.Volume](tx).Updates(ctx, volumedb)
 		if err != nil {
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
@@ -530,7 +530,7 @@ func (s *VolumeService) UnpublishVolume(ctx context.Context, req *connect.Reques
 		volumedb.TargetIQN = ""
 		volumedb.Status = database.VolumeStatusINITIAL
 
-		_, err = gorm.G[*database.Volume](s.database).Updates(ctx, volumedb)
+		_, err = gorm.G[*database.Volume](tx).Updates(ctx, volumedb)
 		if err != nil {
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
@@ -584,7 +584,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 	volumedb.Status = database.VolumeStatusCONNECTED
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
-		_, err = gorm.G[*database.Volume](s.database).Updates(ctx, volumedb)
+		_, err = gorm.G[*database.Volume](tx).Updates(ctx, volumedb)
 		if err != nil {
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
@@ -645,7 +645,7 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 		volumedb.TargetAddress = ""
 		volumedb.Status = database.VolumeStatusPUBLISHED
 
-		_, err = gorm.G[*database.Volume](s.database).Updates(ctx, volumedb)
+		_, err = gorm.G[*database.Volume](tx).Updates(ctx, volumedb)
 		if err != nil {
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
@@ -702,7 +702,7 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 	volumedb.Status = database.VolumeStatusMOUNTED
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
-		_, err = gorm.G[*database.Volume](s.database).Updates(ctx, volumedb)
+		_, err = gorm.G[*database.Volume](tx).Updates(ctx, volumedb)
 		if err != nil {
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
@@ -792,7 +792,7 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 		volumedb.MountPath = ""
 		volumedb.Status = database.VolumeStatusCONNECTED
 
-		_, err = gorm.G[*database.Volume](s.database).Updates(ctx, volumedb)
+		_, err = gorm.G[*database.Volume](tx).Updates(ctx, volumedb)
 		if err != nil {
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
