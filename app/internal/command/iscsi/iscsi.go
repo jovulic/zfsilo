@@ -57,6 +57,7 @@ func (h *Host) IQN() IQN {
 		h.hostname,
 	)
 	value = strings.ToLower(value)
+	value = strings.ReplaceAll(value, "_", "-")
 	return IQN(value)
 }
 
@@ -64,6 +65,7 @@ func (h *Host) VolumeIQN(volumeID string) IQN {
 	value := h.IQN().String()
 	value = fmt.Sprintf("%s:%s", value, volumeID)
 	value = strings.ToLower(value)
+	value = strings.ReplaceAll(value, "_", "-")
 	return IQN(value)
 }
 
