@@ -735,6 +735,7 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 			err = mount.With(consumer).Mount(ctx, mount.MountArguments{
 				SourcePath: volumedb.DevicePathISCSIClient(),
 				TargetPath: volumedb.MountPath,
+				FSType:     "ext4",
 				Options:    []string{"defaults"},
 			})
 			if err != nil {
