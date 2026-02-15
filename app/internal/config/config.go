@@ -84,7 +84,7 @@ type ConfigCommandTargetConsume struct {
 
 type ConfigCommandHost struct {
 	// NOTE: The linux-iscsi.org domain establish time of 01 2006.
-	Domain    string    `json:"domain" default:"linux-iscsi.org"`
+	Domain    string    `json:"domain" mod:"default=linux-iscsi.org"`
 	OwnerTime time.Time `json:"ownerTime" mod:"default=2006-01-01T00:00:00Z"`
 	Hostname  string    `json:"hostname" validate:"required"`
 }
@@ -108,13 +108,8 @@ type Config struct {
 	Command struct {
 		ProduceTarget  ConfigCommandTargetProduce   `json:"produceTarget"`
 		ConsumeTargets []ConfigCommandTargetConsume `json:"consumeTargets"`
-		Host           struct {
-			// NOTE: The linux-iscsi.org domain establish time of 01 2006.
-			Domain    string    `json:"domain" default:"linux-iscsi.org"`
-			OwnerTime time.Time `json:"ownerTime" mod:"default=2006-01-01T00:00:00Z"`
-			Hostname  string    `json:"hostname" validate:"required"`
-		} `json:"host" `
-		Credentials struct {
+		Host           ConfigCommandHost            `json:"host" `
+		Credentials    struct {
 			UserID         string `json:"userId"`
 			Password       string `json:"password"`
 			MutualUserID   string `json:"mutualUserId"`
