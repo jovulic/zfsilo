@@ -191,7 +191,14 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 		return nil, err
 	}
 
-	params := Parameters(req.GetParameters())
+	params := make(Parameters)
+	for k, v := range req.GetParameters() {
+		params[k] = v
+	}
+	for k, v := range req.GetMutableParameters() {
+		params[k] = v
+	}
+
 	name := req.GetName()
 	id := toVolumeID(name)
 	datasetID := toDatasetID(name, params.ParentDatasetID())

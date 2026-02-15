@@ -1,7 +1,6 @@
 package service
 
 import (
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -116,13 +115,10 @@ func validateMaxEntries(maxEntries int32) error {
 	return nil
 }
 
-// validateTargetPath checks that the path is not empty and is absolute.
+// validateTargetPath checks that the path is not empty.
 func validateTargetPath(path string) error {
 	if path == "" {
 		return status.Error(codes.InvalidArgument, "target path cannot be empty")
-	}
-	if !filepath.IsAbs(path) {
-		return status.Errorf(codes.InvalidArgument, "target path must be absolute: %s", path)
 	}
 	return nil
 }
@@ -132,19 +128,13 @@ func validateStagingTargetPath(path string) error {
 	if path == "" {
 		return status.Error(codes.InvalidArgument, "staging target path cannot be empty")
 	}
-	if !filepath.IsAbs(path) {
-		return status.Errorf(codes.InvalidArgument, "staging target path must be absolute: %s", path)
-	}
 	return nil
 }
 
-// validateVolumePath checks that the path is not empty and is absolute.
+// validateVolumePath checks that the path is not empty.
 func validateVolumePath(path string) error {
 	if path == "" {
 		return status.Error(codes.InvalidArgument, "volume path cannot be empty")
-	}
-	if !filepath.IsAbs(path) {
-		return status.Errorf(codes.InvalidArgument, "volume path must be absolute: %s", path)
 	}
 	return nil
 }
@@ -164,6 +154,12 @@ func validateCreateVolumeRequest(req *csi.CreateVolumeRequest) error {
 
 	if Parameters(req.GetParameters()).ParentDatasetID() == "" {
 		return status.Error(codes.InvalidArgument, "parameters parent dataset id is empty")
+	}
+
+	for key := range req.GetMutableParameters() {
+		if !strings.HasPrefix(key, "o_") {
+			return status.Errorf(codes.InvalidArgument, "unsupported mutable parameter: %s", key)
+		}
 	}
 
 	return nil
@@ -302,7 +298,7 @@ func validateNodePublishVolumeRequest(req *csi.NodePublishVolumeRequest) error {
 	// StagingTargetPath is OPTIONAL, if it is set, it must be a valid absolute
 	// path.
 	if req.GetStagingTargetPath() != "" {
-		if err := validateTargetPath(req.GetStagingTargetPath()); err != nil {
+		if err := validateStagingTargetPath(req.GetStagingTargetPath()); err != nil {
 			return err
 		}
 	}
