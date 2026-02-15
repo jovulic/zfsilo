@@ -127,6 +127,17 @@ func validateTargetPath(path string) error {
 	return nil
 }
 
+// validateStagingTargetPath checks that the path is not empty and is absolute.
+func validateStagingTargetPath(path string) error {
+	if path == "" {
+		return status.Error(codes.InvalidArgument, "staging target path cannot be empty")
+	}
+	if !filepath.IsAbs(path) {
+		return status.Errorf(codes.InvalidArgument, "staging target path must be absolute: %s", path)
+	}
+	return nil
+}
+
 // validateVolumePath checks that the path is not empty and is absolute.
 func validateVolumePath(path string) error {
 	if path == "" {
@@ -323,8 +334,8 @@ func validateNodeGetVolumeStatsRequest(req *csi.NodeGetVolumeStatsRequest) error
 
 	// StagingTargetPath is OPTIONAL, if set, it must be a valid absolute path.
 	if req.GetStagingTargetPath() != "" {
-		if err := validateTargetPath(req.GetStagingTargetPath()); err != nil {
-			return status.Errorf(codes.InvalidArgument, "invalid staging target path: %v", err)
+		if err := validateStagingTargetPath(req.GetStagingTargetPath()); err != nil {
+			return err
 		}
 	}
 
@@ -350,8 +361,8 @@ func validateNodeExpandVolumeRequest(req *csi.NodeExpandVolumeRequest) error {
 
 	// StagingTargetPath is OPTIONAL, if set, it must be a valid absolute path.
 	if req.GetStagingTargetPath() != "" {
-		if err := validateTargetPath(req.GetStagingTargetPath()); err != nil {
-			return status.Errorf(codes.InvalidArgument, "Invalid staging target path: %v", err)
+		if err := validateStagingTargetPath(req.GetStagingTargetPath()); err != nil {
+			return err
 		}
 	}
 
