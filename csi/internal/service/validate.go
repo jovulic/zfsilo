@@ -127,6 +127,17 @@ func validateTargetPath(path string) error {
 	return nil
 }
 
+// validateVolumePath checks that the path is not empty and is absolute.
+func validateVolumePath(path string) error {
+	if path == "" {
+		return status.Error(codes.InvalidArgument, "volume path cannot be empty")
+	}
+	if !filepath.IsAbs(path) {
+		return status.Errorf(codes.InvalidArgument, "volume path must be absolute: %s", path)
+	}
+	return nil
+}
+
 func validateCreateVolumeRequest(req *csi.CreateVolumeRequest) error {
 	if err := validateVolumeName(req.GetName()); err != nil {
 		return err
@@ -306,8 +317,8 @@ func validateNodeGetVolumeStatsRequest(req *csi.NodeGetVolumeStatsRequest) error
 	}
 
 	// The path where the volume is mounted.
-	if err := validateTargetPath(req.GetVolumePath()); err != nil {
-		return status.Errorf(codes.NotFound, "invalid volume path: %v", err)
+	if err := validateVolumePath(req.GetVolumePath()); err != nil {
+		return err
 	}
 
 	// StagingTargetPath is OPTIONAL, if set, it must be a valid absolute path.
@@ -326,8 +337,8 @@ func validateNodeExpandVolumeRequest(req *csi.NodeExpandVolumeRequest) error {
 	}
 
 	// The path where the volume is currently published.
-	if err := validateTargetPath(req.GetVolumePath()); err != nil {
-		return status.Errorf(codes.NotFound, "Invalid volume path: %v", err)
+	if err := validateVolumePath(req.GetVolumePath()); err != nil {
+		return err
 	}
 
 	// CapacityRange is OPTIONAL, if set, it must be logically valid.
