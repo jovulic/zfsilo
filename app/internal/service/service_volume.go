@@ -429,6 +429,9 @@ func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[z
 		return nil
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), "dataset is busy") {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("dataset is busy: %w", err))
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to delete volume: %w", err))
 	}
 
