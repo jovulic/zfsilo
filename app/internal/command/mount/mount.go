@@ -25,18 +25,26 @@ func With(executor command.Executor) Mount {
 type MountArguments struct {
 	SourcePath string
 	TargetPath string
+	FSType     string
 	Options    []string
 }
 
 // Mount executes the mount command.
 func (m Mount) Mount(ctx context.Context, args MountArguments) error {
-	cmd := fmt.Sprintf(
-		"mount -o '%s' '%s' '%s'",
-		strings.Join(args.Options, ","),
-		args.SourcePath,
-		args.TargetPath,
-	)
-	result, err := m.executor.Exec(ctx, cmd)
+	var cmd strings.Builder
+	cmd.WriteString("mount")
+
+	if args.FSType != "" {
+		cmd.WriteString(fmt.Sprintf(" -t '%s'", args.FSType))
+	}
+
+	if len(args.Options) > 0 {
+		cmd.WriteString(fmt.Sprintf(" -o '%s'", strings.Join(args.Options, ",")))
+	}
+
+	cmd.WriteString(fmt.Sprintf(" '%s' '%s'", args.SourcePath, args.TargetPath))
+
+	result, err := m.executor.Exec(ctx, cmd.String())
 	if err != nil {
 		stderr := ""
 		if result != nil {
