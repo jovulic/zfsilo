@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/wire"
 	"github.com/jovulic/zfsilo/app/internal/config"
@@ -19,7 +20,11 @@ func WireDatabase(
 	ctx context.Context,
 	config config.Config,
 ) (*gorm.DB, error) {
-	db, err := gorm.Open(sqlite.Open(config.Database.DSN), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(config.Database.DSN), &gorm.Config{
+		Logger: &SlogContextAdapter{
+			SlowThreshold: 200 * time.Millisecond,
+		},
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
