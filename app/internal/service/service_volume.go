@@ -640,6 +640,7 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
 		previousTargetAddress := volumedb.TargetAddress
+		initiatorIQN := volumedb.InitiatorIQN
 		volumedb.InitiatorIQN = ""
 		volumedb.TargetAddress = ""
 		volumedb.Status = database.VolumeStatusPUBLISHED
@@ -649,9 +650,9 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
 
-		consumer, ok := s.consumers[volumedb.InitiatorIQN]
+		consumer, ok := s.consumers[initiatorIQN]
 		if !ok {
-			return fmt.Errorf("unable to lookup consumer %s", volumedb.InitiatorIQN)
+			return fmt.Errorf("unable to lookup consumer %s", initiatorIQN)
 		}
 		err = iscsi.With(consumer).DisconnectTarget(ctx, iscsi.DisconnectTargetArguments{
 			TargetIQN:     iscsi.IQN(volumedb.TargetIQN),
