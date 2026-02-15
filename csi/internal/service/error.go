@@ -24,6 +24,11 @@ func mapError(err error) error {
 	code := connect.CodeOf(err)
 	msg := err.Error()
 
+	// Special handling for busy datasets which should be FailedPrecondition in CSI.
+	if strings.Contains(msg, "dataset is busy") {
+		return status.Error(codes.FailedPrecondition, msg)
+	}
+
 	switch code {
 	case connect.CodeNotFound:
 		return status.Error(codes.NotFound, msg)
