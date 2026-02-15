@@ -28,6 +28,7 @@ func (s *SlogContextAdapter) getLogger(ctx context.Context) *slog.Logger {
 }
 
 func (s *SlogContextAdapter) LogMode(level logger.LogLevel) logger.Interface {
+	// NOTE: We rely on the log level configured on slog.
 	return s
 }
 
