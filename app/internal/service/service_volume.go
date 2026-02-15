@@ -712,6 +712,18 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 			return fmt.Errorf("unable to lookup consumer %s", volumedb.InitiatorIQN)
 		}
 
+		// Wait for block device to appear on the initiator side.
+		devicePath := volumedb.DevicePathISCSIClient()
+		exists, err := fs.With(consumer).Exists(ctx, fs.ExistsArguments{
+			Device: devicePath,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to check for block device %s: %w", devicePath, err)
+		}
+		if !exists {
+			return fmt.Errorf("block device %s not found on initiator", devicePath)
+		}
+
 		switch volumedb.Mode {
 		case database.VolumeModeBLOCK:
 			_, err := literal.With(consumer).Run(ctx, fmt.Sprintf("install -m 0644 /dev/null %s", volumedb.MountPath))
