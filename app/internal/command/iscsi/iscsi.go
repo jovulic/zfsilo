@@ -20,18 +20,18 @@ func (val IQN) String() string {
 	return string(val)
 }
 
+type Host struct {
+	domain    string
+	ownerTime time.Time
+	hostname  string
+}
+
 func NewHost(domain string, ownerTime time.Time, hostname string) *Host {
 	return &Host{
 		domain:    domain,
 		ownerTime: ownerTime,
 		hostname:  hostname,
 	}
-}
-
-type Host struct {
-	domain    string
-	ownerTime time.Time
-	hostname  string
 }
 
 func (h *Host) IQN() IQN {

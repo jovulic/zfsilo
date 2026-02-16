@@ -13,3 +13,6 @@ generate:
 
 wire:
   wire
+
+lint:
+  golangci-lint run

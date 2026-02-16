@@ -79,20 +79,21 @@ type ConfigCommandTargetProduce struct {
 
 type ConfigCommandTargetConsume struct {
 	ConfigCommandTargetProduce
+
 	IQN string `json:"iqn"`
 }
 
 type ConfigCommandHost struct {
 	// NOTE: The linux-iscsi.org domain establish time of 01 2006.
-	Domain    string    `json:"domain" mod:"default=linux-iscsi.org"`
+	Domain    string    `json:"domain"    mod:"default=linux-iscsi.org"`
 	OwnerTime time.Time `json:"ownerTime" mod:"default=2006-01-01T00:00:00Z"`
-	Hostname  string    `json:"hostname" validate:"required"`
+	Hostname  string    `json:"hostname"  validate:"required"`
 }
 
 type Config struct {
 	Log struct {
-		Level  LogLevel `json:"level" mod:"default=INFO" validate:"oneof=DEBUG INFO WARN ERROR"`
-		Format string   `json:"format"  mod:"default=JSON" validate:"oneof=JSON TEXT"`
+		Level  LogLevel `json:"level"  mod:"default=INFO" validate:"oneof=DEBUG INFO WARN ERROR"`
+		Format string   `json:"format" mod:"default=JSON" validate:"oneof=JSON TEXT"`
 	} `json:"log"`
 	Service struct {
 		BindAddress       string `json:"bindAddress"       mod:"default=:8080"`
@@ -108,7 +109,7 @@ type Config struct {
 	Command struct {
 		ProduceTarget  ConfigCommandTargetProduce   `json:"produceTarget"`
 		ConsumeTargets []ConfigCommandTargetConsume `json:"consumeTargets"`
-		Host           ConfigCommandHost            `json:"host" `
+		Host           ConfigCommandHost            `json:"host"`
 		Credentials    struct {
 			UserID         string `json:"userId"`
 			Password       string `json:"password"`

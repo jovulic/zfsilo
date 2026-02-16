@@ -24,6 +24,7 @@ func mapError(err error) error {
 	code := connect.CodeOf(err)
 	msg := err.Error()
 
+	//nolint:exhaustive
 	switch code {
 	case connect.CodeNotFound:
 		return status.Error(codes.NotFound, msg)

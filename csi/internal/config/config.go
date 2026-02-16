@@ -58,22 +58,22 @@ func (SecretValue) MarshalJSON() ([]byte, error) {
 }
 
 type ConfigServiceInitiatorIQN struct {
-	Type  string `json:"type" default:"PATH" validate:"oneof=PATH VALUE"`
+	Type  string `json:"type"  mod:"default=PATH"  validate:"oneof=PATH VALUE"`
 	Value string `json:"value" validate:"required"`
 }
 
 type Config struct {
 	Log struct {
-		Level  LogLevel `json:"level" mod:"default=INFO" validate:"oneof=DEBUG INFO WARN ERROR"`
-		Format string   `json:"format"  mod:"default=JSON" validate:"oneof=JSON TEXT"`
+		Level  LogLevel `json:"level"  mod:"default=INFO" validate:"oneof=DEBUG INFO WARN ERROR"`
+		Format string   `json:"format" mod:"default=JSON" validate:"oneof=JSON TEXT"`
 	} `json:"log"`
 	Service struct {
-		BindAddress         string                    `json:"bindAddress"       mod:"default=:9090"`
-		Secret              SecretValue               `json:"secret" validate:"required"`
-		ZFSiloAddress       string                    `json:"zfsiloAddress" validate:"required"`
+		BindAddress         string                    `json:"bindAddress"         mod:"default=:9090"`
+		Secret              SecretValue               `json:"secret"              validate:"required"`
+		ZFSiloAddress       string                    `json:"zfsiloAddress"       validate:"required"`
 		TargetPortalAddress string                    `json:"targetPortalAddress" validate:"required"`
 		InitiatorIQN        ConfigServiceInitiatorIQN `json:"initiatorIqn"`
-		KnownInitiatorIQNs  []string                  `json:"knownInitiatorIqns" validate:"min=1"`
+		KnownInitiatorIQNs  []string                  `json:"knownInitiatorIqns"  validate:"min=1"`
 	} `json:"service"`
 }
 

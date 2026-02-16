@@ -31,7 +31,7 @@ type CreateVolumeArguments struct {
 
 // CreateVolume creates a new ZFS volume.
 //
-// zfs create [-p] [-o property=value]... -V <size> <volume>
+// zfs create [-p] [-o property=value]... -V <size> <volume>.
 func (z ZFS) CreateVolume(ctx context.Context, args CreateVolumeArguments) error {
 	var cmd strings.Builder
 	cmd.WriteString("zfs create")
@@ -66,7 +66,7 @@ type DestroyVolumeArguments struct {
 
 // DestroyVolume destroys a ZFS volume.
 //
-// zfs destroy [-r] <volume>
+// zfs destroy [-r] <volume>.
 func (z ZFS) DestroyVolume(ctx context.Context, args DestroyVolumeArguments) error {
 	var cmd strings.Builder
 	cmd.WriteString("zfs destroy")
@@ -117,7 +117,7 @@ type SetPropertyArguments struct {
 
 // SetProperty sets a property on a ZFS dataset.
 //
-// zfs set <property>=<value> <dataset>
+// zfs set <property>=<value> <dataset>.
 func (z ZFS) SetProperty(ctx context.Context, args SetPropertyArguments) error {
 	cmd := fmt.Sprintf("zfs set '%s'='%s' '%s'", args.PropertyKey, args.PropertyValue, args.Name)
 
@@ -137,7 +137,7 @@ type GetPropertyArguments struct {
 
 // GetProperty gets a property from a ZFS dataset.
 //
-// zfs get -Hp -o value <property> <dataset>
+// zfs get -Hp -o value <property> <dataset>.
 func (z ZFS) GetProperty(ctx context.Context, args GetPropertyArguments) (string, error) {
 	cmd := fmt.Sprintf("zfs get -Hp -o value '%s' '%s'", args.PropertyKey, args.Name)
 

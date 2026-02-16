@@ -15,3 +15,6 @@ linters:
     - cyclop
     - gocognit
     - funlen
+    - prealloc
+    - nestif
+    - dupl

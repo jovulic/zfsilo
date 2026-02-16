@@ -759,6 +759,8 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 			if err != nil {
 				return fmt.Errorf("failed to chmod mount path: %w", err)
 			}
+		case database.VolumeModeUNSPECIFIED:
+			fallthrough
 		default:
 			return fmt.Errorf("unsupported volume mode %s", volumedb.Mode)
 		}
@@ -937,6 +939,8 @@ func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zf
 				Unit:      zfsilov1.StatsVolumeResponse_Stats_Usage_UNIT_INODES,
 			},
 		)
+	case database.VolumeModeUNSPECIFIED:
+		fallthrough
 	default:
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("unsupported volume mode: %s", volumedb.Mode))
 	}

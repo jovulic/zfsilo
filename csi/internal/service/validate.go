@@ -33,6 +33,7 @@ func validateVolumeCapability(c *csi.VolumeCapability) error {
 	}
 
 	accessMode := c.AccessMode.Mode
+	//nolint:exhaustive
 	switch accessMode {
 	case csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER:
 		// okay

@@ -83,17 +83,6 @@ type CSIService struct {
 	serviceClient zfsilov1connect.ServiceClient
 }
 
-func (s *CSIService) authInterceptor() connect.Interceptor {
-	return connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
-		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-			if s.secret != "" {
-				req.Header().Set("Authorization", "Bearer "+s.secret)
-			}
-			return next(ctx, req)
-		}
-	})
-}
-
 func NewCSIService(config CSIServiceConfig) *CSIService {
 	if err := structutil.Apply(&config); err != nil {
 		message := fmt.Sprintf("command: failed to process config: %s", err)
@@ -825,4 +814,15 @@ func (s *CSIService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCa
 
 func (s *CSIService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
 	return &csi.NodeGetInfoResponse{NodeId: s.initiatorIQN}, nil
+}
+
+func (s *CSIService) authInterceptor() connect.Interceptor {
+	return connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			if s.secret != "" {
+				req.Header().Set("Authorization", "Bearer "+s.secret)
+			}
+			return next(ctx, req)
+		}
+	})
 }

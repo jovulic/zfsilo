@@ -1,5 +1,4 @@
-// Package service defines the application services.
-package service
+package service_test
 
 import (
 	"context"
@@ -10,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/jovulic/zfsilo/csi/internal/service"
 	"github.com/jovulic/zfsilo/lib/command"
 	"github.com/kubernetes-csi/csi-test/v5/pkg/sanity"
 	. "github.com/onsi/ginkgo/v2"
@@ -29,7 +29,7 @@ func TestCSISanity(t *testing.T) {
 
 var _ = Describe("CSIService Sanity", func() {
 	var (
-		srv        *CSIService
+		srv        *service.CSIService
 		grpcServer *grpc.Server
 		endpoint   string
 		stopChan   chan struct{}
@@ -86,7 +86,7 @@ var _ = Describe("CSIService Sanity", func() {
 			parentDatasetID = "tank"
 		}
 
-		srv = NewCSIService(CSIServiceConfig{
+		srv = service.NewCSIService(service.CSIServiceConfig{
 			Secret:              secret,
 			ZFSiloAddress:       zfsiloAddress,
 			TargetPortalAddress: targetPortalAddress,

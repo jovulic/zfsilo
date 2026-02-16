@@ -18,15 +18,6 @@ type SlogContextAdapter struct {
 	SlowThreshold time.Duration
 }
 
-// Helper to safely get logger from context or fallback to the default.
-func (s *SlogContextAdapter) getLogger(ctx context.Context) *slog.Logger {
-	l := slogctx.FromCtx(ctx)
-	if l != nil {
-		return l
-	}
-	return slog.Default()
-}
-
 func (s *SlogContextAdapter) LogMode(level logger.LogLevel) logger.Interface {
 	// NOTE: We rely on the log level configured on slog.
 	return s
@@ -68,4 +59,13 @@ func (s *SlogContextAdapter) Trace(ctx context.Context, begin time.Time, fc func
 	default:
 		l.DebugContext(ctx, "gorm query", attrs...)
 	}
+}
+
+// Helper to safely get logger from context or fallback to the default.
+func (s *SlogContextAdapter) getLogger(ctx context.Context) *slog.Logger {
+	l := slogctx.FromCtx(ctx)
+	if l != nil {
+		return l
+	}
+	return slog.Default()
 }

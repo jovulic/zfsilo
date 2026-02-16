@@ -73,7 +73,7 @@ func (s *VolumeSyncer) syncZFS(ctx context.Context, volumedb *database.Volume) e
 	}
 
 	// Create ZFS volume.
-	// NOTE: We only check for volume existance currently. In the future we might
+	// NOTE: We only check for volume existence currently. In the future we might
 	// want to also verify size etc.
 	opts := make(map[string]string)
 	for _, option := range volumedb.Options.Data() {
@@ -189,9 +189,7 @@ func (s *VolumeSyncer) syncConnect(ctx context.Context, volumedb *database.Volum
 			if err != nil {
 				return fmt.Errorf("failed to connect volume: %w", err)
 			}
-
 		}
-
 	} else {
 		consumer, ok := s.consumers[volumedb.InitiatorIQN]
 		if !ok {
@@ -272,6 +270,10 @@ func (s *VolumeSyncer) syncMount(ctx context.Context, volumedb *database.Volume)
 				if err != nil {
 					return fmt.Errorf("failed to chmod mount path: %w", err)
 				}
+			case database.VolumeModeUNSPECIFIED:
+				fallthrough
+			default:
+				return fmt.Errorf("unsupported volume mode: %s", volumedb.Mode)
 			}
 		}
 	} else {
