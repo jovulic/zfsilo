@@ -20,3 +20,7 @@ test_short:
 build:
     (cd app && just build)
     (cd csi && just build)
+
+lint:
+    (cd app && just lint)
+    (cd csi && just lint)
