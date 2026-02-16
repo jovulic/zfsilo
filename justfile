@@ -16,3 +16,7 @@ test_short:
     (cd app && go test -short ./...)
     (cd lib && go test -short ./...)
     (cd csi && go test -short ./...)
+
+build:
+    (cd app && just build)
+    (cd csi && just build)
