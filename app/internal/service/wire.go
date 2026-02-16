@@ -182,7 +182,7 @@ func WireServer(
 
 	// Block execution until the http server is running.
 	for {
-		conn, err := net.Dial("tcp", conf.Service.BindAddress)
+		conn, err := tls.Dial("tcp", conf.Service.BindAddress, &tls.Config{InsecureSkipVerify: true})
 		if err == nil {
 			conn.Close()
 			break
