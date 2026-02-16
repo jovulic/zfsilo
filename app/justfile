@@ -4,6 +4,9 @@ run:
 test:
   go test ./...
 
+test_short:
+  go test -short ./...
+
 build:
   go build -tags "json1"
 
