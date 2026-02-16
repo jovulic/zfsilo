@@ -35,6 +35,10 @@ type testClients struct {
 }
 
 func newTestExecutor(t *testing.T, config command.RemoteExecutorConfig) command.Executor {
+	if testing.Short() {
+		t.Skip("skipping test that requires remote executor in short mode")
+	}
+
 	executor := command.NewRemoteExecutor(config)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -51,6 +55,10 @@ func newTestExecutor(t *testing.T, config command.RemoteExecutorConfig) command.
 }
 
 func newTestClients(t *testing.T) *testClients {
+	if testing.Short() {
+		t.Skip("skipping test that requires remote infrastructure in short mode")
+	}
+
 	giveExecutor := newTestExecutor(t, giveHostConfig)
 	takeExecutor := newTestExecutor(t, takeHostConfig)
 	return &testClients{

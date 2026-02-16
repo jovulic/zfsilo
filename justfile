@@ -10,3 +10,9 @@ csi:
 test:
     (cd app && just test)
     (cd lib && just test)
+    (cd csi && just test)
+
+test_short:
+    (cd app && go test -short ./...)
+    (cd lib && go test -short ./...)
+    (cd csi && go test -short ./...)

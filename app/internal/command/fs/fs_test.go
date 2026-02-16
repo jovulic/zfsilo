@@ -23,6 +23,10 @@ var giveHostConfig = command.RemoteExecutorConfig{
 }
 
 func newTestExecutor(t *testing.T, config command.RemoteExecutorConfig) command.Executor {
+	if testing.Short() {
+		t.Skip("skipping test that requires remote executor in short mode")
+	}
+
 	executor := command.NewRemoteExecutor(config)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

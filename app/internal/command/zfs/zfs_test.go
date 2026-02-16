@@ -13,6 +13,10 @@ import (
 )
 
 func getTestZFSClient(t *testing.T) zfs.ZFS {
+	if testing.Short() {
+		t.Skip("skipping test that requires remote executor in short mode")
+	}
+
 	// This connects to the 'give' vm, which is tunneled to localhost:9000
 	// by the dev just recipe.
 	// NOTE: This assumes that the test VM is running and accessible.

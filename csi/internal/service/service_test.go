@@ -19,6 +19,10 @@ import (
 )
 
 func TestCSISanity(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping CSI sanity tests in short mode")
+	}
+
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "CSI Sanity Suite")
 }
