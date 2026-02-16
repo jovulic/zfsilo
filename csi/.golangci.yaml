@@ -1,0 +1,17 @@
+version: "2"
+
+linters:
+  default: fast
+  enable:
+    - staticcheck
+    - exhaustive
+  disable:
+    - depguard
+    - wsl
+    - nlreturn
+    - godox
+    - lll
+    - mnd
+    - cyclop
+    - gocognit
+    - funlen
