@@ -49,6 +49,8 @@ jobs:
         uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          extra_nix_config: |
+            sandbox = false
       - name: Build
         run: nix run .#${{ matrix.component }}ImageBuild
       - name: Login
