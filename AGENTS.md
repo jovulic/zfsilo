@@ -4,81 +4,79 @@ This document provides context for the Gemini code assistant to understand the `
 
 ## Project Overview
 
-`zfsilo` is a ZFS-based network storage layer over iSCSI with CSI integration. It is written in Go and uses a gRPC API for communication. The project aims to provide a robust control plane for managing ZFS datasets and exporting them as block devices via iSCSI, primarily for Kubernetes environments.
+`zfsilo` is a ZFS-based network storage layer over iSCSI with CSI (Container Storage Interface) integration. It is written in Go and uses [ConnectRPC](https://connectrpc.com/) for its gRPC-compatible API. The project provides a control plane for managing ZFS datasets and exporting them as block devices or filesystems via iSCSI, primarily for Kubernetes environments.
 
 ## Repository Structure
 
-The project is organized as a multi-module Go workspace.
+The project is organized as a multi-module Go workspace (`go.work`).
 
 ### `api/`
-Contains the schema and generated code for the public API.
-- **Source**: `api/src/zfsilo/v1/zfsilo.proto` defines the gRPC services (`VolumeService`, `Service`).
-- **Generation**: Uses `buf` to generate Go code and OpenAPI specs.
+Defines the public API schema and contains generated code.
+- **Source**: `api/src/zfsilo/v1/zfsilo.proto` defines `Service` (general info) and `VolumeService` (lifecycle).
+- **Generation**: Uses `buf` to generate Go code and OpenAPI v3 specs.
+- **Communication**: Uses ConnectRPC for all internal and external communication.
 
 ### `app/`
-Contains the main `zfsilo` server application.
-- **Entry Points**: `main.go` / `main_app.go` setup the application lifecycle.
+The main `zfsilo` server (Target side). It runs on the storage node.
 - **Internal Architecture** (`app/internal/`):
-    - **`command/`**: Typed wrappers around system CLIs (`zfs`, `iscsiadm`, `mount`, `fs`). This is the bridge to the OS.
-    - **`service/`**: Core business logic implementing the gRPC interfaces. Handles complex workflows like volume creation.
-    - **`database/`**: GORM-based database models (e.g., `Volume`) for tracking state.
+    - **`command/`**: Typed wrappers around system CLIs (`zfs`, `zpool`, `iscsiadm`, `targetcli`, `mount`, `fs`). This is the bridge to the OS.
+    - **`service/`**: Implements the ConnectRPC interfaces. Handles complex workflows (e.g., volume creation with iSCSI target export).
+    - **`database/`**: GORM-based persistence (SQLite/JSON) for tracking volume state and metadata.
     - **`converter/`**: Translates between Protobuf API messages and internal database models.
+- **Build Tags**: Uses `json1` for SQLite JSON support.
 
 ### `csi/`
-Reserved for the Container Storage Interface (CSI) driver implementation. *Currently empty.*
-
-### `nix/stacks/dev/`
-Contains configuration for a reproducible development and testing environment using **MicroVMs**.
-- **`give.nix`**: Defines the "Server" VM (`give`). It runs ZFS, creates a pool named `tank` on startup, and acts as the iSCSI target.
-- **`take.nix`**: Defines the "Client" VM (`take`). It runs `openiscsi` to consume volumes exported by `give`.
-- **`host.nix`**: Host-specific configuration.
-- **`cluster.nix`**: Orchestrates the VM environment.
+Implementation of the Container Storage Interface (CSI) driver.
+- **Role**: Acts as a bridge between Kubernetes (or any CSI consumer) and the `zfsilo` app.
+- **Implementation**: Implements `Identity`, `Controller`, and `Node` services.
+- **Node Service**: Handles local iSCSI login/logout and mounting on the client node.
+- **Controller Service**: Handles volume provisioning and iSCSI target mapping by calling `app`.
 
 ### `lib/`
-Shared Go library packages used by `app` and potentially `csi`.
-- **`command/`**: A command execution abstraction to simplify testing and mocking of shell commands.
-- **`try/`**: A utility for handling reversible operations (transactions), essential for robustly handling multi-step system mutations (e.g., "Create ZFS dataset" -> "Fail" -> "Rollback ZFS dataset").
-- **`selfcert/`**: Helpers for generating self-signed certificates.
-- **`tagged/`**: Utilities for working with tagged data or structures.
-- **`genericutil/`, `stringutil/`, `structutil/`**: General helpers.
+Shared Go library packages.
+- **`command/`**: Abstraction for executing shell commands, facilitating testing/mocking.
+- **`try/`**: A "transaction-like" utility for reversible system operations. Ensures that if a multi-step mutation (e.g., "Create ZFS" -> "Export iSCSI") fails mid-way, previous steps are undone.
+- **`selfcert/`**: Helpers for generating self-signed certificates for TLS.
+- **`tagged/`, `genericutil/`, `stringutil/`, `structutil/`**: General Go helpers.
+
+### `nix/stacks/dev/`
+Reproducible development and testing environment using **MicroVMs**.
+- **`give` VM**: Acts as the storage server (runs `zfsilo app`, ZFS, iSCSI target).
+- **`take` VM**: Acts as the client/initiator (runs `zfsilo csi`, `openiscsi`).
+- **Orchestration**: Managed via Nix Flakes and `nix run .#dev-stack`.
 
 ## Key Architecture Concepts
 
-1.  **CLI Wrapping**: The application manages storage by invoking standard CLI tools (`zfs`, `iscsiadm`) rather than using C bindings. This is handled in `app/internal/command`.
-2.  **Reversibility**: Critical operations use the `lib/try` package to ensure that if a step fails (e.g., database write fails after ZFS creation), previous steps are undone (ZFS dataset is destroyed) to prevent inconsistent state.
-3.  **Development Flow**: Developers use the `give` (server) and `take` (client) MicroVMs to test the full storage lifecycle in an isolated environment that mirrors production ZFS/iSCSI setups.
+1.  **CLI Wrapping**: Instead of C bindings, it manages storage by invoking standard tools (`zfs`, `targetcli`).
+2.  **Reversibility**: Uses `lib/try` to maintain consistency across system-level mutations.
+3.  **Volume Lifecycle**: Volumes progress through a state machine: `INITIAL` -> `PUBLISHED` (Target ready) -> `CONNECTED` (Initiator logged in) -> `MOUNTED` (FS available).
+4.  **ConnectRPC**: Modern, simplified gRPC implementation that works over HTTP/1.1 and HTTP/2.
+5.  **Authentication**: Uses Bearer tokens verified via Unary Interceptors in both `app` and `csi`.
 
-## Development Environment
+## Development & Tooling
 
-The development environment is managed via Nix Flakes.
-- **`nix develop`**: Drops you into a shell with Go, Just, Git, and other dependencies.
-
-## Building and Running
-
-The project uses `just` as a command runner.
-
-### API
-- `just build`: Generates Go code from Protobuf definitions (`buf generate`).
-
-### Application
-- `just run`: Runs the application locally (requires valid config).
-- `just build`: Compiles the binary.
-- `just generate`: Runs `go generate`.
-- `just wire`: Generates dependency injection code using Google Wire.
+The project uses `just` as a command runner and Nix for the environment.
+- **`nix develop`**: Enter the dev shell with all dependencies (Go 1.24+, Just, etc.).
+- **`just dev`**: Launch the MicroVM dev stack.
+- **`just build`**: Compile all binaries.
+- **`just test`**: Run all tests.
+- **`just app` / `just csi`**: Run the components locally (requires configuration).
+- **Dependency Injection**: Uses [Google Wire](https://github.com/google/wire) for wiring components.
 
 ## API Services
-Defined in `api/src/zfsilo/v1/zfsilo.proto`:
-- **`Service`**: General server information.
-    - `GetCapacity`: Returns the current free capacity in bytes.
-- **`VolumeService`**: Full lifecycle management:
-    - `GetVolume`/`ListVolumes`: Query volume state and metadata.
-    - `CreateVolume`/`UpdateVolume`/`DeleteVolume`: Manage ZFS datasets and DB entries.
-    - `PublishVolume`/`UnpublishVolume`: Export/Unexport a volume via iSCSI (Target).
-    - `ConnectVolume`/`DisconnectVolume`: Connect to or disconnect from an iSCSI target (Initiator).
-    - `MountVolume`/`UnmountVolume`: Mount/Unmount a connected device to a local path.
-    - `StatsVolume`: Retrieve volume usage statistics.
-    - `SyncVolume`/`SyncVolumes`: Reconcile internal state with the actual system state.
+- **`Service`**:
+    - `GetCapacity`: Returns free space in the ZFS pool.
+- **`VolumeService`**:
+    - `GetVolume`/`ListVolumes`: Query volume metadata and status.
+    - `CreateVolume`/`UpdateVolume`/`DeleteVolume`: Manage ZFS datasets and persistence.
+    - `PublishVolume`/`UnpublishVolume`: Manage iSCSI Target configuration.
+    - `ConnectVolume`/`DisconnectVolume`: Manage iSCSI Initiator login/logout.
+    - `MountVolume`/`UnmountVolume`: Manage local filesystem mounting.
+    - `StatsVolume`: Get filesystem usage (total/used/available).
+    - `SyncVolume`/`SyncVolumes`: Reconcile actual system state with the database.
 
-## Code Style
-- **Linting**: Enforced via `.golangci.yaml`.
-- **Formatting**: Standard Go formatting.
+## Code Style & Conventions
+- **Linting**: Enforced via `golangci-lint` (see `.golangci.yaml`).
+- **Formatting**: Standard `go fmt`.
+- **Persistence**: Database models are in `app/internal/database`.
+- **Protobuf**: Managed via `buf`. All proto definitions are in `api/src`.
