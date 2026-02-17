@@ -139,10 +139,10 @@
               csiimg = createApp ''
                 podman load < "$(nix build .#packages.${system}.csiimg --print-out-paths)"
                 # shellcheck disable=SC2068
-                podman run --rm --network=host -it "localhost/zfsilo:${version}-${commitHashShort}"
+                podman run --rm --network=host -it "localhost/zfsilo-csi:${version}-${commitHashShort}"
               '';
-              csiImageBuild = imageBuild "csiimg" "zfsilo";
-              csiImagePush = imagePush "zfsilo";
+              csiImageBuild = imageBuild "csiimg" "zfsilo-csi";
+              csiImagePush = imagePush "zfsilo-csi";
               dev = createApp ''
                 nix run .#nixosConfigurations.dev.host.config.microvm.declaredRunner
               '';
