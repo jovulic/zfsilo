@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/jovulic/zfsilo/compare/v0.2.2...v0.3.0) (2026-03-04)
+
+
+### Features
+
+* **app:** separate setup from auth in iscsi publish and apply auth during connect ([a7defd6](https://github.com/jovulic/zfsilo/commit/a7defd6a86f12ae29d7de54af6b84144edf0580b))
+
+
+### General Changes
+
+* **nix:** update readiness probe for dev stack ([cd29517](https://github.com/jovulic/zfsilo/commit/cd29517878c6e47c44b58151b0072534678bdbd8))
+
 ## [0.2.2](https://github.com/jovulic/zfsilo/compare/v0.2.1...v0.2.2) (2026-03-04)
 
 
