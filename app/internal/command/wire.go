@@ -12,8 +12,6 @@ import (
 var WireSet = wire.NewSet(
 	WireProduceTarget,
 	WireConsumeTarget,
-	WireHost,
-	WireCredentials,
 )
 
 func buildExecutor(target config.ConfigCommandTarget) (command.Executor, error) {
@@ -35,42 +33,50 @@ func buildExecutor(target config.ConfigCommandTarget) (command.Executor, error) 
 	}
 }
 
-type ProduceExecutor command.Executor
-
-func WireProduceTarget(conf config.Config) (ProduceExecutor, error) {
-	return buildExecutor(conf.Command.ProduceTarget.ConfigCommandTarget)
+type ProduceTarget struct {
+	Executor command.Executor
+	Host     *iscsi.Host
+	Password string
 }
 
-type ConsumeExecutorMap map[string]command.Executor
+func WireProduceTarget(conf config.Config) (ProduceTarget, error) {
+	executor, err := buildExecutor(conf.Command.ProduceTarget.ConfigCommandTarget)
+	if err != nil {
+		return ProduceTarget{}, fmt.Errorf("failed to build produce executor: %w", err)
+	}
 
-func WireConsumeTarget(conf config.Config) (ConsumeExecutorMap, error) {
-	rets := make(map[string]command.Executor)
+	host := conf.Command.ProduceTarget.Host
+	if host.Hostname == "" {
+		return ProduceTarget{}, fmt.Errorf("produce target hostname is not set")
+	}
+
+	return ProduceTarget{
+		Executor: executor,
+		Host:     iscsi.NewHost(host.Domain, host.OwnerTime, host.Hostname),
+		Password: string(conf.Command.ProduceTarget.Password),
+	}, nil
+}
+
+type ConsumeTarget struct {
+	Executor command.Executor
+	IQN      string
+	Password string
+}
+
+type ConsumeTargetMap map[string]ConsumeTarget
+
+func WireConsumeTarget(conf config.Config) (ConsumeTargetMap, error) {
+	rets := make(ConsumeTargetMap)
 	for i, target := range conf.Command.ConsumeTargets {
-		ret, err := buildExecutor(target.ConfigCommandTarget)
+		executor, err := buildExecutor(target.ConfigCommandTarget)
 		if err != nil {
 			return nil, fmt.Errorf("failed to process consume target %d: %w", i, err)
 		}
-		rets[target.IQN] = ret
+		rets[target.IQN] = ConsumeTarget{
+			Executor: executor,
+			IQN:      target.IQN,
+			Password: string(target.Password),
+		}
 	}
 	return rets, nil
-}
-
-func WireHost(conf config.Config) (*iscsi.Host, error) {
-	if conf.Command.Host.Hostname == "" {
-		return nil, fmt.Errorf("hostname is not set")
-	}
-	return iscsi.NewHost(conf.Command.Host.Domain, conf.Command.Host.OwnerTime, conf.Command.Host.Hostname), nil
-}
-
-func WireCredentials(conf config.Config) (iscsi.Credentials, error) {
-	credentials := iscsi.Credentials{
-		UserID:         conf.Command.Credentials.UserID,
-		Password:       string(conf.Command.Credentials.Password),
-		MutualUserID:   conf.Command.Credentials.MutualUserID,
-		MutualPassword: string(conf.Command.Credentials.MutualPassword),
-	}
-	if credentials.IsEmpty() {
-		return iscsi.Credentials{}, fmt.Errorf("credentials are not defined")
-	}
-	return credentials, nil
 }

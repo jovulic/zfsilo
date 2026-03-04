@@ -24,7 +24,11 @@
         "port": 9000,
         "username": "root",
         "password": ""
-      }
+      },
+      "host": {
+        "hostname": "give"
+      },
+      "password": "mutualpassword"
     },
     "consumeTargets": [
       {
@@ -35,17 +39,9 @@
           "username": "root",
           "password": ""
         },
-        "iqn": "iqn.2006-01.org.linux-iscsi.take"
+        "iqn": "iqn.2006-01.org.linux-iscsi.take",
+        "password": "password"
       }
-    ],
-    "host": {
-      "hostname": "give"
-    },
-    "credentials": {
-      "userId": "userid",
-      "password": "password",
-      "mutualUserId": "mutualuserid",
-      "mutualPassword": "mutualpassword"
-    }
+    ]
   }
 }

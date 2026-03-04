@@ -69,20 +69,6 @@ func (h *Host) VolumeIQN(volumeID string) IQN {
 	return IQN(value)
 }
 
-type Credentials struct {
-	UserID         string
-	Password       string
-	MutualUserID   string
-	MutualPassword string
-}
-
-func (c Credentials) IsEmpty() bool {
-	return c.UserID == "" ||
-		c.Password == "" ||
-		c.MutualUserID == "" ||
-		c.MutualPassword == ""
-}
-
 // ISCSI provides an interface for interacting with iSCSI.
 type ISCSI struct {
 	executor command.Executor
@@ -96,10 +82,9 @@ func With(executor command.Executor) ISCSI {
 }
 
 type PublishVolumeArguments struct {
-	VolumeID    string
-	DevicePath  string
-	TargetIQN   IQN
-	Credentials Credentials
+	VolumeID   string
+	DevicePath string
+	TargetIQN  IQN
 }
 
 var publishVolumeTmpl = genericutil.Must(
@@ -114,15 +99,12 @@ var publishVolumeTmpl = genericutil.Must(
 			# Add LUN to the iSCSI target.
 			cd /iscsi/{{.TargetIQN}}/tpg1/luns
 			create /backstores/block/{{.VolumeID}}
-			# Setup TPG authentication.
+			# Setup TPG attributes.
 			cd /iscsi/{{.TargetIQN}}/tpg1
 			set attribute demo_mode_write_protect=0
-			set attribute generate_node_acls=1
-			set attribute cache_dynamic_acls=1
-			set auth userid={{.Credentials.UserID}}
-			set auth password={{.Credentials.Password}}
-			set auth mutual_userid={{.Credentials.MutualUserID}}
-			set auth mutual_password={{.Credentials.MutualPassword}}
+			set attribute generate_node_acls=0
+			set attribute cache_dynamic_acls=0
+			set attribute authentication=1
 			# Navigate back to root.
 			cd /
 		`),
@@ -144,6 +126,88 @@ func (i ISCSI) PublishVolume(ctx context.Context, args PublishVolumeArguments) e
 			stderr = result.Stderr
 		}
 		return fmt.Errorf("failed to publish volume '%s': %w, stderr: %s", args.VolumeID, err, stderr)
+	}
+
+	return nil
+}
+
+type AuthorizeArguments struct {
+	TargetIQN         IQN
+	TargetPassword    string
+	InitiatorIQN      IQN
+	InitiatorPassword string
+}
+
+var authorizeTmpl = genericutil.Must(
+	template.New("authorize").Parse(
+		stringutil.Multiline(`
+			# Create ACL for the initiator.
+			cd /iscsi/{{.TargetIQN}}/tpg1/acls
+			create {{.InitiatorIQN}}
+			# Setup ACL authentication.
+			cd /iscsi/{{.TargetIQN}}/tpg1/acls/{{.InitiatorIQN}}
+			set auth userid={{.InitiatorIQN}}
+			set auth password={{.InitiatorPassword}}
+			set auth mutual_userid={{.TargetIQN}}
+			set auth mutual_password={{.TargetPassword}}
+			# Navigate back to root.
+			cd /
+		`),
+	),
+)
+
+func (i ISCSI) Authorize(ctx context.Context, args AuthorizeArguments) error {
+	var buf bytes.Buffer
+	if err := authorizeTmpl.Execute(&buf, args); err != nil {
+		return fmt.Errorf("failed to render authorize template: %w", err)
+	}
+
+	cmd := fmt.Sprintf("echo \"%s\" | targetcli", buf.String())
+
+	result, err := i.executor.Exec(ctx, cmd)
+	if err != nil {
+		stderr := ""
+		if result != nil {
+			stderr = result.Stderr
+		}
+		return fmt.Errorf("failed to authorize initiator '%s' for target '%s': %w, stderr: %s", args.InitiatorIQN, args.TargetIQN, err, stderr)
+	}
+
+	return nil
+}
+
+type UnauthorizeArguments struct {
+	TargetIQN    IQN
+	InitiatorIQN IQN
+}
+
+var unauthorizeTmpl = genericutil.Must(
+	template.New("unauthorize").Parse(
+		stringutil.Multiline(`
+			# Delete ACL for the initiator.
+			cd /iscsi/{{.TargetIQN}}/tpg1/acls
+			delete {{.InitiatorIQN}}
+			# Navigate back to root.
+			cd /
+		`),
+	),
+)
+
+func (i ISCSI) Unauthorize(ctx context.Context, args UnauthorizeArguments) error {
+	var buf bytes.Buffer
+	if err := unauthorizeTmpl.Execute(&buf, args); err != nil {
+		return fmt.Errorf("failed to render unauthorize template: %w", err)
+	}
+
+	cmd := fmt.Sprintf("echo \"%s\" | targetcli", buf.String())
+
+	result, err := i.executor.Exec(ctx, cmd)
+	if err != nil {
+		stderr := ""
+		if result != nil {
+			stderr = result.Stderr
+		}
+		return fmt.Errorf("failed to unauthorize initiator '%s' for target '%s': %w, stderr: %s", args.InitiatorIQN, args.TargetIQN, err, stderr)
 	}
 
 	return nil
@@ -190,9 +254,11 @@ func (i ISCSI) UnpublishVolume(ctx context.Context, args UnpublishVolumeArgument
 }
 
 type ConnectTargetArguments struct {
-	TargetIQN     IQN
-	TargetAddress string
-	Credentials   Credentials
+	TargetAddress     string
+	TargetIQN         IQN
+	TargetPassword    string
+	InitiatorIQN      IQN
+	InitiatorPassword string
 }
 
 var connectTargetTmpl = genericutil.Must(
@@ -200,10 +266,10 @@ var connectTargetTmpl = genericutil.Must(
 		stringutil.Multiline(`
 			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op new ) &&
 			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.authmethod --value CHAP ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.username --value '{{.Credentials.UserID}}' ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.password --value '{{.Credentials.Password}}' ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.username_in --value '{{.Credentials.MutualUserID}}' ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.password_in --value '{{.Credentials.MutualPassword}}' ) &&
+			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.username --value '{{.InitiatorIQN}}' ) &&
+			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.password --value '{{.InitiatorPassword}}' ) &&
+			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.username_in --value '{{.TargetIQN}}' ) &&
+			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.password_in --value '{{.TargetPassword}}' ) &&
 			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --login )
 		`),
 	),

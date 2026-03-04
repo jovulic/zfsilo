@@ -75,12 +75,16 @@ type ConfigCommandTarget struct {
 
 type ConfigCommandTargetProduce struct {
 	ConfigCommandTarget
+
+	Host     ConfigCommandHost `json:"host"`
+	Password SecretValue       `json:"password"`
 }
 
 type ConfigCommandTargetConsume struct {
-	ConfigCommandTargetProduce
+	ConfigCommandTarget
 
-	IQN string `json:"iqn"`
+	IQN      string      `json:"iqn"`
+	Password SecretValue `json:"password"`
 }
 
 type ConfigCommandHost struct {
@@ -109,13 +113,6 @@ type Config struct {
 	Command struct {
 		ProduceTarget  ConfigCommandTargetProduce   `json:"produceTarget"`
 		ConsumeTargets []ConfigCommandTargetConsume `json:"consumeTargets"`
-		Host           ConfigCommandHost            `json:"host"`
-		Credentials    struct {
-			UserID         string      `json:"userId"`
-			Password       SecretValue `json:"password"`
-			MutualUserID   string      `json:"mutualUserId"`
-			MutualPassword SecretValue `json:"mutualPassword"`
-		} `json:"credentials"`
 	} `json:"command"`
 }
 

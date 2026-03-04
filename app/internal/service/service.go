@@ -16,11 +16,11 @@ import (
 type Service struct {
 	zfsilov1connect.UnimplementedServiceHandler
 
-	producer command.ProduceExecutor
+	producer command.ProduceTarget
 }
 
 func NewService(
-	producer command.ProduceExecutor,
+	producer command.ProduceTarget,
 ) *Service {
 	return &Service{
 		producer: producer,
@@ -28,7 +28,7 @@ func NewService(
 }
 
 func (s *Service) GetCapacity(ctx context.Context, req *connect.Request[zfsilov1.GetCapacityRequest]) (*connect.Response[zfsilov1.GetCapacityResponse], error) {
-	availString, err := zfs.With(s.producer).GetProperty(ctx, zfs.GetPropertyArguments{
+	availString, err := zfs.With(s.producer.Executor).GetProperty(ctx, zfs.GetPropertyArguments{
 		Name:        "tank",
 		PropertyKey: "avail",
 	})

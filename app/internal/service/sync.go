@@ -17,26 +17,20 @@ import (
 )
 
 type VolumeSyncer struct {
-	database    *gorm.DB
-	producer    command.ProduceExecutor
-	consumers   command.ConsumeExecutorMap
-	host        *iscsi.Host
-	credentials iscsi.Credentials
+	database       *gorm.DB
+	produceTarget  command.ProduceTarget
+	consumeTargets command.ConsumeTargetMap
 }
 
 func NewVolumeSyncer(
 	database *gorm.DB,
-	producer command.ProduceExecutor,
-	consumers command.ConsumeExecutorMap,
-	host *iscsi.Host,
-	credentials iscsi.Credentials,
+	produceTarget command.ProduceTarget,
+	consumeTargets command.ConsumeTargetMap,
 ) *VolumeSyncer {
 	return &VolumeSyncer{
-		database:    database,
-		producer:    producer,
-		consumers:   consumers,
-		host:        host,
-		credentials: credentials,
+		database:       database,
+		produceTarget:  produceTarget,
+		consumeTargets: consumeTargets,
 	}
 }
 
@@ -61,7 +55,7 @@ func (s *VolumeSyncer) Sync(ctx context.Context, volumedb *database.Volume) erro
 }
 
 func (s *VolumeSyncer) syncZFS(ctx context.Context, volumedb *database.Volume) error {
-	exists, err := zfs.With(s.producer).VolumeExists(ctx, zfs.VolumeExistsArguments{
+	exists, err := zfs.With(s.produceTarget.Executor).VolumeExists(ctx, zfs.VolumeExistsArguments{
 		Name: volumedb.DatasetID,
 	})
 	if err != nil {
@@ -79,7 +73,7 @@ func (s *VolumeSyncer) syncZFS(ctx context.Context, volumedb *database.Volume) e
 	for _, option := range volumedb.Options.Data() {
 		opts[option.Key] = option.Value
 	}
-	err = zfs.With(s.producer).CreateVolume(ctx, zfs.CreateVolumeArguments{
+	err = zfs.With(s.produceTarget.Executor).CreateVolume(ctx, zfs.CreateVolumeArguments{
 		Name:    volumedb.DatasetID,
 		Size:    uint64(volumedb.CapacityBytes),
 		Options: opts,
@@ -91,7 +85,7 @@ func (s *VolumeSyncer) syncZFS(ctx context.Context, volumedb *database.Volume) e
 
 	// Format if filesystem.
 	if volumedb.Mode == database.VolumeModeFILESYSTEM {
-		err := fs.With(s.producer).Format(ctx, fs.FormatArguments{
+		err := fs.With(s.produceTarget.Executor).Format(ctx, fs.FormatArguments{
 			Device:        volumedb.DevicePathZFS(),
 			WaitForDevice: true,
 		})
@@ -107,14 +101,14 @@ func (s *VolumeSyncer) syncPublish(ctx context.Context, volumedb *database.Volum
 	getTargetIQN := func(volumedb *database.Volume) string {
 		// We try to pull the target iqn via the volume field, but if we fail that,
 		// we compute what it would be with the configured host.
-		if volumedb.TargetIQN == "" {
+		if volumedb.TargetIQN != "" {
 			return volumedb.TargetIQN
 		}
-		return string(s.host.VolumeIQN(volumedb.ID))
+		return string(s.produceTarget.Host.VolumeIQN(volumedb.ID))
 	}
 	checkPublished := func(targetIQN string) bool {
 		// If err != nil, likely does not exist (ls returns non-zero).
-		_, err := literal.With(s.producer).Run(ctx, fmt.Sprintf("ls -d %s", database.BuildDevicePathISCSIServer(targetIQN)))
+		_, err := literal.With(s.produceTarget.Executor).Run(ctx, fmt.Sprintf("ls -d /sys/kernel/config/target/iscsi/%s", targetIQN))
 		return err == nil
 	}
 
@@ -123,11 +117,10 @@ func (s *VolumeSyncer) syncPublish(ctx context.Context, volumedb *database.Volum
 		isPublished := checkPublished(targetIQN)
 		if !isPublished {
 			slogctx.Info(ctx, "publishing volume during sync", "volumeId", volumedb.ID)
-			err := iscsi.With(s.producer).PublishVolume(ctx, iscsi.PublishVolumeArguments{
-				VolumeID:    volumedb.ID,
-				DevicePath:  volumedb.DevicePathZFS(),
-				TargetIQN:   iscsi.IQN(targetIQN),
-				Credentials: s.credentials,
+			err := iscsi.With(s.produceTarget.Executor).PublishVolume(ctx, iscsi.PublishVolumeArguments{
+				VolumeID:   volumedb.ID,
+				DevicePath: volumedb.DevicePathZFS(),
+				TargetIQN:  iscsi.IQN(targetIQN),
 			})
 			if err != nil {
 				return fmt.Errorf("failed to publish volume: %w", err)
@@ -138,7 +131,7 @@ func (s *VolumeSyncer) syncPublish(ctx context.Context, volumedb *database.Volum
 		isPublished := checkPublished(targetIQN)
 		if isPublished {
 			slogctx.Info(ctx, "unpublishing volume during sync", "volumeId", volumedb.ID)
-			err := iscsi.With(s.producer).UnpublishVolume(ctx, iscsi.UnpublishVolumeArguments{
+			err := iscsi.With(s.produceTarget.Executor).UnpublishVolume(ctx, iscsi.UnpublishVolumeArguments{
 				VolumeID:  volumedb.ID,
 				TargetIQN: iscsi.IQN(targetIQN),
 			})
@@ -155,10 +148,15 @@ func (s *VolumeSyncer) syncConnect(ctx context.Context, volumedb *database.Volum
 	getTargetIQN := func(volumedb *database.Volume) string {
 		// We try to pull the target iqn via the volume field, but if we fail that,
 		// we compute what it would be with the configured host.
-		if volumedb.TargetIQN == "" {
+		if volumedb.TargetIQN != "" {
 			return volumedb.TargetIQN
 		}
-		return string(s.host.VolumeIQN(volumedb.ID))
+		return string(s.produceTarget.Host.VolumeIQN(volumedb.ID))
+	}
+	checkAuthorized := func(targetIQN, initiatorIQN string) bool {
+		// Check if ACL exists for initiator.
+		_, err := literal.With(s.produceTarget.Executor).Run(ctx, fmt.Sprintf("ls -d /sys/kernel/config/target/iscsi/%s/tpgt_1/acls/%s", targetIQN, initiatorIQN))
+		return err == nil
 	}
 	checkConnected := func(consumer libcommand.Executor, targetIQN string) bool {
 		// iscsiadm -m session returns list. We grep for target IQN.
@@ -172,40 +170,74 @@ func (s *VolumeSyncer) syncConnect(ctx context.Context, volumedb *database.Volum
 	}
 
 	if volumedb.IsConnected() {
-		consumer, ok := s.consumers[volumedb.InitiatorIQN]
+		consumeTarget, ok := s.consumeTargets[volumedb.InitiatorIQN]
 		if !ok {
-			return fmt.Errorf("unknown consumer: %s", volumedb.InitiatorIQN)
+			return fmt.Errorf("unknown consume target: %s", volumedb.InitiatorIQN)
 		}
 
 		targetIQN := getTargetIQN(volumedb)
-		isConnected := checkConnected(consumer, targetIQN)
+
+		// Reconcile authorization.
+		isAuthorized := checkAuthorized(targetIQN, volumedb.InitiatorIQN)
+		if !isAuthorized {
+			slogctx.Info(ctx, "authorizing initiator during sync", "volumeId", volumedb.ID, "initiatorIQN", volumedb.InitiatorIQN)
+			err := iscsi.With(s.produceTarget.Executor).Authorize(ctx, iscsi.AuthorizeArguments{
+				TargetIQN:         iscsi.IQN(targetIQN),
+				InitiatorIQN:      iscsi.IQN(consumeTarget.IQN),
+				InitiatorPassword: consumeTarget.Password,
+				TargetPassword:    s.produceTarget.Password,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to authorize initiator: %w", err)
+			}
+		}
+
+		// Reconcile connection.
+		isConnected := checkConnected(consumeTarget.Executor, targetIQN)
 		if !isConnected {
 			slogctx.Info(ctx, "connecting volume during sync", "volumeId", volumedb.ID)
-			err := iscsi.With(consumer).ConnectTarget(ctx, iscsi.ConnectTargetArguments{
-				TargetIQN:     iscsi.IQN(targetIQN),
-				TargetAddress: volumedb.TargetAddress,
-				Credentials:   s.credentials,
+			err := iscsi.With(consumeTarget.Executor).ConnectTarget(ctx, iscsi.ConnectTargetArguments{
+				TargetIQN:         iscsi.IQN(targetIQN),
+				TargetAddress:     volumedb.TargetAddress,
+				InitiatorIQN:      iscsi.IQN(consumeTarget.IQN),
+				InitiatorPassword: consumeTarget.Password,
+				TargetPassword:    s.produceTarget.Password,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to connect volume: %w", err)
 			}
 		}
 	} else {
-		consumer, ok := s.consumers[volumedb.InitiatorIQN]
+		consumeTarget, ok := s.consumeTargets[volumedb.InitiatorIQN]
 		if !ok {
-			return fmt.Errorf("unknown consumer: %s", volumedb.InitiatorIQN)
+			return fmt.Errorf("unknown consume target: %s", volumedb.InitiatorIQN)
 		}
 
 		targetIQN := getTargetIQN(volumedb)
-		isConnected := checkConnected(consumer, targetIQN)
+
+		// Reconcile connection.
+		isConnected := checkConnected(consumeTarget.Executor, targetIQN)
 		if isConnected {
 			slogctx.Info(ctx, "disconnecting volume during sync", "volumeId", volumedb.ID)
-			err := iscsi.With(consumer).DisconnectTarget(ctx, iscsi.DisconnectTargetArguments{
+			err := iscsi.With(consumeTarget.Executor).DisconnectTarget(ctx, iscsi.DisconnectTargetArguments{
 				TargetIQN:     iscsi.IQN(targetIQN),
 				TargetAddress: volumedb.TargetAddress,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to disconnect volume: %w", err)
+			}
+		}
+
+		// Reconcile authorization.
+		isAuthorized := checkAuthorized(targetIQN, volumedb.InitiatorIQN)
+		if isAuthorized {
+			slogctx.Info(ctx, "unauthorizing initiator during sync", "volumeId", volumedb.ID, "initiatorIQN", volumedb.InitiatorIQN)
+			err := iscsi.With(s.produceTarget.Executor).Unauthorize(ctx, iscsi.UnauthorizeArguments{
+				TargetIQN:    iscsi.IQN(targetIQN),
+				InitiatorIQN: iscsi.IQN(volumedb.InitiatorIQN),
+			})
+			if err != nil {
+				return fmt.Errorf("failed to unauthorize initiator: %w", err)
 			}
 		}
 	}
@@ -227,23 +259,23 @@ func (s *VolumeSyncer) syncMount(ctx context.Context, volumedb *database.Volume)
 	}
 
 	if volumedb.IsMounted() {
-		consumer, ok := s.consumers[volumedb.InitiatorIQN]
+		consumer, ok := s.consumeTargets[volumedb.InitiatorIQN]
 		if !ok {
 			return fmt.Errorf("unknown consumer: %s", volumedb.InitiatorIQN)
 		}
 
-		isMounted := checkMounted(consumer, volumedb.MountPath)
+		isMounted := checkMounted(consumer.Executor, volumedb.MountPath)
 		if !isMounted {
 			slogctx.Info(ctx, "mounting volume during sync", "volumeId", volumedb.ID)
 
 			// Prepare mount path.
 			switch volumedb.Mode {
 			case database.VolumeModeBLOCK:
-				_, err := literal.With(consumer).Run(ctx, fmt.Sprintf("install -m 0644 /dev/null %s", volumedb.MountPath))
+				_, err := literal.With(consumer.Executor).Run(ctx, fmt.Sprintf("install -m 0644 /dev/null %s", volumedb.MountPath))
 				if err != nil {
 					return fmt.Errorf("failed to touch mount path: %w", err)
 				}
-				err = mount.With(consumer).Mount(ctx, mount.MountArguments{
+				err = mount.With(consumer.Executor).Mount(ctx, mount.MountArguments{
 					SourcePath: volumedb.DevicePathISCSIClient(),
 					TargetPath: volumedb.MountPath,
 					Options:    []string{"bind"},
@@ -252,11 +284,11 @@ func (s *VolumeSyncer) syncMount(ctx context.Context, volumedb *database.Volume)
 					return fmt.Errorf("failed to mount volume: %w", err)
 				}
 			case database.VolumeModeFILESYSTEM:
-				_, err := literal.With(consumer).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", volumedb.MountPath))
+				_, err := literal.With(consumer.Executor).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", volumedb.MountPath))
 				if err != nil {
 					return fmt.Errorf("failed to touch mount path: %w", err)
 				}
-				err = mount.With(consumer).Mount(ctx, mount.MountArguments{
+				err = mount.With(consumer.Executor).Mount(ctx, mount.MountArguments{
 					SourcePath: volumedb.DevicePathISCSIClient(),
 					TargetPath: volumedb.MountPath,
 					FSType:     "ext4",
@@ -266,7 +298,7 @@ func (s *VolumeSyncer) syncMount(ctx context.Context, volumedb *database.Volume)
 					return fmt.Errorf("failed to mount volume: %w", err)
 				}
 
-				_, err = literal.With(consumer).Run(ctx, fmt.Sprintf("chmod 0777 %s", volumedb.MountPath))
+				_, err = literal.With(consumer.Executor).Run(ctx, fmt.Sprintf("chmod 0777 %s", volumedb.MountPath))
 				if err != nil {
 					return fmt.Errorf("failed to chmod mount path: %w", err)
 				}
@@ -277,15 +309,15 @@ func (s *VolumeSyncer) syncMount(ctx context.Context, volumedb *database.Volume)
 			}
 		}
 	} else {
-		consumer, ok := s.consumers[volumedb.InitiatorIQN]
+		consumer, ok := s.consumeTargets[volumedb.InitiatorIQN]
 		if !ok {
 			return fmt.Errorf("unknown consumer: %s", volumedb.InitiatorIQN)
 		}
 
-		isMounted := checkMounted(consumer, volumedb.MountPath)
+		isMounted := checkMounted(consumer.Executor, volumedb.MountPath)
 		if isMounted {
 			slogctx.Info(ctx, "unmounting volume during sync", "volumeId", volumedb.ID)
-			err := mount.With(consumer).Umount(ctx, mount.UmountArguments{
+			err := mount.With(consumer.Executor).Umount(ctx, mount.UmountArguments{
 				Path: volumedb.MountPath,
 			})
 			if err != nil {

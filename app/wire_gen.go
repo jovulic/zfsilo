@@ -19,30 +19,22 @@ import (
 // Injectors from wire.go:
 
 func WireApp(ctx context.Context, conf config.Config, term *graterm.Terminator) (*App, error) {
-	produceExecutor, err := command.WireProduceTarget(conf)
+	produceTarget, err := command.WireProduceTarget(conf)
 	if err != nil {
 		return nil, err
 	}
-	serviceService := service.WireService(produceExecutor)
+	serviceService := service.WireService(produceTarget)
 	db, err := database.WireDatabase(ctx, conf)
 	if err != nil {
 		return nil, err
 	}
 	volumeConverter := converter.WireVolumeConverter()
-	consumeExecutorMap, err := command.WireConsumeTarget(conf)
+	consumeTargetMap, err := command.WireConsumeTarget(conf)
 	if err != nil {
 		return nil, err
 	}
-	host, err := command.WireHost(conf)
-	if err != nil {
-		return nil, err
-	}
-	credentials, err := command.WireCredentials(conf)
-	if err != nil {
-		return nil, err
-	}
-	volumeSyncer := service.WireVolumeSyncer(db, produceExecutor, consumeExecutorMap, host, credentials)
-	volumeService := service.WireVolumeService(db, volumeConverter, produceExecutor, consumeExecutorMap, host, credentials, volumeSyncer)
+	volumeSyncer := service.WireVolumeSyncer(db, produceTarget, consumeTargetMap)
+	volumeService := service.WireVolumeService(db, volumeConverter, produceTarget, consumeTargetMap, volumeSyncer)
 	server, err := service.WireServer(ctx, conf, term, serviceService, volumeService)
 	if err != nil {
 		return nil, err

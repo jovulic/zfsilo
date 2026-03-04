@@ -15,7 +15,6 @@ import (
 	"github.com/google/wire"
 	"github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1/zfsilov1connect"
 	"github.com/jovulic/zfsilo/app/internal/command"
-	"github.com/jovulic/zfsilo/app/internal/command/iscsi"
 	"github.com/jovulic/zfsilo/app/internal/config"
 	converteriface "github.com/jovulic/zfsilo/app/internal/converter/iface"
 	"github.com/jovulic/zfsilo/lib/selfcert"
@@ -33,31 +32,27 @@ var WireSet = wire.NewSet(
 )
 
 func WireService(
-	producer command.ProduceExecutor,
+	produceTarget command.ProduceTarget,
 ) *Service {
-	return NewService(producer)
+	return NewService(produceTarget)
 }
 
 func WireVolumeSyncer(
 	database *gorm.DB,
-	producer command.ProduceExecutor,
-	consumers command.ConsumeExecutorMap,
-	host *iscsi.Host,
-	credentials iscsi.Credentials,
+	produceTarget command.ProduceTarget,
+	consumeTargets command.ConsumeTargetMap,
 ) *VolumeSyncer {
-	return NewVolumeSyncer(database, producer, consumers, host, credentials)
+	return NewVolumeSyncer(database, produceTarget, consumeTargets)
 }
 
 func WireVolumeService(
 	database *gorm.DB,
 	converter converteriface.VolumeConverter,
-	producer command.ProduceExecutor,
-	consumers command.ConsumeExecutorMap,
-	host *iscsi.Host,
-	credentials iscsi.Credentials,
+	produceTarget command.ProduceTarget,
+	consumeTargets command.ConsumeTargetMap,
 	syncer *VolumeSyncer,
 ) *VolumeService {
-	return NewVolumeService(database, converter, producer, consumers, host, credentials, syncer)
+	return NewVolumeService(database, converter, produceTarget, consumeTargets, syncer)
 }
 
 func WireServer(

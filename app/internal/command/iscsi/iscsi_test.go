@@ -145,12 +145,6 @@ func TestPublishAndUnpublishVolume(t *testing.T) {
 	volName := "tank/test-pub-unpub"
 	devPath := fmt.Sprintf("/dev/zvol/%s", volName)
 	targetIQN := iscsi.IQN("iqn.2003-01.org.linux-iscsi.give:test-pub-unpub")
-	creds := iscsi.Credentials{
-		UserID:         "userid",
-		Password:       "password",
-		MutualUserID:   "mutualuserid",
-		MutualPassword: "mutualpassword",
-	}
 
 	// Create ZFS volume.
 	err := clients.giveZfs.CreateVolume(ctx, zfs.CreateVolumeArguments{Name: volName, Size: mb})
@@ -164,10 +158,9 @@ func TestPublishAndUnpublishVolume(t *testing.T) {
 
 	// Publish volume.
 	err = clients.giveIscsi.PublishVolume(ctx, iscsi.PublishVolumeArguments{
-		VolumeID:    "test-pub-unpub",
-		DevicePath:  devPath,
-		TargetIQN:   targetIQN,
-		Credentials: creds,
+		VolumeID:   "test-pub-unpub",
+		DevicePath: devPath,
+		TargetIQN:  targetIQN,
 	})
 	require.NoError(t, err)
 
@@ -188,12 +181,9 @@ func TestConnectAndDisconnectTarget(t *testing.T) {
 	volIdentifier := "test-conn-disconn"
 	devPath := fmt.Sprintf("/dev/zvol/%s", volName)
 	targetIQN := iscsi.IQN(fmt.Sprintf("iqn.2003-01.org.linux-iscsi.give:%s", volIdentifier))
-	creds := iscsi.Credentials{
-		UserID:         "userid",
-		Password:       "password",
-		MutualUserID:   "mutualuserid",
-		MutualPassword: "mutualpassword",
-	}
+	initiatorIQN := iscsi.IQN("iqn.2006-01.org.linux-iscsi.take")
+	initiatorPassword := "password"
+	targetPassword := "mutualpassword"
 	targetEndpoint := "$(dig +short give):3260"
 
 	// Create ZFS volume.
@@ -208,10 +198,9 @@ func TestConnectAndDisconnectTarget(t *testing.T) {
 
 	// Publish volume.
 	err = clients.giveIscsi.PublishVolume(ctx, iscsi.PublishVolumeArguments{
-		VolumeID:    volIdentifier,
-		DevicePath:  devPath,
-		TargetIQN:   targetIQN,
-		Credentials: creds,
+		VolumeID:   volIdentifier,
+		DevicePath: devPath,
+		TargetIQN:  targetIQN,
 	})
 	require.NoError(t, err)
 
@@ -224,11 +213,31 @@ func TestConnectAndDisconnectTarget(t *testing.T) {
 		require.NoError(t, err, "iscsi unpublish cleanup failed")
 	}()
 
+	// Authorize initiator on target side.
+	err = clients.giveIscsi.Authorize(ctx, iscsi.AuthorizeArguments{
+		TargetIQN:         targetIQN,
+		InitiatorIQN:      initiatorIQN,
+		InitiatorPassword: initiatorPassword,
+		TargetPassword:    targetPassword,
+	})
+	require.NoError(t, err)
+
+	defer func() {
+		// Cleanup iSCSI authorization.
+		err := clients.giveIscsi.Unauthorize(ctx, iscsi.UnauthorizeArguments{
+			TargetIQN:    targetIQN,
+			InitiatorIQN: initiatorIQN,
+		})
+		require.NoError(t, err, "iscsi unauthorize cleanup failed")
+	}()
+
 	// Connect to target.
 	err = clients.takeIscsi.ConnectTarget(ctx, iscsi.ConnectTargetArguments{
-		TargetIQN:     targetIQN,
-		TargetAddress: targetEndpoint,
-		Credentials:   creds,
+		TargetIQN:         targetIQN,
+		TargetAddress:     targetEndpoint,
+		InitiatorIQN:      initiatorIQN,
+		InitiatorPassword: initiatorPassword,
+		TargetPassword:    targetPassword,
 	})
 	require.NoError(t, err)
 
