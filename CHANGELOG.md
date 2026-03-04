@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.2](https://github.com/jovulic/zfsilo/compare/v0.2.1...v0.2.2) (2026-03-04)
+
+
+### Bug Fixes
+
+* **app:** cast secret value to string in uses ([062d224](https://github.com/jovulic/zfsilo/commit/062d2243a52324f31a11dd99422a926eea1d310b))
+* **app:** type sensitive config values as secret ([92d1f95](https://github.com/jovulic/zfsilo/commit/92d1f950b1a296441d29073750a3bd4750b5c377))
+
 ## [0.2.1](https://github.com/jovulic/zfsilo/compare/v0.2.0...v0.2.1) (2026-02-17)
 
 
