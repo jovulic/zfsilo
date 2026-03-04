@@ -4,8 +4,8 @@
     command = "${pkgs.nix}/bin/nix run .#dev";
     readiness_probe = {
       exec.command = "${pkgs.netcat}/bin/nc -z localhost 2222";
-      initial_delay_seconds = 2;
-      period_seconds = 1;
+      initial_delay_seconds = 10;
+      period_seconds = 10;
       failure_threshold = 60;
     };
   };
@@ -19,8 +19,9 @@
     };
     readiness_probe = {
       exec.command = "${pkgs.netcat}/bin/nc -z localhost 9000";
-      initial_delay_seconds = 2;
-      period_seconds = 1;
+      initial_delay_seconds = 10;
+      period_seconds = 10;
+      failure_threshold = 60;
     };
     availability = {
       restart = "on_failure";
@@ -37,8 +38,9 @@
     };
     readiness_probe = {
       exec.command = "${pkgs.netcat}/bin/nc -z localhost 9100";
-      initial_delay_seconds = 2;
-      period_seconds = 1;
+      initial_delay_seconds = 10;
+      period_seconds = 10;
+      failure_threshold = 60;
     };
     availability = {
       restart = "on_failure";
