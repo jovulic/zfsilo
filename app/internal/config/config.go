@@ -66,10 +66,10 @@ type ConfigCommandTarget struct {
 	Type      string `json:"type"      mod:"default=LOCAL" validate:"oneof=LOCAL REMOTE"`
 	RunAsRoot bool   `json:"runAsRoot"`
 	Remote    struct {
-		Address  string `json:"address"  validate:"required_if=Mode remote"`
-		Port     uint16 `json:"port"     mod:"default=22"                   validate:"required_if=Mode REMOTE"`
-		Username string `json:"username" validate:"required_if=Mode remote"`
-		Password string `json:"password" validate:"required_if=Mode remote"`
+		Address  string      `json:"address"  validate:"required_if=Mode remote"`
+		Port     uint16      `json:"port"     mod:"default=22"                   validate:"required_if=Mode REMOTE"`
+		Username string      `json:"username" validate:"required_if=Mode remote"`
+		Password SecretValue `json:"password" validate:"required_if=Mode remote"`
 	} `json:"remote"`
 }
 
@@ -99,8 +99,8 @@ type Config struct {
 		BindAddress       string `json:"bindAddress"       mod:"default=:8080"`
 		ExternalServerURI string `json:"externalServerURI" validate:"required"`
 		Keys              []struct {
-			Identity string `json:"identity"`
-			Token    string `json:"token"`
+			Identity string      `json:"identity"`
+			Token    SecretValue `json:"token"`
 		} `json:"keys"`
 	} `json:"service"`
 	Database struct {
@@ -111,10 +111,10 @@ type Config struct {
 		ConsumeTargets []ConfigCommandTargetConsume `json:"consumeTargets"`
 		Host           ConfigCommandHost            `json:"host"`
 		Credentials    struct {
-			UserID         string `json:"userId"`
-			Password       string `json:"password"`
-			MutualUserID   string `json:"mutualUserId"`
-			MutualPassword string `json:"mutualPassword"`
+			UserID         string      `json:"userId"`
+			Password       SecretValue `json:"password"`
+			MutualUserID   string      `json:"mutualUserId"`
+			MutualPassword SecretValue `json:"mutualPassword"`
 		} `json:"credentials"`
 	} `json:"command"`
 }
