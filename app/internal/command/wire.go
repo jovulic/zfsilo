@@ -28,7 +28,7 @@ func buildExecutor(target config.ConfigCommandTarget) (command.Executor, error) 
 			Address:   target.Remote.Address,
 			Port:      target.Remote.Port,
 			Username:  target.Remote.Username,
-			Password:  target.Remote.Password,
+			Password:  string(target.Remote.Password),
 		}), nil
 	default:
 		return nil, fmt.Errorf("unknown command mode: %s", target.Type)
@@ -65,9 +65,9 @@ func WireHost(conf config.Config) (*iscsi.Host, error) {
 func WireCredentials(conf config.Config) (iscsi.Credentials, error) {
 	credentials := iscsi.Credentials{
 		UserID:         conf.Command.Credentials.UserID,
-		Password:       conf.Command.Credentials.Password,
+		Password:       string(conf.Command.Credentials.Password),
 		MutualUserID:   conf.Command.Credentials.MutualUserID,
-		MutualPassword: conf.Command.Credentials.MutualPassword,
+		MutualPassword: string(conf.Command.Credentials.MutualPassword),
 	}
 	if credentials.IsEmpty() {
 		return iscsi.Credentials{}, fmt.Errorf("credentials are not defined")

@@ -79,8 +79,8 @@ func WireServer(
 		logInterceptor := newLogInterceptor(slogctx.FromCtx(ctx))
 
 		type ConfigKey = struct {
-			Identity string `json:"identity"`
-			Token    string `json:"token"`
+			Identity string             `json:"identity"`
+			Token    config.SecretValue `json:"token"`
 		}
 		type Key = struct {
 			identity string
@@ -90,7 +90,7 @@ func WireServer(
 			lo.Map(conf.Service.Keys, func(item ConfigKey, index int) Key {
 				return Key{
 					identity: item.Identity,
-					token:    item.Token,
+					token:    string(item.Token),
 				}
 			}),
 		)
