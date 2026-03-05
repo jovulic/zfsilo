@@ -22,29 +22,6 @@ func With(executor command.Executor) ZFS {
 	}
 }
 
-func (z ZFS) retryOnBusy(ctx context.Context, fn func() (*command.CommandResult, error)) (*command.CommandResult, error) {
-	var res *command.CommandResult
-	var err error
-	for range 5 {
-		res, err = fn()
-		if err == nil {
-			return res, nil
-		}
-
-		if !strings.Contains(err.Error(), "dataset is busy") && (res == nil || !strings.Contains(res.Stderr, "dataset is busy")) {
-			return res, err
-		}
-
-		select {
-		case <-ctx.Done():
-			return res, ctx.Err()
-		case <-time.After(time.Second):
-			// retry
-		}
-	}
-	return res, err
-}
-
 // CreateVolumeArguments represents the arguments for creating a ZFS volume.
 type CreateVolumeArguments struct {
 	Name    string
@@ -195,4 +172,27 @@ func (z ZFS) GetProperty(ctx context.Context, args GetPropertyArguments) (string
 	}
 
 	return valueString, nil
+}
+
+func (z ZFS) retryOnBusy(ctx context.Context, fn func() (*command.CommandResult, error)) (*command.CommandResult, error) {
+	var res *command.CommandResult
+	var err error
+	for range 5 {
+		res, err = fn()
+		if err == nil {
+			return res, nil
+		}
+
+		if !strings.Contains(err.Error(), "dataset is busy") && (res == nil || !strings.Contains(res.Stderr, "dataset is busy")) {
+			return res, err
+		}
+
+		select {
+		case <-ctx.Done():
+			return res, ctx.Err()
+		case <-time.After(time.Second):
+			// retry
+		}
+	}
+	return res, err
 }
