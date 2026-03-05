@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.1](https://github.com/jovulic/zfsilo/compare/v0.3.0...v0.3.1) (2026-03-05)
+
+
+### Bug Fixes
+
+* **app:** fix lint error related to private method placement in file ([ddad517](https://github.com/jovulic/zfsilo/commit/ddad51719545a9514769323f66f0f67c3dd76d6d))
+
+
+### General Changes
+
+* **app:** add retry to zfs commands to handle busy ([562135d](https://github.com/jovulic/zfsilo/commit/562135dacaf3d43484bfae3d1078b53117582a26))
+
 ## [0.3.0](https://github.com/jovulic/zfsilo/compare/v0.2.2...v0.3.0) (2026-03-04)
 
 
