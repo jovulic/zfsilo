@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jovulic/zfsilo/lib/command"
 )
@@ -19,6 +20,29 @@ func With(executor command.Executor) ZFS {
 	return ZFS{
 		executor: executor,
 	}
+}
+
+func (z ZFS) retryOnBusy(ctx context.Context, fn func() (*command.CommandResult, error)) (*command.CommandResult, error) {
+	var res *command.CommandResult
+	var err error
+	for range 5 {
+		res, err = fn()
+		if err == nil {
+			return res, nil
+		}
+
+		if !strings.Contains(err.Error(), "dataset is busy") && (res == nil || !strings.Contains(res.Stderr, "dataset is busy")) {
+			return res, err
+		}
+
+		select {
+		case <-ctx.Done():
+			return res, ctx.Err()
+		case <-time.After(time.Second):
+			// retry
+		}
+	}
+	return res, err
 }
 
 // CreateVolumeArguments represents the arguments for creating a ZFS volume.
@@ -48,15 +72,15 @@ func (z ZFS) CreateVolume(ctx context.Context, args CreateVolumeArguments) error
 
 	cmd.WriteString(fmt.Sprintf(" -V %d %s", args.Size, args.Name))
 
-	result, err := z.executor.Exec(ctx, cmd.String())
-	if err != nil {
-		// The command can fail with a non-zero exit code. The `Exec` method in
-		// `lib/command/command.go` returns an error for non-zero exit codes. It
-		// also returns the result. We wrap the error with more context.
-		return fmt.Errorf("failed to create volume '%s': %w, stderr: %s", args.Name, err, result.Stderr)
-	}
+	_, err := z.retryOnBusy(ctx, func() (*command.CommandResult, error) {
+		result, err := z.executor.Exec(ctx, cmd.String())
+		if err != nil {
+			return result, fmt.Errorf("failed to create volume '%s': %w, stderr: %s", args.Name, err, result.Stderr)
+		}
+		return result, nil
+	})
 
-	return nil
+	return err
 }
 
 // DestroyVolumeArguments represents the arguments for destroying a ZFS volume.
@@ -73,12 +97,18 @@ func (z ZFS) DestroyVolume(ctx context.Context, args DestroyVolumeArguments) err
 
 	cmd.WriteString(fmt.Sprintf(" %s", args.Name))
 
-	result, err := z.executor.Exec(ctx, cmd.String())
-	if err != nil {
-		return fmt.Errorf("failed to destroy volume '%s': %w, stderr: %s", args.Name, err, result.Stderr)
-	}
+	_, err := z.retryOnBusy(ctx, func() (*command.CommandResult, error) {
+		result, err := z.executor.Exec(ctx, cmd.String())
+		if err != nil {
+			if result != nil && strings.Contains(result.Stderr, "dataset does not exist") {
+				return result, nil
+			}
+			return result, fmt.Errorf("failed to destroy volume '%s': %w, stderr: %s", args.Name, err, result.Stderr)
+		}
+		return result, nil
+	})
 
-	return nil
+	return err
 }
 
 // VolumeExistsArguments represents the arguments for checking if a ZFS volume exists.
@@ -121,12 +151,15 @@ type SetPropertyArguments struct {
 func (z ZFS) SetProperty(ctx context.Context, args SetPropertyArguments) error {
 	cmd := fmt.Sprintf("zfs set '%s'='%s' '%s'", args.PropertyKey, args.PropertyValue, args.Name)
 
-	result, err := z.executor.Exec(ctx, cmd)
-	if err != nil {
-		return fmt.Errorf("failed to set property '%s' on '%s': %w, stderr: %s", args.PropertyKey, args.Name, err, result.Stderr)
-	}
+	_, err := z.retryOnBusy(ctx, func() (*command.CommandResult, error) {
+		result, err := z.executor.Exec(ctx, cmd)
+		if err != nil {
+			return result, fmt.Errorf("failed to set property '%s' on '%s': %w, stderr: %s", args.PropertyKey, args.Name, err, result.Stderr)
+		}
+		return result, nil
+	})
 
-	return nil
+	return err
 }
 
 // GetPropertyArguments represents the arguments for getting a ZFS property.
