@@ -1,3 +1,5 @@
+// Package host contains utility types to ease creating IQN or NQN names off
+// host configuration.
 package host
 
 import (
