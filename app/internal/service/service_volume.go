@@ -655,7 +655,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 
 		switch volumedb.Transport {
 		case database.VolumeTransportISCSI:
-			// Authorize initiator on the producer side.
+			// Authorize client on the producer side.
 			err = iscsi.With(s.produceTarget.Executor).Authorize(ctx, iscsi.AuthorizeArguments{
 				TargetIQN:         iscsi.IQN(volumedb.TargetID),
 				TargetPassword:    s.produceTarget.Password,
@@ -663,7 +663,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 				InitiatorPassword: consumeTarget.Password,
 			})
 			if err != nil {
-				return fmt.Errorf("failed to authorize initiator: %w", err)
+				return fmt.Errorf("failed to authorize client: %w", err)
 			}
 
 			err = iscsi.With(consumeTarget.Executor).ConnectTarget(ctx, iscsi.ConnectTargetArguments{
@@ -674,7 +674,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 				InitiatorPassword: consumeTarget.Password,
 			})
 		case database.VolumeTransportNVMEOF_TCP:
-			// Authorize initiator on the producer side.
+			// Authorize client on the producer side.
 			err = nvmeof.With(s.produceTarget.Executor).Authorize(ctx, nvmeof.AuthorizeArguments{
 				TargetNQN:         nvmeof.NQN(volumedb.TargetID),
 				TargetPassword:    s.produceTarget.Password,
@@ -682,7 +682,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 				InitiatorPassword: consumeTarget.Password,
 			})
 			if err != nil {
-				return fmt.Errorf("failed to authorize initiator: %w", err)
+				return fmt.Errorf("failed to authorize client: %w", err)
 			}
 
 			err = nvmeof.With(consumeTarget.Executor).ConnectTarget(ctx, nvmeof.ConnectTargetArguments{
@@ -764,7 +764,7 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 				return fmt.Errorf("failed to disconnect volume: %w", err)
 			}
 
-			// Unauthorize initiator on the producer side.
+			// Unauthorize client on the producer side.
 			err = iscsi.With(s.produceTarget.Executor).Unauthorize(ctx, iscsi.UnauthorizeArguments{
 				TargetIQN:    iscsi.IQN(volumedb.TargetID),
 				InitiatorIQN: iscsi.IQN(clientID),
@@ -777,7 +777,7 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 				return fmt.Errorf("failed to disconnect volume: %w", err)
 			}
 
-			// Unauthorize initiator on the producer side.
+			// Unauthorize client on the producer side.
 			err = nvmeof.With(s.produceTarget.Executor).Unauthorize(ctx, nvmeof.UnauthorizeArguments{
 				TargetNQN:    nvmeof.NQN(volumedb.TargetID),
 				InitiatorNQN: nvmeof.NQN(clientID),
@@ -788,7 +788,7 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 			return fmt.Errorf("no transport specified on volume")
 		}
 		if err != nil {
-			return fmt.Errorf("failed to unauthorize initiator: %w", err)
+			return fmt.Errorf("failed to unauthorize client: %w", err)
 		}
 
 		return nil
@@ -842,7 +842,7 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 			return fmt.Errorf("unable to lookup consume target %s", volumedb.ClientID)
 		}
 
-		// Wait for block device to appear on the initiator side.
+		// Wait for block device to appear on the client side.
 		devicePath, err := volumedb.DevicePathClient()
 		if err != nil {
 			return fmt.Errorf("failed to get device path: %w", err)
@@ -854,7 +854,7 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 			return fmt.Errorf("failed to check for block device %s: %w", devicePath, err)
 		}
 		if !exists {
-			return fmt.Errorf("block device %s not found on initiator", devicePath)
+			return fmt.Errorf("block device %s not found on client", devicePath)
 		}
 
 		switch volumedb.Mode {

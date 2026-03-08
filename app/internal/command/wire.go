@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/google/wire"
-	"github.com/jovulic/zfsilo/app/internal/command/iscsi"
+	"github.com/jovulic/zfsilo/app/internal/command/lib/host"
 	"github.com/jovulic/zfsilo/app/internal/config"
 	"github.com/jovulic/zfsilo/lib/command"
 )
@@ -35,7 +35,7 @@ func buildExecutor(target config.ConfigCommandTarget) (command.Executor, error) 
 
 type ProduceTarget struct {
 	Executor command.Executor
-	Host     *iscsi.Host
+	Host     *host.Host
 	Password string
 }
 
@@ -45,21 +45,21 @@ func WireProduceTarget(conf config.Config) (ProduceTarget, error) {
 		return ProduceTarget{}, fmt.Errorf("failed to build produce executor: %w", err)
 	}
 
-	host := conf.Command.ProduceTarget.Host
-	if host.Hostname == "" {
+	h := conf.Command.ProduceTarget.Host
+	if h.Hostname == "" {
 		return ProduceTarget{}, fmt.Errorf("produce target hostname is not set")
 	}
 
 	return ProduceTarget{
 		Executor: executor,
-		Host:     iscsi.NewHost(host.Domain, host.OwnerTime, host.Hostname),
+		Host:     host.New(h.Domain, h.OwnerTime, h.Hostname),
 		Password: string(conf.Command.ProduceTarget.Password),
 	}, nil
 }
 
 type ConsumeTarget struct {
 	Executor command.Executor
-	IQN      string
+	ID       string // Generic ID (IQN or NQN)
 	Password string
 }
 
@@ -72,9 +72,9 @@ func WireConsumeTarget(conf config.Config) (ConsumeTargetMap, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to process consume target %d: %w", i, err)
 		}
-		rets[target.IQN] = ConsumeTarget{
+		rets[target.ClientID] = ConsumeTarget{
 			Executor: executor,
-			IQN:      target.IQN,
+			ID:       target.ClientID,
 			Password: string(target.Password),
 		}
 	}

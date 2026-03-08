@@ -273,7 +273,7 @@ func (s *VolumeSyncer) syncConnect(ctx context.Context, volumedb *database.Volum
 					TargetPassword:    s.produceTarget.Password,
 				})
 				if err != nil {
-					return fmt.Errorf("failed to authorize iscsi initiator: %w", err)
+					return fmt.Errorf("failed to authorize iscsi client: %w", err)
 				}
 			case database.VolumeTransportNVMEOF_TCP:
 				err := nvmeof.With(s.produceTarget.Executor).Authorize(ctx, nvmeof.AuthorizeArguments{
@@ -283,7 +283,7 @@ func (s *VolumeSyncer) syncConnect(ctx context.Context, volumedb *database.Volum
 					TargetPassword:    s.produceTarget.Password,
 				})
 				if err != nil {
-					return fmt.Errorf("failed to authorize nvmeof initiator: %w", err)
+					return fmt.Errorf("failed to authorize nvmeof client: %w", err)
 				}
 			case database.VolumeTransportUNSPECIFIED:
 				fallthrough
@@ -371,7 +371,7 @@ func (s *VolumeSyncer) syncConnect(ctx context.Context, volumedb *database.Volum
 					InitiatorIQN: iscsi.IQN(volumedb.ClientID),
 				})
 				if err != nil {
-					return fmt.Errorf("failed to unauthorize iscsi initiator: %w", err)
+					return fmt.Errorf("failed to unauthorize iscsi client: %w", err)
 				}
 			case database.VolumeTransportNVMEOF_TCP:
 				err := nvmeof.With(s.produceTarget.Executor).Unauthorize(ctx, nvmeof.UnauthorizeArguments{
@@ -379,7 +379,7 @@ func (s *VolumeSyncer) syncConnect(ctx context.Context, volumedb *database.Volum
 					InitiatorNQN: nvmeof.NQN(volumedb.ClientID),
 				})
 				if err != nil {
-					return fmt.Errorf("failed to unauthorize nvmeof initiator: %w", err)
+					return fmt.Errorf("failed to unauthorize nvmeof client: %w", err)
 				}
 			case database.VolumeTransportUNSPECIFIED:
 				fallthrough

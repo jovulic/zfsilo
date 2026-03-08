@@ -39,7 +39,7 @@
           "username": "root",
           "password": ""
         },
-        "iqn": "iqn.2006-01.org.linux-iscsi.take",
+        "clientId": "iqn.2006-01.org.linux-iscsi.take",
         "password": "password"
       }
     ]
