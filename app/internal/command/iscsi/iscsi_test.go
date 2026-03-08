@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jovulic/zfsilo/app/internal/command/iscsi"
+	"github.com/jovulic/zfsilo/app/internal/command/lib/host"
 	"github.com/jovulic/zfsilo/app/internal/command/zfs"
 	"github.com/jovulic/zfsilo/lib/command"
 	"github.com/stretchr/testify/require"
@@ -77,7 +78,7 @@ func TestHost_IQN(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   iscsi.IQN
+		want   string
 	}{
 		{
 			name: "nominal",
@@ -91,7 +92,7 @@ func TestHost_IQN(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := iscsi.NewHost(tt.fields.domain, tt.fields.ownerTime, tt.fields.hostname)
+			h := host.New(tt.fields.domain, tt.fields.ownerTime, tt.fields.hostname)
 			if got := h.IQN(); got != tt.want {
 				t.Errorf("Host.IQN() = %v, want %v", got, tt.want)
 			}
@@ -112,7 +113,7 @@ func TestHost_VolumeIQN(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   iscsi.IQN
+		want   string
 	}{
 		{
 			name: "nominal",
@@ -129,7 +130,7 @@ func TestHost_VolumeIQN(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tr := iscsi.NewHost(tt.fields.domain, tt.fields.ownerTime, tt.fields.hostname)
+			tr := host.New(tt.fields.domain, tt.fields.ownerTime, tt.fields.hostname)
 			if got := tr.VolumeIQN(tt.args.volumeName); got != tt.want {
 				t.Errorf("Target.NewIQN() = %v, want %v", got, tt.want)
 			}
