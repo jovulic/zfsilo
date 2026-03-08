@@ -2,7 +2,7 @@
 
 # ZFSilo
 
-_A ZFS-based network storage layer over iSCSI with CSI integration._
+_A ZFS-based network storage layer over TCP with CSI integration._
 
 ## 📌 Description
 
