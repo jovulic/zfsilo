@@ -13,7 +13,7 @@ import (
 
 // The test host for mount tests runs on port 2222.
 var testHostConfig = command.RemoteExecutorConfig{
-	Address:  "localhost",
+	Address:  "127.0.0.1",
 	Port:     2222,
 	Username: "root",
 	Password: "",

@@ -16,7 +16,7 @@ import (
 const mb = 1 << 20
 
 var giveHostConfig = command.RemoteExecutorConfig{
-	Address:  "localhost",
+	Address:  "127.0.0.1",
 	Port:     9000,
 	Username: "root",
 	Password: "",

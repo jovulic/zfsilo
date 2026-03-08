@@ -24,7 +24,7 @@ func getTestZFSClient(t *testing.T) zfs.ZFS {
 	// NOTE: This also assumes that the root user can log in without a password,
 	// or that the SSH client is configured to use a key.
 	executor := command.NewRemoteExecutor(command.RemoteExecutorConfig{
-		Address:  "localhost",
+		Address:  "127.0.0.1",
 		Port:     9000,
 		Username: "root",
 		Password: "",
