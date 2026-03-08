@@ -105,6 +105,12 @@ message Volume {
     STATUS_MOUNTED = 4;
   }
 
+  enum Transport {
+    TRANSPORT_UNSPECIFIED = 0;
+    TRANSPORT_ISCSI = 1;
+    TRANSPORT_NVMEOF_TCP = 2;
+  }
+
   google.protobuf.Struct struct = 1 [(gnostic.openapi.v3.property) = {description: "Loosely structured data stored with the volume."}];
   google.protobuf.Timestamp create_time = 2 [(gnostic.openapi.v3.property) = {
     description: "When the volume was created."
@@ -130,9 +136,7 @@ message Volume {
     (buf.validate.field).string.pattern = "^[a-zA-Z0-9-_]+(/?[a-zA-Z0-9-_]+)*$"
   ];
   repeated Option options = 7 [(gnostic.openapi.v3.property) = {description: "The options applied to the volume. Immutable."}];
-  optional bool sparse = 8 [
-    (gnostic.openapi.v3.property) = {description: "Whether the volume is sparse. Immutable."}
-  ];
+  optional bool sparse = 8 [(gnostic.openapi.v3.property) = {description: "Whether the volume is sparse. Immutable."}];
   Mode mode = 9 [
     (gnostic.openapi.v3.property) = {description: "The mode of the volume. Immutable."},
     (buf.validate.field).required = true
@@ -142,33 +146,40 @@ message Volume {
     (buf.validate.field).int64.gte = 0
   ];
   Status status = 11 [
-    (gnostic.openapi.v3.property) = {description: "The status of the volume. Immutable."},
+    (gnostic.openapi.v3.property) = {
+      description: "The status of the volume."
+      read_only: true
+    },
     (buf.validate.field).required = true
   ];
-  optional string initiator_iqn = 12 [
+  optional Transport transport = 12 [(gnostic.openapi.v3.property) = {
+    description: "The protocol used to expose this volume."
+    read_only: true
+  }];
+  optional string client_id = 13 [
     (gnostic.openapi.v3.property) = {
-      description: "The iSCSI initiator IQN."
+      description: "The client identifier (e.g., Initiator IQN or Host NQN)."
       read_only: true
     },
-    (buf.validate.field).string = {pattern: "^iqn.*$"}
+    (buf.validate.field).string = {pattern: "^(iqn|nqn).*$"}
   ];
-  optional string target_iqn = 13 [
+  optional string target_id = 14 [
     (gnostic.openapi.v3.property) = {
-      description: "The iSCSI target IQN."
+      description: "The target identifier (e.g., Target IQN or Subsystem NQN)."
       read_only: true
     },
-    (buf.validate.field).string = {pattern: "^iqn.*$"}
+    (buf.validate.field).string = {pattern: "^(iqn|nqn).*$"}
   ];
-  optional string target_address = 14 [
+  optional string target_address = 15 [
     (gnostic.openapi.v3.property) = {
-      description: "The iSCSI target address (host and port)."
+      description: "The target address (host and port)."
       read_only: true
     },
     (buf.validate.field).string = {host_and_port: true}
   ];
-  optional string mount_path = 15 [
+  optional string mount_path = 16 [
     (gnostic.openapi.v3.property) = {
-      description: "The iSCSI mount path."
+      description: "The mount path on the client."
       read_only: true
     },
     (buf.validate.field).string = {pattern: "^(/[^/ ]*)+/?$"}
@@ -240,6 +251,7 @@ message PublishVolumeRequest {
     (buf.validate.field).required = true,
     (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
   ];
+  Volume.Transport transport = 2 [(gnostic.openapi.v3.property) = {description: "The protocol used to expose this volume."}];
 }
 
 message PublishVolumeResponse {
@@ -264,10 +276,10 @@ message ConnectVolumeRequest {
     (buf.validate.field).required = true,
     (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
   ];
-  string initiator_iqn = 2 [
-    (gnostic.openapi.v3.property) = {description: "The initiator iqn."},
+  string client_id = 2 [
+    (gnostic.openapi.v3.property) = {description: "The client identifier."},
     (buf.validate.field).required = true,
-    (buf.validate.field).string.pattern = "^iqn.*$"
+    (buf.validate.field).string.pattern = "^(iqn|nqn).*$"
   ];
   string target_address = 3 [
     (gnostic.openapi.v3.property) = {description: "The target address."},

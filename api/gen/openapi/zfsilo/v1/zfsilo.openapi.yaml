@@ -579,6 +579,13 @@ components:
         - STATUS_PUBLISHED
         - STATUS_CONNECTED
         - STATUS_MOUNTED
+    zfsilo.v1.Volume.Transport:
+      type: string
+      title: Transport
+      enum:
+        - TRANSPORT_UNSPECIFIED
+        - TRANSPORT_ISCSI
+        - TRANSPORT_NVMEOF_TCP
     google.protobuf.ListValue:
       type: object
       properties:
@@ -738,11 +745,11 @@ components:
           title: id
           pattern: ^vol_[a-zA-Z0-9-_]+$
           description: The id of the volume to be connected.
-        initiatorIqn:
+        clientId:
           type: string
-          title: initiator_iqn
-          pattern: ^iqn.*$
-          description: The initiator iqn.
+          title: client_id
+          pattern: ^(iqn|nqn).*$
+          description: The client identifier.
         targetAddress:
           type: string
           title: target_address
@@ -750,7 +757,7 @@ components:
       title: ConnectVolumeRequest
       required:
         - id
-        - initiatorIqn
+        - clientId
         - targetAddress
       additionalProperties: false
     zfsilo.v1.ConnectVolumeResponse:
@@ -926,6 +933,10 @@ components:
           title: id
           pattern: ^vol_[a-zA-Z0-9-_]+$
           description: The id of the volume to be published.
+        transport:
+          title: transport
+          description: The protocol used to expose this volume.
+          $ref: '#/components/schemas/zfsilo.v1.Volume.Transport'
       title: PublishVolumeRequest
       required:
         - id
@@ -1133,33 +1144,40 @@ components:
           description: The capacity of the volume.
         status:
           title: status
-          description: The status of the volume. Immutable.
+          description: The status of the volume.
+          readOnly: true
           $ref: '#/components/schemas/zfsilo.v1.Volume.Status'
-        initiatorIqn:
-          type: string
-          title: initiator_iqn
-          pattern: ^iqn.*$
-          description: The iSCSI initiator IQN.
+        transport:
+          title: transport
+          description: The protocol used to expose this volume.
           nullable: true
           readOnly: true
-        targetIqn:
+          $ref: '#/components/schemas/zfsilo.v1.Volume.Transport'
+        clientId:
           type: string
-          title: target_iqn
-          pattern: ^iqn.*$
-          description: The iSCSI target IQN.
+          title: client_id
+          pattern: ^(iqn|nqn).*$
+          description: The client identifier (e.g., Initiator IQN or Host NQN).
+          nullable: true
+          readOnly: true
+        targetId:
+          type: string
+          title: target_id
+          pattern: ^(iqn|nqn).*$
+          description: The target identifier (e.g., Target IQN or Subsystem NQN).
           nullable: true
           readOnly: true
         targetAddress:
           type: string
           title: target_address
-          description: The iSCSI target address (host and port).
+          description: The target address (host and port).
           nullable: true
           readOnly: true
         mountPath:
           type: string
           title: mount_path
           pattern: ^(/[^/ ]*)+/?$
-          description: The iSCSI mount path.
+          description: The mount path on the client.
           nullable: true
           readOnly: true
       title: Volume
