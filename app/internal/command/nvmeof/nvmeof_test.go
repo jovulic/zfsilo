@@ -62,6 +62,12 @@ func newTestClients(t *testing.T) *testClients {
 
 	giveExecutor := newTestExecutor(t, giveHostConfig)
 	takeExecutor := newTestExecutor(t, takeHostConfig)
+
+	// It seems like MicroVM does not load the kernel modules automatically?
+	ctx := context.Background()
+	_, _ = giveExecutor.Exec(ctx, "modprobe nvmet nvmet-tcp")
+	_, _ = takeExecutor.Exec(ctx, "modprobe nvme-tcp nvme-fabrics")
+
 	return &testClients{
 		giveZfs:    zfs.With(giveExecutor),
 		giveNVMeOF: nvmeof.With(giveExecutor),
@@ -182,8 +188,8 @@ func TestConnectAndDisconnectTarget(t *testing.T) {
 	devPath := fmt.Sprintf("/dev/zvol/%s", volName)
 	targetNQN := nvmeof.NQN(fmt.Sprintf("nqn.2014-08.org.nvmexpress:give:%s", volIdentifier))
 	initiatorNQN := nvmeof.NQN("nqn.2014-08.org.nvmexpress:take")
-	initiatorPassword := "DHHC-1:00:aGVsbG93b3JsZGhlbGxvd29ybGRoZWxsb3dvcmxkMTIzNDU=:"
-	targetPassword := "DHHC-1:00:bXV0dWFsaGVsbG93b3JsZG11dHVhbGhlbGxvd29ybGQxMjM=:"
+	initiatorPassword := "DHHC-1:00:aGVsbG93b3JsZGhlbGxvd29ybGRoZWxsb3dvcmxkMTLKDm0S:"
+	targetPassword := "DHHC-1:00:5u0Yw3VEsqN6WnSWOPkOJNsvyvyyoMk9Qe1d7nj5TR6U8bbA:"
 	targetEndpoint := "$(dig +short give)"
 
 	// Create ZFS volume.

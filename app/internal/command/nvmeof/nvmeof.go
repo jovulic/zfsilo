@@ -42,7 +42,6 @@ var publishVolumeTmpl = genericutil.Must(
 		stringutil.Multiline(`
 			# Navigate to subsystems
 			cd /subsystems
-			# Create a new NVMe subsystem
 			create {{.TargetNQN}}
 			# Disallow any host to connect (enforce ACLs)
 			cd /subsystems/{{.TargetNQN}}
@@ -55,8 +54,7 @@ var publishVolumeTmpl = genericutil.Must(
 			enable
 			# Create a port if it doesn't exist, and configure it
 			cd /ports
-			# Note: If port already exists, create is ignored or we can just cd into it.
-			# Using create will navigate into the port.
+			# Using create will navigate into the port if it exists or create it.
 			create 1
 			cd /ports/1
 			set addr trtype=tcp
@@ -138,37 +136,24 @@ type AuthorizeArguments struct {
 	TargetPassword    string // Optional mutual auth DH-HMAC-CHAP key
 }
 
-var authorizeTmpl = genericutil.Must(
-	template.New("authorize").Parse(
-		stringutil.Multiline(`
-			# Create ACL for the initiator.
-			cd /subsystems/{{.TargetNQN}}/allowed_hosts
-			create {{.InitiatorNQN}}
-			# Setup ACL authentication.
-			cd {{.InitiatorNQN}}
-			set dhchap_key={{.InitiatorPassword}}
-			{{if .TargetPassword}}set dhchap_ctrl_key={{.TargetPassword}}{{end}}
-			# Navigate back to root.
-			cd /
-		`),
-	),
-)
-
 func (n NVMeOF) Authorize(ctx context.Context, args AuthorizeArguments) error {
-	var buf bytes.Buffer
-	if err := authorizeTmpl.Execute(&buf, args); err != nil {
-		return fmt.Errorf("failed to render authorize template: %w", err)
+	// Setup NVMe-oF authentication and ACLs using direct configfs (sysfs) commands.
+	// nvmetcli is avoided here due to version compatibility issues with DH-HMAC-CHAP.
+	cmd := fmt.Sprintf(
+		stringutil.Multiline(`
+			mkdir -p /sys/kernel/config/nvmet/hosts/%[1]s &&
+			ln -sf /sys/kernel/config/nvmet/hosts/%[1]s /sys/kernel/config/nvmet/subsystems/%[2]s/allowed_hosts/%[1]s &&
+			echo \"%[3]s\" > /sys/kernel/config/nvmet/hosts/%[1]s/dhchap_key
+		`),
+		args.InitiatorNQN, args.TargetNQN, args.InitiatorPassword,
+	)
+
+	if args.TargetPassword != "" {
+		cmd += fmt.Sprintf(" && echo \"%s\" > /sys/kernel/config/nvmet/hosts/%s/dhchap_ctrl_key", args.TargetPassword, args.InitiatorNQN)
 	}
 
-	cmd := fmt.Sprintf("echo \"%s\" | nvmetcli", buf.String())
-
-	result, err := n.executor.Exec(ctx, cmd)
-	if err != nil {
-		stderr := ""
-		if result != nil {
-			stderr = result.Stderr
-		}
-		return fmt.Errorf("failed to authorize initiator '%s' for target '%s': %w, stderr: %s", args.InitiatorNQN, args.TargetNQN, err, stderr)
+	if _, err := n.executor.Exec(ctx, cmd); err != nil {
+		return fmt.Errorf("failed to authorize initiator '%s' for target '%s' via sysfs: %w", args.InitiatorNQN, args.TargetNQN, err)
 	}
 
 	return nil
@@ -179,33 +164,18 @@ type UnauthorizeArguments struct {
 	InitiatorNQN NQN
 }
 
-var unauthorizeTmpl = genericutil.Must(
-	template.New("unauthorize").Parse(
-		stringutil.Multiline(`
-			# Delete ACL for the initiator.
-			cd /subsystems/{{.TargetNQN}}/allowed_hosts
-			delete {{.InitiatorNQN}}
-			# Navigate back to root.
-			cd /
-		`),
-	),
-)
-
 func (n NVMeOF) Unauthorize(ctx context.Context, args UnauthorizeArguments) error {
-	var buf bytes.Buffer
-	if err := unauthorizeTmpl.Execute(&buf, args); err != nil {
-		return fmt.Errorf("failed to render unauthorize template: %w", err)
-	}
+	// Remove NVMe-oF authentication and ACLs using direct configfs (sysfs) commands.
+	cmd := fmt.Sprintf(
+		stringutil.Multiline(`
+			rm -f /sys/kernel/config/nvmet/subsystems/%s/allowed_hosts/%s &&
+			rmdir /sys/kernel/config/nvmet/hosts/%s
+		`),
+		args.TargetNQN, args.InitiatorNQN, args.InitiatorNQN,
+	)
 
-	cmd := fmt.Sprintf("echo \"%s\" | nvmetcli", buf.String())
-
-	result, err := n.executor.Exec(ctx, cmd)
-	if err != nil {
-		stderr := ""
-		if result != nil {
-			stderr = result.Stderr
-		}
-		return fmt.Errorf("failed to unauthorize initiator '%s' for target '%s': %w, stderr: %s", args.InitiatorNQN, args.TargetNQN, err, stderr)
+	if _, err := n.executor.Exec(ctx, cmd); err != nil {
+		return fmt.Errorf("failed to unauthorize initiator '%s' for target '%s' via sysfs: %w", args.InitiatorNQN, args.TargetNQN, err)
 	}
 
 	return nil
@@ -222,7 +192,7 @@ type ConnectTargetArguments struct {
 var connectTargetTmpl = genericutil.Must(
 	template.New("connect_target").Parse(
 		stringutil.Multiline(`
-			( nvme connect -t tcp -n '{{.TargetNQN}}' -a '{{.TargetAddress}}' -s '4420' -q '{{.InitiatorNQN}}' {{if .InitiatorPassword}}-S '{{.InitiatorPassword}}'{{end}} {{if .TargetPassword}}-C '{{.TargetPassword}}'{{end}} )
+			( nvme connect -t tcp -n '{{.TargetNQN}}' -a "{{.TargetAddress}}" -s '4420' -q '{{.InitiatorNQN}}' {{if .InitiatorPassword}}-S '{{.InitiatorPassword}}'{{end}} {{if .TargetPassword}}-C '{{.TargetPassword}}'{{end}} )
 		`),
 	),
 )
