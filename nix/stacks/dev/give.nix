@@ -36,6 +36,9 @@
 
     environment.systemPackages = [
       pkgs.dig
+      (pkgs.nvmet-cli.overrideAttrs (old: {
+        propagatedBuildInputs = (old.propagatedBuildInputs or [ ]) ++ [ pkgs.python3Packages.six ];
+      }))
     ];
 
     systemd.network.enable = true;
@@ -47,7 +50,8 @@
       allowedTCPPorts = [
         22 # allow SSH
         5355 # allow LLMNR
-        3260 # allow ISCSI
+        3260 # allow iSCSI
+        4420 # allow NVMe/TCP
       ];
     };
 
@@ -68,19 +72,23 @@
 
     boot = {
       supportedFilesystems = [ "zfs" ];
+      kernelModules = [
+        "nvmet"
+        "nvmet-tcp"
+      ];
     };
 
     services.target = {
       enable = true;
     };
 
-    systemd.services.setuptank = {
-      enable = true;
+    systemd.services.setup-tank = {
+      description = "Configure ZFS.";
       wantedBy = [ "multi-user.target" ];
       after = [ "getty@tty1.service" ];
       serviceConfig = {
         Type = "exec";
-        ExecStart = pkgs.writeShellScript "setuptank.sh" ''
+        ExecStart = pkgs.writeShellScript "setup_tank.sh" ''
           source ${config.system.build.setEnvironment}
 
           set -veuo pipefail

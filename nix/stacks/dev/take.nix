@@ -23,8 +23,16 @@
       storeDiskType = "squashfs";
     };
 
+    boot = {
+      kernelModules = [
+        "nvme-tcp"
+        "nvme-fabrics"
+      ];
+    };
+
     environment.systemPackages = [
       pkgs.dig
+      pkgs.nvme-cli
     ];
 
     systemd.network.enable = true;
@@ -36,7 +44,6 @@
       allowedTCPPorts = [
         22 # allow SSH
         5355 # allow LLMNR
-        3260 # allow ISCSI
       ];
     };
 
