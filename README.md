@@ -6,12 +6,12 @@ _A ZFS-based network storage layer over TCP with CSI integration._
 
 ## 📌 Description
 
-ZFSilo is a high-performance control plane for managing ZFS datasets and exporting them as block devices or filesystems via iSCSI. Designed primarily for Kubernetes environments, it provides a robust and reversible storage layer that bridges the gap between ZFS's advanced data management and network-accessible storage.
+ZFSilo is a high-performance control plane for managing ZFS datasets and exporting them as block devices or filesystems via iSCSI/NVME-oF (NVMe/TCP). Designed primarily for Kubernetes environments, it provides a robust and reversible storage layer that bridges the gap between ZFS's advanced data management and network-accessible storage.
 
 The project is split into two primary components:
 
-- **`app`**: The storage node agent. It runs on the ZFS-enabled server, managing datasets and configuring the iSCSI target.
-- **`csi`**: The Container Storage Interface driver. It facilitates volume provisioning and manages iSCSI initiator connections on client nodes.
+- **`app`**: The storage node agent. It runs on the ZFS-enabled server, managing datasets and configuring the iSCSI/NVMe-oF target.
+- **`csi`**: The Container Storage Interface driver. It facilitates volume provisioning and manages iSCSI/NVMe-oF initiator connections on client nodes.
 
 Built with [Go](https://go.dev/) and [ConnectRPC](https://connectrpc.com/) and leveraging [Nix](https://nixos.org/) for a fully reproducible development and testing environment, including a MicroVM-based dev stack that mirrors production storage configurations.
 
@@ -21,7 +21,7 @@ ZFSilo requires both the storage agent (`app`) and the CSI driver (`csi`) to be 
 
 ### Running the App
 
-The `app` component manages the ZFS pool and iSCSI target. To start it with a local configuration:
+The `app` component manages the ZFS pool and iSCSI/NVMe-oF target. To start it with a local configuration:
 
 ```bash
 nix run .#app -- start --config=./app/config.json
