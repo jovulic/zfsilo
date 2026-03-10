@@ -145,13 +145,10 @@ message Volume {
     (gnostic.openapi.v3.property) = {description: "The capacity of the volume."},
     (buf.validate.field).int64.gte = 0
   ];
-  Status status = 11 [
-    (gnostic.openapi.v3.property) = {
-      description: "The status of the volume."
-      read_only: true
-    },
-    (buf.validate.field).required = true
-  ];
+  Status status = 11 [(gnostic.openapi.v3.property) = {
+    description: "The status of the volume."
+    read_only: true
+  }];
   optional Transport transport = 12 [(gnostic.openapi.v3.property) = {
     description: "The protocol used to expose this volume."
     read_only: true

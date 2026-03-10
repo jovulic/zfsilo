@@ -1955,7 +1955,7 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\x16zfsilo/v1/zfsilo.proto\x12\tzfsilo.v1\x1a\x1bbuf/validate/validate.proto\x1a$gnostic/openapi/v3/annotations.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"5\n" +
 	"\x12GetCapacityRequest:\x1f\xbaG\x1c\x92\x02\x19The get capacity request.\"\x99\x01\n" +
 	"\x13GetCapacityResponse\x12`\n" +
-	"\x18available_capacity_bytes\x18\x01 \x01(\x03B&\xbaG#\x92\x02 The available capacity in bytes.R\x16availableCapacityBytes: \xbaG\x1d\x92\x02\x1aThe get capacity response.\"\xf1\x10\n" +
+	"\x18available_capacity_bytes\x18\x01 \x01(\x03B&\xbaG#\x92\x02 The available capacity in bytes.R\x16availableCapacityBytes: \xbaG\x1d\x92\x02\x1aThe get capacity response.\"\xeb\x10\n" +
 	"\x06Volume\x12f\n" +
 	"\x06struct\x18\x01 \x01(\v2\x17.google.protobuf.StructB5\xbaG2\x92\x02/Loosely structured data stored with the volume.R\x06struct\x12a\n" +
 	"\vcreate_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampB$\xbaG!\x18\x01\x92\x02\x1cWhen the volume was created.R\n" +
@@ -1970,8 +1970,8 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\x06sparse\x18\b \x01(\bB.\xbaG+\x92\x02(Whether the volume is sparse. Immutable.H\x00R\x06sparse\x88\x01\x01\x12Z\n" +
 	"\x04mode\x18\t \x01(\x0e2\x16.zfsilo.v1.Volume.ModeB.\xbaG%\x92\x02\"The mode of the volume. Immutable.\xbaH\x03\xc8\x01\x01R\x04mode\x12O\n" +
 	"\x0ecapacity_bytes\x18\n" +
-	" \x01(\x03B(\xbaG\x1e\x92\x02\x1bThe capacity of the volume.\xbaH\x04\"\x02(\x00R\rcapacityBytes\x12Y\n" +
-	"\x06status\x18\v \x01(\x0e2\x18.zfsilo.v1.Volume.StatusB'\xbaG\x1e\x18\x01\x92\x02\x19The status of the volume.\xbaH\x03\xc8\x01\x01R\x06status\x12p\n" +
+	" \x01(\x03B(\xbaG\x1e\x92\x02\x1bThe capacity of the volume.\xbaH\x04\"\x02(\x00R\rcapacityBytes\x12S\n" +
+	"\x06status\x18\v \x01(\x0e2\x18.zfsilo.v1.Volume.StatusB!\xbaG\x1e\x18\x01\x92\x02\x19The status of the volume.R\x06status\x12p\n" +
 	"\ttransport\x18\f \x01(\x0e2\x1b.zfsilo.v1.Volume.TransportB0\xbaG-\x18\x01\x92\x02(The protocol used to expose this volume.H\x01R\ttransport\x88\x01\x01\x12v\n" +
 	"\tclient_id\x18\r \x01(\tBT\xbaG=\x18\x01\x92\x028The client identifier (e.g., Initiator IQN or Host NQN).\xbaH\x11r\x0f2\r^(iqn|nqn).*$H\x02R\bclientId\x88\x01\x01\x12x\n" +
 	"\ttarget_id\x18\x0e \x01(\tBV\xbaG?\x18\x01\x92\x02:The target identifier (e.g., Target IQN or Subsystem NQN).\xbaH\x11r\x0f2\r^(iqn|nqn).*$H\x03R\btargetId\x88\x01\x01\x12_\n" +

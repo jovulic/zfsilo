@@ -1186,7 +1186,6 @@ components:
         - name
         - datasetId
         - mode
-        - status
       additionalProperties: false
       description: The volume resource.
     zfsilo.v1.Volume.Option:
