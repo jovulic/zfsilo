@@ -54,7 +54,7 @@ var _ = Describe("CSIService Sanity", func() {
 		if targetPortalAddress == "" {
 			// Dynamically resolve 'give' address from 'take' host perspective.
 			takeExecutor := command.NewRemoteExecutor(command.RemoteExecutorConfig{
-				Address:  "localhost",
+				Address:  "127.0.0.1",
 				Port:     9100,
 				Username: "root",
 				Password: "",
@@ -71,9 +71,9 @@ var _ = Describe("CSIService Sanity", func() {
 			targetPortalAddress = address + ":3260"
 		}
 
-		initiatorIQN := os.Getenv("ZFSILO_INITIATOR_IQN")
-		if initiatorIQN == "" {
-			initiatorIQN = "iqn.2006-01.org.linux-iscsi.take"
+		clientID := os.Getenv("ZFSILO_CLIENT_ID")
+		if clientID == "" {
+			clientID = "iqn.2006-01.org.linux-iscsi.take"
 		}
 
 		secret := os.Getenv("ZFSILO_SECRET")
@@ -90,8 +90,8 @@ var _ = Describe("CSIService Sanity", func() {
 			Secret:              secret,
 			ZFSiloAddress:       zfsiloAddress,
 			TargetPortalAddress: targetPortalAddress,
-			InitiatorIQN:        initiatorIQN,
-			KnownInitiatorIQNs:  []string{initiatorIQN},
+			ClientID:            clientID,
+			KnownClientIDs:      []string{clientID},
 		})
 
 		err := srv.Start(ctx)

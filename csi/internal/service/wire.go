@@ -29,7 +29,7 @@ var WireSet = wire.NewSet(
 	WireServer,
 )
 
-func buildInitiatorIQN(conf config.ConfigServiceInitiatorIQN) (string, error) {
+func buildClientID(conf config.ConfigServiceClientID) (string, error) {
 	switch conf.Type {
 	case "VALUE":
 		return conf.Value, nil
@@ -39,16 +39,16 @@ func buildInitiatorIQN(conf config.ConfigServiceInitiatorIQN) (string, error) {
 		filesystem := os.DirFS(dir)
 		valueBytes, err := fs.ReadFile(filesystem, base)
 		if err != nil {
-			return "", fmt.Errorf("failed to read initiator iqn file: %w", err)
+			return "", fmt.Errorf("failed to read client id file: %w", err)
 		}
 
 		// The value comes in the following [example] form, so we remove the prefix.
 		// InitiatorName=iqn.2003-01.org.linux-iscsi.thinkone
-		iqn := strings.TrimPrefix(string(valueBytes), "InitiatorName=")
+		id := strings.TrimPrefix(string(valueBytes), "InitiatorName=")
 
-		return iqn, nil
+		return id, nil
 	default:
-		return "", fmt.Errorf("unknown initiator iqn type %s", conf.Type)
+		return "", fmt.Errorf("unknown client id type %s", conf.Type)
 	}
 }
 
@@ -57,16 +57,16 @@ func WireCSIService(
 	conf config.Config,
 	term *graterm.Terminator,
 ) (*CSIService, error) {
-	initiatorIQN, err := buildInitiatorIQN(conf.Service.InitiatorIQN)
+	clientID, err := buildClientID(conf.Service.ClientID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build initiator iqn: %w", err)
+		return nil, fmt.Errorf("failed to build client id: %w", err)
 	}
 	service := NewCSIService(CSIServiceConfig{
 		Secret:              string(conf.Service.Secret),
 		ZFSiloAddress:       conf.Service.ZFSiloAddress,
 		TargetPortalAddress: conf.Service.TargetPortalAddress,
-		InitiatorIQN:        initiatorIQN,
-		KnownInitiatorIQNs:  conf.Service.KnownInitiatorIQNs,
+		ClientID:            clientID,
+		KnownClientIDs:      conf.Service.KnownClientIDs,
 	})
 	if err := service.Start(ctx); err != nil {
 		return nil, fmt.Errorf("failed to start csi service: %w", err)

@@ -59,8 +59,8 @@ type CSIServiceConfig struct {
 	Secret              string   `validate:"required"`
 	ZFSiloAddress       string   `validate:"required"`
 	TargetPortalAddress string   `validate:"required"`
-	InitiatorIQN        string   `validate:"required"`
-	KnownInitiatorIQNs  []string `validate:"required"`
+	ClientID            string   `validate:"required"`
+	KnownClientIDs      []string `validate:"required"`
 }
 
 // CSIService implements the CSI specification.
@@ -74,8 +74,8 @@ type CSIService struct {
 	secret              string
 	zfsiloAddress       string
 	targetPortalAddress string
-	initiatorIQN        string
-	knownInitiatorIQNs  []string
+	clientID            string
+	knownClientIDs      []string
 
 	lock          sync.Mutex
 	started       bool
@@ -92,8 +92,8 @@ func NewCSIService(config CSIServiceConfig) *CSIService {
 		secret:              config.Secret,
 		zfsiloAddress:       config.ZFSiloAddress,
 		targetPortalAddress: config.TargetPortalAddress,
-		initiatorIQN:        config.InitiatorIQN,
-		knownInitiatorIQNs:  config.KnownInitiatorIQNs,
+		clientID:            config.ClientID,
+		knownClientIDs:      config.KnownClientIDs,
 	}
 }
 
@@ -221,7 +221,6 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 			Mode:          mode,
 			CapacityBytes: capacityBytes,
 			Sparse:        proto.Bool(params.Sparse()),
-			Status:        zfsilov1.Volume_STATUS_INITIAL,
 			Options:       zfsOptions,
 		},
 	}))
@@ -282,7 +281,7 @@ func (s *CSIService) ControllerPublishVolume(ctx context.Context, req *csi.Contr
 	}
 
 	nodeID := req.GetNodeId()
-	found := slices.Contains(s.knownInitiatorIQNs, nodeID)
+	found := slices.Contains(s.knownClientIDs, nodeID)
 	if !found {
 		return nil, status.Errorf(codes.NotFound, "node %s not found", nodeID)
 	}
@@ -298,7 +297,7 @@ func (s *CSIService) ControllerPublishVolume(ctx context.Context, req *csi.Contr
 	// Connect (associate with node and login).
 	connectResp, err := s.volumeClient.ConnectVolume(ctx, connect.NewRequest(&zfsilov1.ConnectVolumeRequest{
 		Id:            id,
-		InitiatorIqn:  nodeID,
+		ClientId:      nodeID,
 		TargetAddress: s.targetPortalAddress,
 	}))
 	if err != nil {
@@ -306,9 +305,9 @@ func (s *CSIService) ControllerPublishVolume(ctx context.Context, req *csi.Contr
 	}
 
 	// Verify it's connected to the right node.
-	initiatorIQN := connectResp.Msg.Volume.InitiatorIqn
-	if initiatorIQN != nil && *initiatorIQN != "" && *initiatorIQN != nodeID {
-		return nil, status.Errorf(codes.FailedPrecondition, "volume %s is already connected to another node: %s", id, *initiatorIQN)
+	clientID := connectResp.Msg.Volume.ClientId
+	if clientID != nil && *clientID != "" && *clientID != nodeID {
+		return nil, status.Errorf(codes.FailedPrecondition, "volume %s is already connected to another node: %s", id, *clientID)
 	}
 
 	return &csi.ControllerPublishVolumeResponse{}, nil
@@ -335,8 +334,8 @@ func (s *CSIService) ControllerUnpublishVolume(ctx context.Context, req *csi.Con
 
 	// Check node id. If it is published to a different node, it's already
 	// "unpublished".
-	initiatorIQN := vol.InitiatorIqn
-	if nodeID != "" && initiatorIQN != nil && *initiatorIQN != "" && *initiatorIQN != nodeID {
+	clientID := vol.ClientId
+	if nodeID != "" && clientID != nil && *clientID != "" && *clientID != nodeID {
 		return &csi.ControllerUnpublishVolumeResponse{}, nil
 	}
 
@@ -420,8 +419,8 @@ func (s *CSIService) ListVolumes(ctx context.Context, req *csi.ListVolumesReques
 	entries := make([]*csi.ListVolumesResponse_Entry, 0, len(resp.Msg.Volumes))
 	for _, vol := range resp.Msg.Volumes {
 		var publishedNodeIds []string
-		if vol.InitiatorIqn != nil && *vol.InitiatorIqn != "" {
-			publishedNodeIds = []string{*vol.InitiatorIqn}
+		if vol.ClientId != nil && *vol.ClientId != "" {
+			publishedNodeIds = []string{*vol.ClientId}
 		}
 
 		entries = append(entries, &csi.ListVolumesResponse_Entry{
@@ -585,8 +584,8 @@ func (s *CSIService) ControllerGetVolume(ctx context.Context, req *csi.Controlle
 
 	vol := resp.Msg.Volume
 	var publishedNodeIds []string
-	if vol.InitiatorIqn != nil && *vol.InitiatorIqn != "" {
-		publishedNodeIds = []string{*vol.InitiatorIqn}
+	if vol.ClientId != nil && *vol.ClientId != "" {
+		publishedNodeIds = []string{*vol.ClientId}
 	}
 
 	return &csi.ControllerGetVolumeResponse{
@@ -670,10 +669,10 @@ func (s *CSIService) NodePublishVolume(ctx context.Context, req *csi.NodePublish
 	}
 
 	// Ensure connected to this node.
-	if vol.Status < zfsilov1.Volume_STATUS_CONNECTED || vol.InitiatorIqn == nil || *vol.InitiatorIqn != s.initiatorIQN {
+	if vol.Status < zfsilov1.Volume_STATUS_CONNECTED || vol.ClientId == nil || *vol.ClientId != s.clientID {
 		_, err := s.volumeClient.ConnectVolume(ctx, connect.NewRequest(&zfsilov1.ConnectVolumeRequest{
 			Id:            id,
-			InitiatorIqn:  s.initiatorIQN,
+			ClientId:      s.clientID,
 			TargetAddress: s.targetPortalAddress,
 		}))
 		if err != nil {
@@ -720,7 +719,7 @@ func (s *CSIService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpub
 	}
 
 	// Disconnect if connected to this node.
-	if vol.Status >= zfsilov1.Volume_STATUS_CONNECTED && vol.InitiatorIqn != nil && *vol.InitiatorIqn == s.initiatorIQN {
+	if vol.Status >= zfsilov1.Volume_STATUS_CONNECTED && vol.ClientId != nil && *vol.ClientId == s.clientID {
 		_, err := s.volumeClient.DisconnectVolume(ctx, connect.NewRequest(&zfsilov1.DisconnectVolumeRequest{Id: id}))
 		if err != nil {
 			return nil, mapError(err)
@@ -813,7 +812,7 @@ func (s *CSIService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCa
 }
 
 func (s *CSIService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	return &csi.NodeGetInfoResponse{NodeId: s.initiatorIQN}, nil
+	return &csi.NodeGetInfoResponse{NodeId: s.clientID}, nil
 }
 
 func (s *CSIService) authInterceptor() connect.Interceptor {
