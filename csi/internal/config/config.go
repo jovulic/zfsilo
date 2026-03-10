@@ -68,12 +68,12 @@ type Config struct {
 		Format string   `json:"format" mod:"default=JSON" validate:"oneof=JSON TEXT"`
 	} `json:"log"`
 	Service struct {
-		BindAddress         string                 `json:"bindAddress"         mod:"default=:9090"`
-		Secret              SecretValue            `json:"secret"              validate:"required"`
-		ZFSiloAddress       string                 `json:"zfsiloAddress"       validate:"required"`
-		TargetPortalAddress string                 `json:"targetPortalAddress" validate:"required"`
-		ClientID            ConfigServiceClientID  `json:"clientId"`
-		KnownClientIDs      []string               `json:"knownClientIds"      validate:"min=1"`
+		BindAddress         string                `json:"bindAddress"         mod:"default=:9090"`
+		Secret              SecretValue           `json:"secret"              validate:"required"`
+		ZFSiloAddress       string                `json:"zfsiloAddress"       validate:"required"`
+		TargetPortalAddress string                `json:"targetPortalAddress" validate:"required"`
+		ClientID            ConfigServiceClientID `json:"clientId"`
+		KnownClientIDs      []string              `json:"knownClientIds"      validate:"min=1"`
 	} `json:"service"`
 }
 
