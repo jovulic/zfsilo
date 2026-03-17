@@ -29,27 +29,39 @@ var WireSet = wire.NewSet(
 	WireServer,
 )
 
-func buildClientID(conf config.ConfigServiceClientID) (string, error) {
-	switch conf.Type {
-	case "VALUE":
-		return conf.Value, nil
-	case "PATH":
-		dir := path.Dir(conf.Value)
-		base := path.Base(conf.Value)
-		filesystem := os.DirFS(dir)
-		valueBytes, err := fs.ReadFile(filesystem, base)
-		if err != nil {
-			return "", fmt.Errorf("failed to read client id file: %w", err)
+func buildClientIDs(confs []config.ConfigServiceClientID) (map[string]string, error) {
+	clientIDs := make(map[string]string)
+	for _, conf := range confs {
+		var id string
+		switch conf.Type {
+		case "VALUE":
+			id = conf.Value
+		case "PATH":
+			dir := path.Dir(conf.Value)
+			base := path.Base(conf.Value)
+			filesystem := os.DirFS(dir)
+			valueBytes, err := fs.ReadFile(filesystem, base)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read client id file %s: %w", conf.Value, err)
+			}
+
+			// The value comes in the following [example] form, so we remove the prefix.
+			// InitiatorName=iqn.2003-01.org.linux-iscsi.thinkone
+			id = strings.TrimPrefix(string(valueBytes), "InitiatorName=")
+			id = strings.TrimSpace(id)
+		default:
+			return nil, fmt.Errorf("unknown client id type %s", conf.Type)
 		}
 
-		// The value comes in the following [example] form, so we remove the prefix.
-		// InitiatorName=iqn.2003-01.org.linux-iscsi.thinkone
-		id := strings.TrimPrefix(string(valueBytes), "InitiatorName=")
-
-		return id, nil
-	default:
-		return "", fmt.Errorf("unknown client id type %s", conf.Type)
+		if strings.HasPrefix(id, "iqn.") {
+			clientIDs["iscsi"] = id
+		} else if strings.HasPrefix(id, "nqn.") {
+			clientIDs["nvmeof"] = id
+		} else {
+			return nil, fmt.Errorf("unsupported client id format: %s", id)
+		}
 	}
+	return clientIDs, nil
 }
 
 func WireCSIService(
@@ -57,15 +69,15 @@ func WireCSIService(
 	conf config.Config,
 	term *graterm.Terminator,
 ) (*CSIService, error) {
-	clientID, err := buildClientID(conf.Service.ClientID)
+	clientIDs, err := buildClientIDs(conf.Service.ClientIDs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build client id: %w", err)
+		return nil, fmt.Errorf("failed to build client ids: %w", err)
 	}
 	service := NewCSIService(CSIServiceConfig{
 		Secret:              string(conf.Service.Secret),
 		ZFSiloAddress:       conf.Service.ZFSiloAddress,
 		TargetPortalAddress: conf.Service.TargetPortalAddress,
-		ClientID:            clientID,
+		ClientIDs:           clientIDs,
 		KnownClientIDs:      conf.Service.KnownClientIDs,
 	})
 	if err := service.Start(ctx); err != nil {
