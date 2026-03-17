@@ -831,7 +831,7 @@ func (s *CSIService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpub
 
 	// Unmount volume.
 	_, err := s.volumeClient.UnmountVolume(ctx, connect.NewRequest(&zfsilov1.UnmountVolumeRequest{
-		Id:         id,
+		Id:        id,
 		MountPath: targetPath,
 	}))
 	if err != nil {
@@ -859,14 +859,7 @@ func (s *CSIService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVol
 	}
 
 	vol := getResp.Msg.Volume
-	found := false
-	for _, p := range vol.TargetPaths {
-		if p == volumePath {
-			found = true
-			break
-		}
-	}
-
+	found := slices.Contains(vol.TargetPaths, volumePath)
 	if !found {
 		return nil, status.Errorf(codes.NotFound, "volume %s is not mounted at %s", id, volumePath)
 	}
