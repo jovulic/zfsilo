@@ -362,6 +362,76 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/zfsilo.v1.DisconnectVolumeResponse'
+  /zfsilo.v1.VolumeService/StageVolume:
+    post:
+      tags:
+        - zfsilo.v1.VolumeService
+      summary: StageVolume
+      operationId: zfsilo.v1.VolumeService.StageVolume
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.StageVolumeRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.StageVolumeResponse'
+  /zfsilo.v1.VolumeService/UnstageVolume:
+    post:
+      tags:
+        - zfsilo.v1.VolumeService
+      summary: UnstageVolume
+      operationId: zfsilo.v1.VolumeService.UnstageVolume
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.UnstageVolumeRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.UnstageVolumeResponse'
   /zfsilo.v1.VolumeService/MountVolume:
     post:
       tags:
@@ -549,13 +619,6 @@ components:
          `Value` type union.
 
          The JSON representation for `NullValue` is JSON `null`.
-    zfsilo.v1.MountVolumeRequest.Mode:
-      type: string
-      title: Mode
-      enum:
-        - MODE_UNSPECIFIED
-        - MODE_BLOCK
-        - MODE_FILESYSTEM
     zfsilo.v1.StatsVolumeResponse.Stats.Usage.Unit:
       type: string
       title: Unit
@@ -578,6 +641,7 @@ components:
         - STATUS_INITIAL
         - STATUS_PUBLISHED
         - STATUS_CONNECTED
+        - STATUS_STAGED
         - STATUS_MOUNTED
     zfsilo.v1.Volume.Transport:
       type: string
@@ -949,6 +1013,32 @@ components:
           $ref: '#/components/schemas/zfsilo.v1.Volume'
       title: PublishVolumeResponse
       additionalProperties: false
+    zfsilo.v1.StageVolumeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          title: id
+          pattern: ^vol_[a-zA-Z0-9-_]+$
+          description: The id of the volume to be staged.
+        stagingPath:
+          type: string
+          title: staging_path
+          pattern: ^(/[^/ ]*)+/?$
+          description: The staging path.
+      title: StageVolumeRequest
+      required:
+        - id
+        - stagingPath
+      additionalProperties: false
+    zfsilo.v1.StageVolumeResponse:
+      type: object
+      properties:
+        volume:
+          title: volume
+          $ref: '#/components/schemas/zfsilo.v1.Volume'
+      title: StageVolumeResponse
+      additionalProperties: false
     zfsilo.v1.StatsVolumeRequest:
       type: object
       properties:
@@ -1037,9 +1127,15 @@ components:
           title: id
           pattern: ^vol_[a-zA-Z0-9-_]+$
           description: The id of the volume to be unmounted.
+        mountPath:
+          type: string
+          title: mount_path
+          pattern: ^(/[^/ ]*)+/?$
+          description: The mount path.
       title: UnmountVolumeRequest
       required:
         - id
+        - mountPath
       additionalProperties: false
     zfsilo.v1.UnmountVolumeResponse:
       type: object
@@ -1068,6 +1164,26 @@ components:
           title: volume
           $ref: '#/components/schemas/zfsilo.v1.Volume'
       title: UnpublishVolumeResponse
+      additionalProperties: false
+    zfsilo.v1.UnstageVolumeRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          title: id
+          pattern: ^vol_[a-zA-Z0-9-_]+$
+          description: The id of the volume to be unstaged.
+      title: UnstageVolumeRequest
+      required:
+        - id
+      additionalProperties: false
+    zfsilo.v1.UnstageVolumeResponse:
+      type: object
+      properties:
+        volume:
+          title: volume
+          $ref: '#/components/schemas/zfsilo.v1.Volume'
+      title: UnstageVolumeResponse
       additionalProperties: false
     zfsilo.v1.UpdateVolumeRequest:
       type: object
@@ -1173,12 +1289,22 @@ components:
           description: The target address (host and port).
           nullable: true
           readOnly: true
-        mountPath:
+        stagingPath:
           type: string
-          title: mount_path
+          title: staging_path
           pattern: ^(/[^/ ]*)+/?$
-          description: The mount path on the client.
+          description: The staging path on the client.
           nullable: true
+          readOnly: true
+        targetPaths:
+          type: array
+          items:
+            type: string
+            pattern: ^(/[^/ ]*)+/?$
+            description: The target paths on the client where the volume is mounted.
+            readOnly: true
+          title: target_paths
+          description: The target paths on the client where the volume is mounted.
           readOnly: true
       title: Volume
       required:
