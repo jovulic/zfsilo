@@ -28,8 +28,9 @@ func TestCSISanity(t *testing.T) {
 }
 
 type prefixIDGenerator struct {
-	prefix string
 	sanity.DefaultIDGenerator
+
+	prefix string
 }
 
 func (g *prefixIDGenerator) GenerateUniqueValidVolumeID() string {
@@ -38,7 +39,6 @@ func (g *prefixIDGenerator) GenerateUniqueValidVolumeID() string {
 
 var _ = Describe("CSIService Sanity", func() {
 	for _, transport := range []string{"iscsi", "nvmeof"} {
-		transport := transport
 		Context(fmt.Sprintf("with %s transport", transport), func() {
 			var (
 				srv        *service.CSIService
