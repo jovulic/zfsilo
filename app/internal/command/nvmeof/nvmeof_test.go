@@ -1,4 +1,4 @@
-package iscsi_test
+package nvmeof_test
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jovulic/zfsilo/app/internal/command/iscsi"
 	"github.com/jovulic/zfsilo/app/internal/command/lib/host"
+	"github.com/jovulic/zfsilo/app/internal/command/nvmeof"
 	"github.com/jovulic/zfsilo/app/internal/command/zfs"
 	"github.com/jovulic/zfsilo/lib/command"
 	"github.com/stretchr/testify/require"
@@ -30,9 +30,9 @@ var takeHostConfig = command.RemoteExecutorConfig{
 }
 
 type testClients struct {
-	giveZfs   zfs.ZFS
-	giveIscsi iscsi.ISCSI
-	takeIscsi iscsi.ISCSI
+	giveZfs    zfs.ZFS
+	giveNVMeOF nvmeof.NVMeOF
+	takeNVMeOF nvmeof.NVMeOF
 }
 
 func newTestExecutor(t *testing.T, config command.RemoteExecutorConfig) command.Executor {
@@ -62,14 +62,20 @@ func newTestClients(t *testing.T) *testClients {
 
 	giveExecutor := newTestExecutor(t, giveHostConfig)
 	takeExecutor := newTestExecutor(t, takeHostConfig)
+
+	// It seems like MicroVM does not load the kernel modules automatically?
+	ctx := context.Background()
+	_, _ = giveExecutor.Exec(ctx, "modprobe nvmet nvmet-tcp")
+	_, _ = takeExecutor.Exec(ctx, "modprobe nvme-tcp nvme-fabrics")
+
 	return &testClients{
-		giveZfs:   zfs.With(giveExecutor),
-		giveIscsi: iscsi.With(giveExecutor),
-		takeIscsi: iscsi.With(takeExecutor),
+		giveZfs:    zfs.With(giveExecutor),
+		giveNVMeOF: nvmeof.With(giveExecutor),
+		takeNVMeOF: nvmeof.With(takeExecutor),
 	}
 }
 
-func TestHost_IQN(t *testing.T) {
+func TestHost_NQN(t *testing.T) {
 	type fields struct {
 		domain    string
 		ownerTime time.Time
@@ -83,24 +89,24 @@ func TestHost_IQN(t *testing.T) {
 		{
 			name: "nominal",
 			fields: fields{
-				domain:    "linux-iscsi.org",
-				ownerTime: time.Date(2003, 1, 1, 0, 0, 0, 0, time.UTC),
+				domain:    "nvmexpress.org",
+				ownerTime: time.Date(2014, 8, 1, 0, 0, 0, 0, time.UTC),
 				hostname:  "give",
 			},
-			want: "iqn.2003-01.org.linux-iscsi.give",
+			want: "nqn.2014-08.org.nvmexpress:give",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h := host.New(tt.fields.domain, tt.fields.ownerTime, tt.fields.hostname)
-			if got := h.IQN(); got != tt.want {
-				t.Errorf("Host.IQN() = %v, want %v", got, tt.want)
+			if got := h.NQN(); got != tt.want {
+				t.Errorf("Host.NQN() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestHost_VolumeIQN(t *testing.T) {
+func TestHost_VolumeNQN(t *testing.T) {
 	type fields struct {
 		domain    string
 		ownerTime time.Time
@@ -118,21 +124,21 @@ func TestHost_VolumeIQN(t *testing.T) {
 		{
 			name: "nominal",
 			fields: fields{
-				domain:    "linux-iscsi.org",
-				ownerTime: time.Date(2003, 1, 1, 0, 0, 0, 0, time.UTC),
+				domain:    "nvmexpress.org",
+				ownerTime: time.Date(2014, 8, 1, 0, 0, 0, 0, time.UTC),
 				hostname:  "give",
 			},
 			args: args{
 				volumeName: "tank-ivol",
 			},
-			want: "iqn.2003-01.org.linux-iscsi.give:tank-ivol",
+			want: "nqn.2014-08.org.nvmexpress:give:tank-ivol",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tr := host.New(tt.fields.domain, tt.fields.ownerTime, tt.fields.hostname)
-			if got := tr.VolumeIQN(tt.args.volumeName); got != tt.want {
-				t.Errorf("Target.NewIQN() = %v, want %v", got, tt.want)
+			if got := tr.VolumeNQN(tt.args.volumeName); got != tt.want {
+				t.Errorf("Target.VolumeNQN() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -143,9 +149,9 @@ func TestPublishAndUnpublishVolume(t *testing.T) {
 
 	clients := newTestClients(t)
 
-	volName := "tank/test-pub-unpub"
+	volName := "tank/test-nvme-pub-unpub"
 	devPath := fmt.Sprintf("/dev/zvol/%s", volName)
-	targetIQN := iscsi.IQN("iqn.2003-01.org.linux-iscsi.give:test-pub-unpub")
+	targetNQN := nvmeof.NQN("nqn.2014-08.org.nvmexpress:give:test-nvme-pub-unpub")
 
 	// Create ZFS volume.
 	err := clients.giveZfs.CreateVolume(ctx, zfs.CreateVolumeArguments{Name: volName, Size: mb})
@@ -158,17 +164,16 @@ func TestPublishAndUnpublishVolume(t *testing.T) {
 	}()
 
 	// Publish volume.
-	err = clients.giveIscsi.PublishVolume(ctx, iscsi.PublishVolumeArguments{
-		VolumeID:   "test-pub-unpub",
+	err = clients.giveNVMeOF.PublishVolume(ctx, nvmeof.PublishVolumeArguments{
+		VolumeID:   "test-nvme-pub-unpub",
 		DevicePath: devPath,
-		TargetIQN:  targetIQN,
+		TargetNQN:  targetNQN,
 	})
 	require.NoError(t, err)
 
 	// Unpublish volume.
-	err = clients.giveIscsi.UnpublishVolume(ctx, iscsi.UnpublishVolumeArguments{
-		TargetIQN: targetIQN,
-		VolumeID:  "test-pub-unpub",
+	err = clients.giveNVMeOF.UnpublishVolume(ctx, nvmeof.UnpublishVolumeArguments{
+		TargetNQN: targetNQN,
 	})
 	require.NoError(t, err)
 }
@@ -178,14 +183,14 @@ func TestConnectAndDisconnectTarget(t *testing.T) {
 
 	clients := newTestClients(t)
 
-	volName := "tank/test-conn-disconn"
-	volIdentifier := "test-conn-disconn"
+	volName := "tank/test-nvme-conn-disconn"
+	volIdentifier := "test-nvme-conn-disconn"
 	devPath := fmt.Sprintf("/dev/zvol/%s", volName)
-	targetIQN := iscsi.IQN(fmt.Sprintf("iqn.2003-01.org.linux-iscsi.give:%s", volIdentifier))
-	initiatorIQN := iscsi.IQN("iqn.2006-01.org.linux-iscsi.take")
-	initiatorPassword := "password"
-	targetPassword := "mutualpassword"
-	targetEndpoint := "$(dig +short give):3260"
+	targetNQN := nvmeof.NQN(fmt.Sprintf("nqn.2014-08.org.nvmexpress:give:%s", volIdentifier))
+	initiatorNQN := nvmeof.NQN("nqn.2014-08.org.nvmexpress:take")
+	initiatorPassword := "DHHC-1:00:aGVsbG93b3JsZGhlbGxvd29ybGRoZWxsb3dvcmxkMTLKDm0S:"
+	targetPassword := "DHHC-1:00:5u0Yw3VEsqN6WnSWOPkOJNsvyvyyoMk9Qe1d7nj5TR6U8bbA:"
+	targetEndpoint := "$(dig +short give)"
 
 	// Create ZFS volume.
 	err := clients.giveZfs.CreateVolume(ctx, zfs.CreateVolumeArguments{Name: volName, Size: mb})
@@ -198,54 +203,52 @@ func TestConnectAndDisconnectTarget(t *testing.T) {
 	}()
 
 	// Publish volume.
-	err = clients.giveIscsi.PublishVolume(ctx, iscsi.PublishVolumeArguments{
+	err = clients.giveNVMeOF.PublishVolume(ctx, nvmeof.PublishVolumeArguments{
 		VolumeID:   volIdentifier,
 		DevicePath: devPath,
-		TargetIQN:  targetIQN,
+		TargetNQN:  targetNQN,
 	})
 	require.NoError(t, err)
 
 	defer func() {
-		// Cleanup iSCSI publish.
-		err := clients.giveIscsi.UnpublishVolume(ctx, iscsi.UnpublishVolumeArguments{
-			TargetIQN: targetIQN,
-			VolumeID:  volIdentifier,
+		// Cleanup NVMe publish.
+		err := clients.giveNVMeOF.UnpublishVolume(ctx, nvmeof.UnpublishVolumeArguments{
+			TargetNQN: targetNQN,
 		})
-		require.NoError(t, err, "iscsi unpublish cleanup failed")
+		require.NoError(t, err, "nvmeof unpublish cleanup failed")
 	}()
 
 	// Authorize initiator on target side.
-	err = clients.giveIscsi.Authorize(ctx, iscsi.AuthorizeArguments{
-		TargetIQN:         targetIQN,
-		InitiatorIQN:      initiatorIQN,
+	err = clients.giveNVMeOF.Authorize(ctx, nvmeof.AuthorizeArguments{
+		TargetNQN:         targetNQN,
+		InitiatorNQN:      initiatorNQN,
 		InitiatorPassword: initiatorPassword,
 		TargetPassword:    targetPassword,
 	})
 	require.NoError(t, err)
 
 	defer func() {
-		// Cleanup iSCSI authorization.
-		err := clients.giveIscsi.Unauthorize(ctx, iscsi.UnauthorizeArguments{
-			TargetIQN:    targetIQN,
-			InitiatorIQN: initiatorIQN,
+		// Cleanup NVMe authorization.
+		err := clients.giveNVMeOF.Unauthorize(ctx, nvmeof.UnauthorizeArguments{
+			TargetNQN:    targetNQN,
+			InitiatorNQN: initiatorNQN,
 		})
-		require.NoError(t, err, "iscsi unauthorize cleanup failed")
+		require.NoError(t, err, "nvmeof unauthorize cleanup failed")
 	}()
 
 	// Connect to target.
-	err = clients.takeIscsi.ConnectTarget(ctx, iscsi.ConnectTargetArguments{
-		TargetIQN:         targetIQN,
+	err = clients.takeNVMeOF.ConnectTarget(ctx, nvmeof.ConnectTargetArguments{
+		TargetNQN:         targetNQN,
 		TargetAddress:     targetEndpoint,
-		InitiatorIQN:      initiatorIQN,
+		InitiatorNQN:      initiatorNQN,
 		InitiatorPassword: initiatorPassword,
 		TargetPassword:    targetPassword,
 	})
 	require.NoError(t, err)
 
 	// Disconnect from target.
-	err = clients.takeIscsi.DisconnectTarget(ctx, iscsi.DisconnectTargetArguments{
-		TargetIQN:     targetIQN,
-		TargetAddress: targetEndpoint,
+	err = clients.takeNVMeOF.DisconnectTarget(ctx, nvmeof.DisconnectTargetArguments{
+		TargetNQN: targetNQN,
 	})
 	require.NoError(t, err)
 }

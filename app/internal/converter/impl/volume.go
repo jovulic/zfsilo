@@ -39,12 +39,13 @@ func (c *VolumeConverterImpl) FromAPIToDB(source *v1.Volume) (*database.Volume, 
 		}
 		databaseVolume.Mode = iface.ConvertVolumeModeFromAPIToDB((*source).Mode)
 		databaseVolume.Status = iface.ConvertVolumeStatusFromAPIToDB((*source).Status)
+		databaseVolume.Transport = iface.ConvertVolumeTransportFromAPIToDB((*source).Transport)
 		databaseVolume.CapacityBytes = (*source).CapacityBytes
-		if (*source).InitiatorIqn != nil {
-			databaseVolume.InitiatorIQN = *(*source).InitiatorIqn
+		if (*source).ClientId != nil {
+			databaseVolume.ClientID = *(*source).ClientId
 		}
-		if (*source).TargetIqn != nil {
-			databaseVolume.TargetIQN = *(*source).TargetIqn
+		if (*source).TargetId != nil {
+			databaseVolume.TargetID = *(*source).TargetId
 		}
 		if (*source).TargetAddress != nil {
 			databaseVolume.TargetAddress = *(*source).TargetAddress
@@ -98,10 +99,11 @@ func (c *VolumeConverterImpl) FromDBToAPI(source *database.Volume) (*v1.Volume, 
 		zfsilov1Volume.Mode = iface.ConvertVolumeModeFromDBToAPI((*source).Mode)
 		zfsilov1Volume.CapacityBytes = (*source).CapacityBytes
 		zfsilov1Volume.Status = iface.ConvertVolumeStatusFromDBToAPI((*source).Status)
-		pString := (*source).InitiatorIQN
-		zfsilov1Volume.InitiatorIqn = &pString
-		pString2 := (*source).TargetIQN
-		zfsilov1Volume.TargetIqn = &pString2
+		zfsilov1Volume.Transport = iface.ConvertVolumeTransportFromDBToAPI((*source).Transport)
+		pString := (*source).ClientID
+		zfsilov1Volume.ClientId = &pString
+		pString2 := (*source).TargetID
+		zfsilov1Volume.TargetId = &pString2
 		pString3 := (*source).TargetAddress
 		zfsilov1Volume.TargetAddress = &pString3
 		pString4 := (*source).MountPath

@@ -83,7 +83,7 @@ type ConfigCommandTargetProduce struct {
 type ConfigCommandTargetConsume struct {
 	ConfigCommandTarget
 
-	IQN      string      `json:"iqn"`
+	ClientID string      `json:"clientId"`
 	Password SecretValue `json:"password"`
 }
 

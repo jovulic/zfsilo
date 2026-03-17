@@ -26,10 +26,10 @@ func TestLiteral_Run(t *testing.T) {
 		executor := &mockExecutor{
 			execFunc: func(ctx context.Context, cmd string) (*command.CommandResult, error) {
 				return &command.CommandResult{
-					Stdout:   "  hello world  \n",
-					ExitCode: 0,
-				},
-				nil
+						Stdout:   "  hello world  \n",
+						ExitCode: 0,
+					},
+					nil
 			},
 		}
 
@@ -44,10 +44,10 @@ func TestLiteral_Run(t *testing.T) {
 		executor := &mockExecutor{
 			execFunc: func(ctx context.Context, cmd string) (*command.CommandResult, error) {
 				return &command.CommandResult{
-					Stderr:   "error message",
-					ExitCode: 1,
-				},
-				errors.New("exit status 1")
+						Stderr:   "error message",
+						ExitCode: 1,
+					},
+					errors.New("exit status 1")
 			},
 		}
 
@@ -67,10 +67,10 @@ func TestLiteral_RunLines(t *testing.T) {
 		executor := &mockExecutor{
 			execFunc: func(ctx context.Context, cmd string) (*command.CommandResult, error) {
 				return &command.CommandResult{
-					Stdout:   "  line1  \n  line2  \nline3",
-					ExitCode: 0,
-				},
-				nil
+						Stdout:   "  line1  \n  line2  \nline3",
+						ExitCode: 0,
+					},
+					nil
 			},
 		}
 
@@ -85,10 +85,10 @@ func TestLiteral_RunLines(t *testing.T) {
 		executor := &mockExecutor{
 			execFunc: func(ctx context.Context, cmd string) (*command.CommandResult, error) {
 				return &command.CommandResult{
-					Stdout:   "   \n  ",
-					ExitCode: 0,
-				},
-				nil
+						Stdout:   "   \n  ",
+						ExitCode: 0,
+					},
+					nil
 			},
 		}
 

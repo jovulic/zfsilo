@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 	"text/template"
-	"time"
 
 	"github.com/jovulic/zfsilo/lib/command"
 	"github.com/jovulic/zfsilo/lib/genericutil"
@@ -18,55 +17,6 @@ type IQN string
 
 func (val IQN) String() string {
 	return string(val)
-}
-
-type Host struct {
-	domain    string
-	ownerTime time.Time
-	hostname  string
-}
-
-func NewHost(domain string, ownerTime time.Time, hostname string) *Host {
-	return &Host{
-		domain:    domain,
-		ownerTime: ownerTime,
-		hostname:  hostname,
-	}
-}
-
-func (h *Host) IQN() IQN {
-	value := fmt.Sprintf(
-		"iqn.%s.%s.%s",
-		h.ownerTime.Format("2006-01"),
-		func(domain string) string {
-			parts := strings.Split(domain, ".")
-
-			// Need at least two parts for the "naming authority" in order to pass validation.
-			if len(parts) == 1 {
-				parts = append(parts, "local")
-			}
-
-			// Reverse the order of parts slice.
-			// https://github.com/golang/go/wiki/SliceTricks#reversing
-			for left, right := 0, len(parts)-1; left < right; left, right = left+1, right-1 {
-				parts[left], parts[right] = parts[right], parts[left]
-			}
-
-			return strings.Join(parts, ".")
-		}(h.domain),
-		h.hostname,
-	)
-	value = strings.ToLower(value)
-	value = strings.ReplaceAll(value, "_", "-")
-	return IQN(value)
-}
-
-func (h *Host) VolumeIQN(volumeID string) IQN {
-	value := h.IQN().String()
-	value = fmt.Sprintf("%s:%s", value, volumeID)
-	value = strings.ToLower(value)
-	value = strings.ReplaceAll(value, "_", "-")
-	return IQN(value)
 }
 
 // ISCSI provides an interface for interacting with iSCSI.
@@ -133,9 +83,9 @@ func (i ISCSI) PublishVolume(ctx context.Context, args PublishVolumeArguments) e
 
 type AuthorizeArguments struct {
 	TargetIQN         IQN
-	TargetPassword    string
 	InitiatorIQN      IQN
 	InitiatorPassword string
+	TargetPassword    string
 }
 
 var authorizeTmpl = genericutil.Must(
@@ -146,10 +96,14 @@ var authorizeTmpl = genericutil.Must(
 			create {{.InitiatorIQN}}
 			# Setup ACL authentication.
 			cd /iscsi/{{.TargetIQN}}/tpg1/acls/{{.InitiatorIQN}}
+			{{- if .InitiatorPassword }}
 			set auth userid={{.InitiatorIQN}}
 			set auth password={{.InitiatorPassword}}
+			{{- end }}
+			{{- if .TargetPassword }}
 			set auth mutual_userid={{.TargetIQN}}
 			set auth mutual_password={{.TargetPassword}}
+			{{- end }}
 			# Navigate back to root.
 			cd /
 		`),
@@ -264,13 +218,19 @@ type ConnectTargetArguments struct {
 var connectTargetTmpl = genericutil.Must(
 	template.New("connect_target").Parse(
 		stringutil.Multiline(`
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op new ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.authmethod --value CHAP ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.username --value '{{.InitiatorIQN}}' ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.password --value '{{.InitiatorPassword}}' ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.username_in --value '{{.TargetIQN}}' ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.password_in --value '{{.TargetPassword}}' ) &&
-			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --login )
+			( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op new )
+			{{- if or .InitiatorPassword .TargetPassword }}
+			&& ( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.authmethod --value CHAP )
+			{{- end }}
+			{{- if .InitiatorPassword }}
+			&& ( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.username --value '{{.InitiatorIQN}}' )
+			&& ( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.password --value '{{.InitiatorPassword}}' )
+			{{- end }}
+			{{- if .TargetPassword }}
+			&& ( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.username_in --value '{{.TargetIQN}}' )
+			&& ( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --op update --name node.session.auth.password_in --value '{{.TargetPassword}}' )
+			{{- end }}
+			&& ( iscsiadm --mode node --targetname '{{.TargetIQN}}' --portal "{{.TargetAddress}}" --login )
 		`),
 	),
 )

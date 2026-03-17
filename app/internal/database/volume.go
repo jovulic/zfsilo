@@ -55,6 +55,15 @@ const (
 	VolumeStatusMOUNTED                         // MOUNTED
 )
 
+//go:generate stringer -type=VolumeTransport -linecomment volume.go
+type VolumeTransport int
+
+const (
+	VolumeTransportUNSPECIFIED VolumeTransport = iota // UNSPECIFIED
+	VolumeTransportISCSI                              // ISCSI
+	VolumeTransportNVMEOF_TCP                         // NVMEOF_TCP
+)
+
 type Volume struct {
 	Struct        datatypes.JSON
 	CreateTime    time.Time `gorm:"autoCreateTime"`
@@ -66,9 +75,10 @@ type Volume struct {
 	Sparse        bool
 	Mode          VolumeMode
 	Status        VolumeStatus
+	Transport     VolumeTransport
 	CapacityBytes int64 `gorm:"check:capacity_bytes > 0"`
-	InitiatorIQN  string
-	TargetIQN     string
+	ClientID      string
+	TargetID      string
 	TargetAddress string
 	MountPath     string
 }
@@ -85,12 +95,30 @@ func (v *Volume) IsMounted() bool {
 	return v.Status >= VolumeStatusMOUNTED
 }
 
-func (v *Volume) DevicePathISCSIClient() string {
-	return BuildDevicePathISCSIClient(v.TargetAddress, v.TargetIQN)
+func (v *Volume) DevicePathClient() (string, error) {
+	switch v.Transport {
+	case VolumeTransportISCSI:
+		return BuildDevicePathISCSIClient(v.TargetAddress, v.TargetID), nil
+	case VolumeTransportNVMEOF_TCP:
+		return BuildDevicePathNVMeOFClient(v.TargetID), nil
+	case VolumeTransportUNSPECIFIED:
+		fallthrough
+	default:
+		return "", fmt.Errorf("unsupported transport: %s", v.Transport)
+	}
 }
 
-func (v *Volume) DevicePathISCSIServer() string {
-	return BuildDevicePathISCSIServer(v.TargetIQN)
+func (v *Volume) DevicePathServer() (string, error) {
+	switch v.Transport {
+	case VolumeTransportISCSI:
+		return BuildDevicePathISCSIServer(v.TargetID), nil
+	case VolumeTransportNVMEOF_TCP:
+		return BuildDevicePathNVMeOFServer(v.TargetID), nil
+	case VolumeTransportUNSPECIFIED:
+		fallthrough
+	default:
+		return "", fmt.Errorf("unsupported transport: %s", v.Transport)
+	}
 }
 
 func (v *Volume) DevicePathZFS() string {
@@ -103,6 +131,17 @@ func BuildDevicePathISCSIClient(address string, iqn string) string {
 
 func BuildDevicePathISCSIServer(iqn string) string {
 	return fmt.Sprintf("/sys/kernel/config/target/iscsi/%s", iqn)
+}
+
+func BuildDevicePathNVMeOFClient(nqn string) string {
+	// NVMe-oF devices often appear in /dev/disk/by-id/nvme-<NQN>
+	// Note: Depending on the system, it might need to be sanitized or prefixed.
+	// For now, using a common pattern.
+	return fmt.Sprintf("/dev/disk/by-id/nvme-%s", nqn)
+}
+
+func BuildDevicePathNVMeOFServer(nqn string) string {
+	return fmt.Sprintf("/sys/kernel/config/nvmet/subsystems/%s", nqn)
 }
 
 func BuildDevicePathZFS(datasetID string) string {
