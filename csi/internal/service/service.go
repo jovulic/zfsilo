@@ -685,20 +685,12 @@ func (s *CSIService) ControllerModifyVolume(ctx context.Context, req *csi.Contro
 }
 
 func (s *CSIService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-	return nil, status.Errorf(codes.InvalidArgument, "method NodeStageVolume not supported")
-}
-
-func (s *CSIService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
-	return nil, status.Errorf(codes.InvalidArgument, "method NodeUnstageVolume not supported")
-}
-
-func (s *CSIService) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	if err := validateNodePublishVolumeRequest(req); err != nil {
+	if err := validateNodeStageVolumeRequest(req); err != nil {
 		return nil, err
 	}
 
 	id := req.GetVolumeId()
-	targetPath := req.GetTargetPath()
+	stagingTargetPath := req.GetStagingTargetPath()
 
 	// Get volume.
 	getResp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
@@ -707,12 +699,12 @@ func (s *CSIService) NodePublishVolume(ctx context.Context, req *csi.NodePublish
 	}
 	vol := getResp.Msg.Volume
 
-	// If already mounted, check if path matches.
-	if vol.Status >= zfsilov1.Volume_STATUS_MOUNTED {
-		if vol.MountPath != nil && *vol.MountPath == targetPath {
-			return &csi.NodePublishVolumeResponse{}, nil
+	// If already staged, check if path matches.
+	if vol.Status >= zfsilov1.Volume_STATUS_STAGED {
+		if vol.StagingPath != nil && *vol.StagingPath == stagingTargetPath {
+			return &csi.NodeStageVolumeResponse{}, nil
 		}
-		return nil, status.Errorf(codes.FailedPrecondition, "volume %s is already mounted at %s", id, *vol.MountPath)
+		return nil, status.Errorf(codes.FailedPrecondition, "volume %s is already staged at %s", id, *vol.StagingPath)
 	}
 
 	transport := zfsilov1.Volume_TRANSPORT_ISCSI
@@ -750,20 +742,20 @@ func (s *CSIService) NodePublishVolume(ctx context.Context, req *csi.NodePublish
 		}
 	}
 
-	// Mount volume.
-	_, err = s.volumeClient.MountVolume(ctx, connect.NewRequest(&zfsilov1.MountVolumeRequest{
-		Id:        id,
-		MountPath: targetPath,
+	// Stage volume.
+	_, err = s.volumeClient.StageVolume(ctx, connect.NewRequest(&zfsilov1.StageVolumeRequest{
+		Id:          id,
+		StagingPath: stagingTargetPath,
 	}))
 	if err != nil {
 		return nil, mapError(err)
 	}
 
-	return &csi.NodePublishVolumeResponse{}, nil
+	return &csi.NodeStageVolumeResponse{}, nil
 }
 
-func (s *CSIService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-	if err := validateNodeUnpublishVolumeRequest(req); err != nil {
+func (s *CSIService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
+	if err := validateNodeUnstageVolumeRequest(req); err != nil {
 		return nil, err
 	}
 
@@ -773,16 +765,16 @@ func (s *CSIService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpub
 	getResp, err := s.volumeClient.GetVolume(ctx, connect.NewRequest(&zfsilov1.GetVolumeRequest{Id: id}))
 	if err != nil {
 		if connect.CodeOf(err) == connect.CodeNotFound || isErrorID(err) {
-			return &csi.NodeUnpublishVolumeResponse{}, nil
+			return &csi.NodeUnstageVolumeResponse{}, nil
 		}
 		return nil, mapError(err)
 	}
 
 	vol := getResp.Msg.Volume
 
-	// Unmount if mounted.
-	if vol.Status >= zfsilov1.Volume_STATUS_MOUNTED {
-		_, err := s.volumeClient.UnmountVolume(ctx, connect.NewRequest(&zfsilov1.UnmountVolumeRequest{Id: id}))
+	// Unstage if staged.
+	if vol.Status >= zfsilov1.Volume_STATUS_STAGED {
+		_, err := s.volumeClient.UnstageVolume(ctx, connect.NewRequest(&zfsilov1.UnstageVolumeRequest{Id: id}))
 		if err != nil {
 			return nil, mapError(err)
 		}
@@ -806,6 +798,49 @@ func (s *CSIService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpub
 		}
 	}
 
+	return &csi.NodeUnstageVolumeResponse{}, nil
+}
+
+func (s *CSIService) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
+	if err := validateNodePublishVolumeRequest(req); err != nil {
+		return nil, err
+	}
+
+	id := req.GetVolumeId()
+	targetPath := req.GetTargetPath()
+
+	// Mount volume.
+	_, err := s.volumeClient.MountVolume(ctx, connect.NewRequest(&zfsilov1.MountVolumeRequest{
+		Id:        id,
+		MountPath: targetPath,
+	}))
+	if err != nil {
+		return nil, mapError(err)
+	}
+
+	return &csi.NodePublishVolumeResponse{}, nil
+}
+
+func (s *CSIService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
+	if err := validateNodeUnpublishVolumeRequest(req); err != nil {
+		return nil, err
+	}
+
+	id := req.GetVolumeId()
+	targetPath := req.GetTargetPath()
+
+	// Unmount volume.
+	_, err := s.volumeClient.UnmountVolume(ctx, connect.NewRequest(&zfsilov1.UnmountVolumeRequest{
+		Id:         id,
+		MountPath: targetPath,
+	}))
+	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound || isErrorID(err) {
+			return &csi.NodeUnpublishVolumeResponse{}, nil
+		}
+		return nil, mapError(err)
+	}
+
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
@@ -824,7 +859,15 @@ func (s *CSIService) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVol
 	}
 
 	vol := getResp.Msg.Volume
-	if vol.MountPath == nil || *vol.MountPath != volumePath {
+	found := false
+	for _, p := range vol.TargetPaths {
+		if p == volumePath {
+			found = true
+			break
+		}
+	}
+
+	if !found {
 		return nil, status.Errorf(codes.NotFound, "volume %s is not mounted at %s", id, volumePath)
 	}
 
@@ -873,6 +916,13 @@ func (s *CSIService) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVo
 func (s *CSIService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
 	return &csi.NodeGetCapabilitiesResponse{
 		Capabilities: []*csi.NodeServiceCapability{
+			{
+				Type: &csi.NodeServiceCapability_Rpc{
+					Rpc: &csi.NodeServiceCapability_RPC{
+						Type: csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
+					},
+				},
+			},
 			{
 				Type: &csi.NodeServiceCapability_Rpc{
 					Rpc: &csi.NodeServiceCapability_RPC{
