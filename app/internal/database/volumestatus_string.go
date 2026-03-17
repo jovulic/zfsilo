@@ -12,12 +12,13 @@ func _() {
 	_ = x[VolumeStatusINITIAL-1]
 	_ = x[VolumeStatusPUBLISHED-2]
 	_ = x[VolumeStatusCONNECTED-3]
-	_ = x[VolumeStatusMOUNTED-4]
+	_ = x[VolumeStatusSTAGED-4]
+	_ = x[VolumeStatusMOUNTED-5]
 }
 
-const _VolumeStatus_name = "UNSPECIFIEDINITIALPUBLISHEDCONNECTEDMOUNTED"
+const _VolumeStatus_name = "UNSPECIFIEDINITIALPUBLISHEDCONNECTEDSTAGEDMOUNTED"
 
-var _VolumeStatus_index = [...]uint8{0, 11, 18, 27, 36, 43}
+var _VolumeStatus_index = [...]uint8{0, 11, 18, 27, 36, 42, 49}
 
 func (i VolumeStatus) String() string {
 	if i < 0 || i >= VolumeStatus(len(_VolumeStatus_index)-1) {

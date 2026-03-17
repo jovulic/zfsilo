@@ -52,6 +52,7 @@ const (
 	VolumeStatusINITIAL                         // INITIAL
 	VolumeStatusPUBLISHED                       // PUBLISHED
 	VolumeStatusCONNECTED                       // CONNECTED
+	VolumeStatusSTAGED                          // STAGED
 	VolumeStatusMOUNTED                         // MOUNTED
 )
 
@@ -80,7 +81,8 @@ type Volume struct {
 	ClientID      string
 	TargetID      string
 	TargetAddress string
-	MountPath     string
+	StagingPath   string
+	TargetPaths   datatypes.JSONSlice[string]
 }
 
 func (v *Volume) IsPublished() bool {
@@ -89,6 +91,10 @@ func (v *Volume) IsPublished() bool {
 
 func (v *Volume) IsConnected() bool {
 	return v.Status >= VolumeStatusCONNECTED
+}
+
+func (v *Volume) IsStaged() bool {
+	return v.Status >= VolumeStatusSTAGED
 }
 
 func (v *Volume) IsMounted() bool {

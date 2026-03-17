@@ -25,6 +25,8 @@ type VolumeConverter interface {
 	//goverter:map Mode | ConvertVolumeModeFromDBToAPI
 	//goverter:map Status | ConvertVolumeStatusFromDBToAPI
 	//goverter:map Transport | ConvertVolumeTransportFromDBToAPI
+	//goverter:map StagingPath StagingPath
+	//goverter:map TargetPaths TargetPaths
 	FromDBToAPI(source *database.Volume) (*zfsilov1.Volume, error)
 	FromDBToAPIList(source []*database.Volume) ([]*zfsilov1.Volume, error)
 
@@ -37,6 +39,8 @@ type VolumeConverter interface {
 	//goverter:map Mode | ConvertVolumeModeFromAPIToDB
 	//goverter:map Status | ConvertVolumeStatusFromAPIToDB
 	//goverter:map Transport | ConvertVolumeTransportFromAPIToDB
+	//goverter:map StagingPath StagingPath
+	//goverter:map TargetPaths TargetPaths
 	FromAPIToDB(source *zfsilov1.Volume) (*database.Volume, error)
 	FromAPIToDBList(source []*zfsilov1.Volume) ([]*database.Volume, error)
 }

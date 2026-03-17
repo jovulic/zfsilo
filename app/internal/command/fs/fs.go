@@ -92,6 +92,25 @@ func (m FS) Format(ctx context.Context, args FormatArguments) error {
 	return nil
 }
 
+// GetFSType returns the filesystem type of a device.
+// It uses `blkid -o value -s TYPE`.
+func (m FS) GetFSType(ctx context.Context, device string) (string, error) {
+	cmd := fmt.Sprintf("blkid -o value -s TYPE '%s'", device)
+	result, err := m.executor.Exec(ctx, cmd)
+	if err != nil {
+		// blkid returns 2 if no filesystem is found.
+		if result != nil && result.ExitCode == 2 {
+			return "", nil
+		}
+		stderr := ""
+		if result != nil {
+			stderr = result.Stderr
+		}
+		return "", fmt.Errorf("failed to get filesystem type for device '%s': %w, stderr: %s", device, err, stderr)
+	}
+	return result.Stdout, nil
+}
+
 // ClearArguments represents the arguments for clearing filesystem signatures from a device.
 type ClearArguments struct {
 	Device string

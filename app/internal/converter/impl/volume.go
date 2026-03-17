@@ -7,6 +7,7 @@ import (
 	v1 "github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1"
 	iface "github.com/jovulic/zfsilo/app/internal/converter/iface"
 	database "github.com/jovulic/zfsilo/app/internal/database"
+	datatypes "gorm.io/datatypes"
 )
 
 type VolumeConverterImpl struct{}
@@ -50,9 +51,10 @@ func (c *VolumeConverterImpl) FromAPIToDB(source *v1.Volume) (*database.Volume, 
 		if (*source).TargetAddress != nil {
 			databaseVolume.TargetAddress = *(*source).TargetAddress
 		}
-		if (*source).MountPath != nil {
-			databaseVolume.MountPath = *(*source).MountPath
+		if (*source).StagingPath != nil {
+			databaseVolume.StagingPath = *(*source).StagingPath
 		}
+		databaseVolume.TargetPaths = c.stringListToDatatypesJSONSlice((*source).TargetPaths)
 		pDatabaseVolume = &databaseVolume
 	}
 	return pDatabaseVolume, nil
@@ -106,8 +108,9 @@ func (c *VolumeConverterImpl) FromDBToAPI(source *database.Volume) (*v1.Volume, 
 		zfsilov1Volume.TargetId = &pString2
 		pString3 := (*source).TargetAddress
 		zfsilov1Volume.TargetAddress = &pString3
-		pString4 := (*source).MountPath
-		zfsilov1Volume.MountPath = &pString4
+		pString4 := (*source).StagingPath
+		zfsilov1Volume.StagingPath = &pString4
+		zfsilov1Volume.TargetPaths = c.datatypesJSONSliceToStringList((*source).TargetPaths)
 		pZfsilov1Volume = &zfsilov1Volume
 	}
 	return pZfsilov1Volume, nil
@@ -125,4 +128,24 @@ func (c *VolumeConverterImpl) FromDBToAPIList(source []*database.Volume) ([]*v1.
 		}
 	}
 	return pZfsilov1VolumeList, nil
+}
+func (c *VolumeConverterImpl) datatypesJSONSliceToStringList(source datatypes.JSONSlice[string]) []string {
+	var stringList []string
+	if source != nil {
+		stringList = make([]string, len(source))
+		for i := 0; i < len(source); i++ {
+			stringList[i] = source[i]
+		}
+	}
+	return stringList
+}
+func (c *VolumeConverterImpl) stringListToDatatypesJSONSlice(source []string) datatypes.JSONSlice[string] {
+	var datatypesJSONSlice datatypes.JSONSlice[string]
+	if source != nil {
+		datatypesJSONSlice = make(datatypes.JSONSlice[string], len(source))
+		for i := 0; i < len(source); i++ {
+			datatypesJSONSlice[i] = source[i]
+		}
+	}
+	return datatypesJSONSlice
 }

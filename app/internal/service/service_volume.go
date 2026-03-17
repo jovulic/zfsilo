@@ -253,16 +253,6 @@ func (s *VolumeService) CreateVolume(ctx context.Context, req *connect.Request[z
 				return nil
 			})
 
-			if volumedb.Mode == database.VolumeModeFILESYSTEM {
-				err = fs.With(s.produceTarget.Executor).Format(ctx, fs.FormatArguments{
-					Device:        volumedb.DevicePathZFS(),
-					WaitForDevice: true,
-				})
-				if err != nil {
-					return fmt.Errorf("failed to format zfs volume: %w", err)
-				}
-			}
-
 			return nil
 		})
 		if err != nil {
@@ -804,7 +794,7 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 	return connect.NewResponse(&zfsilov1.DisconnectVolumeResponse{Volume: volumeapi}), nil
 }
 
-func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zfsilov1.MountVolumeRequest]) (*connect.Response[zfsilov1.MountVolumeResponse], error) {
+func (s *VolumeService) StageVolume(ctx context.Context, req *connect.Request[zfsilov1.StageVolumeRequest]) (*connect.Response[zfsilov1.StageVolumeResponse], error) {
 	volumedb, err := gorm.G[*database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
 	switch {
 	case err == nil:
@@ -820,16 +810,19 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not published"))
 	case !volumedb.IsConnected():
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not connected"))
-	case volumedb.IsMounted():
-		volumeapi, err := s.converter.FromDBToAPI(volumedb)
-		if err != nil {
-			return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
+	case volumedb.IsStaged():
+		if volumedb.StagingPath == req.Msg.StagingPath {
+			volumeapi, err := s.converter.FromDBToAPI(volumedb)
+			if err != nil {
+				return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
+			}
+			return connect.NewResponse(&zfsilov1.StageVolumeResponse{Volume: volumeapi}), nil
 		}
-		return connect.NewResponse(&zfsilov1.MountVolumeResponse{Volume: volumeapi}), nil
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("volume is already staged at %s", volumedb.StagingPath))
 	}
 
-	volumedb.MountPath = req.Msg.MountPath
-	volumedb.Status = database.VolumeStatusMOUNTED
+	volumedb.StagingPath = req.Msg.StagingPath
+	volumedb.Status = database.VolumeStatusSTAGED
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
 		_, err = gorm.G[*database.Volume](tx).Updates(ctx, volumedb)
@@ -857,45 +850,189 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 			return fmt.Errorf("block device %s not found on client", devicePath)
 		}
 
-		switch volumedb.Mode {
-		case database.VolumeModeBLOCK:
-			_, err := literal.With(consumeTarget.Executor).Run(ctx, fmt.Sprintf("install -m 0644 /dev/null %s", volumedb.MountPath))
+		if volumedb.Mode == database.VolumeModeFILESYSTEM {
+			// Check if filesystem exists.
+			fsType, err := fs.With(consumeTarget.Executor).GetFSType(ctx, devicePath)
+			if err != nil {
+				return fmt.Errorf("failed to get filesystem type: %w", err)
+			}
+
+			if fsType == "" {
+				// Format the device.
+				err = fs.With(consumeTarget.Executor).Format(ctx, fs.FormatArguments{
+					Device:        devicePath,
+					WaitForDevice: false,
+				})
+				if err != nil {
+					return fmt.Errorf("failed to format device: %w", err)
+				}
+			}
+		}
+
+		// Create staging path.
+		_, err = literal.With(consumeTarget.Executor).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", volumedb.StagingPath))
+		if err != nil {
+			return fmt.Errorf("failed to create staging path: %w", err)
+		}
+
+		// Mount volume to staging path.
+		mountArgs := mount.MountArguments{
+			SourcePath: devicePath,
+			TargetPath: volumedb.StagingPath,
+		}
+		if volumedb.Mode == database.VolumeModeFILESYSTEM {
+			mountArgs.FSType = "ext4"
+			mountArgs.Options = []string{"defaults"}
+		} else {
+			mountArgs.Options = []string{"bind"}
+		}
+
+		err = mount.With(consumeTarget.Executor).Mount(ctx, mountArgs)
+		if err != nil {
+			return fmt.Errorf("failed to mount volume to staging path: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to stage volume: %w", err))
+	}
+
+	volumeapi, err := s.converter.FromDBToAPI(volumedb)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
+	}
+	return connect.NewResponse(&zfsilov1.StageVolumeResponse{Volume: volumeapi}), nil
+}
+
+func (s *VolumeService) UnstageVolume(ctx context.Context, req *connect.Request[zfsilov1.UnstageVolumeRequest]) (*connect.Response[zfsilov1.UnstageVolumeResponse], error) {
+	volumedb, err := gorm.G[*database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	switch {
+	case err == nil:
+		// okay
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
+	default:
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to get volume: %w", err))
+	}
+
+	switch {
+	case !volumedb.IsStaged():
+		volumeapi, err := s.converter.FromDBToAPI(volumedb)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
+		}
+		return connect.NewResponse(&zfsilov1.UnstageVolumeResponse{Volume: volumeapi}), nil
+	case volumedb.IsMounted():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is still mounted to one or more target paths"))
+	}
+
+	err = s.database.Transaction(func(tx *gorm.DB) error {
+		previousStagingPath := volumedb.StagingPath
+		volumedb.StagingPath = ""
+		volumedb.Status = database.VolumeStatusCONNECTED
+
+		_, err = gorm.G[*database.Volume](tx).Updates(ctx, volumedb)
+		if err != nil {
+			return fmt.Errorf("failed to update volume in database: %w", err)
+		}
+
+		consumeTarget, ok := s.consumeTargets[volumedb.ClientID]
+		if !ok {
+			return fmt.Errorf("unable to lookup consume target %s", volumedb.ClientID)
+		}
+
+		err = mount.With(consumeTarget.Executor).Umount(ctx, mount.UmountArguments{
+			Path: previousStagingPath,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to umount volume from staging path: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to unstage volume: %w", err))
+	}
+
+	volumeapi, err := s.converter.FromDBToAPI(volumedb)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
+	}
+	return connect.NewResponse(&zfsilov1.UnstageVolumeResponse{Volume: volumeapi}), nil
+}
+
+func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zfsilov1.MountVolumeRequest]) (*connect.Response[zfsilov1.MountVolumeResponse], error) {
+	volumedb, err := gorm.G[*database.Volume](s.database).Where("id = ?", req.Msg.Id).First(ctx)
+	switch {
+	case err == nil:
+		// okay
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("volume does not exist"))
+	default:
+		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to get volume: %w", err))
+	}
+
+	switch {
+	case !volumedb.IsPublished():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not published"))
+	case !volumedb.IsConnected():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not connected"))
+	case !volumedb.IsStaged():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not staged"))
+	}
+
+	// Check if already mounted to this path.
+	if indexOf(volumedb.TargetPaths, req.Msg.MountPath) != -1 {
+		volumeapi, err := s.converter.FromDBToAPI(volumedb)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
+		}
+		return connect.NewResponse(&zfsilov1.MountVolumeResponse{Volume: volumeapi}), nil
+	}
+
+	volumedb.TargetPaths = append(volumedb.TargetPaths, req.Msg.MountPath)
+	volumedb.Status = database.VolumeStatusMOUNTED
+
+	err = s.database.Transaction(func(tx *gorm.DB) error {
+		_, err = gorm.G[*database.Volume](tx).Updates(ctx, volumedb)
+		if err != nil {
+			return fmt.Errorf("failed to update volume in database: %w", err)
+		}
+
+		consumeTarget, ok := s.consumeTargets[volumedb.ClientID]
+		if !ok {
+			return fmt.Errorf("unable to lookup consume target %s", volumedb.ClientID)
+		}
+
+		// Create mount path.
+		if volumedb.Mode == database.VolumeModeBLOCK {
+			_, err := literal.With(consumeTarget.Executor).Run(ctx, fmt.Sprintf("install -m 0644 /dev/null %s", req.Msg.MountPath))
 			if err != nil {
 				return fmt.Errorf("failed to touch mount path: %w", err)
 			}
-
-			err = mount.With(consumeTarget.Executor).Mount(ctx, mount.MountArguments{
-				SourcePath: devicePath,
-				TargetPath: volumedb.MountPath,
-				Options:    []string{"bind"},
-			})
-			if err != nil {
-				return fmt.Errorf("failed to mount volume: %w", err)
-			}
-		case database.VolumeModeFILESYSTEM:
-			_, err := literal.With(consumeTarget.Executor).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", volumedb.MountPath))
+		} else {
+			_, err := literal.With(consumeTarget.Executor).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", req.Msg.MountPath))
 			if err != nil {
 				return fmt.Errorf("failed to touch mount path: %w", err)
 			}
-			err = mount.With(consumeTarget.Executor).Mount(ctx, mount.MountArguments{
-				SourcePath: devicePath,
-				TargetPath: volumedb.MountPath,
-				FSType:     "ext4",
-				Options:    []string{"defaults"},
-			})
-			if err != nil {
-				return fmt.Errorf("failed to mount volume: %w", err)
-			}
+		}
 
+		// Perform bind mount from staging path to mount path.
+		err = mount.With(consumeTarget.Executor).Mount(ctx, mount.MountArguments{
+			SourcePath: volumedb.StagingPath,
+			TargetPath: req.Msg.MountPath,
+			Options:    []string{"bind"},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to bind mount volume: %w", err)
+		}
+
+		if volumedb.Mode == database.VolumeModeFILESYSTEM {
 			// TODO: I should properly expose the volume to non-root users.
-			_, err = literal.With(consumeTarget.Executor).Run(ctx, fmt.Sprintf("chmod 0777 %s", volumedb.MountPath))
+			_, err = literal.With(consumeTarget.Executor).Run(ctx, fmt.Sprintf("chmod 0777 %s", req.Msg.MountPath))
 			if err != nil {
 				return fmt.Errorf("failed to chmod mount path: %w", err)
 			}
-		case database.VolumeModeUNSPECIFIED:
-			fallthrough
-		default:
-			return fmt.Errorf("unsupported volume mode %s", volumedb.Mode)
 		}
 
 		return nil
@@ -922,12 +1059,9 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to get volume: %w", err))
 	}
 
-	switch {
-	case !volumedb.IsPublished():
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not published"))
-	case !volumedb.IsConnected():
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not connected"))
-	case !volumedb.IsMounted():
+	index := indexOf(volumedb.TargetPaths, req.Msg.MountPath)
+	if index == -1 {
+		// Already unmounted from this path or never mounted.
 		volumeapi, err := s.converter.FromDBToAPI(volumedb)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
@@ -935,11 +1069,13 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 		return connect.NewResponse(&zfsilov1.UnmountVolumeResponse{Volume: volumeapi}), nil
 	}
 
-	err = s.database.Transaction(func(tx *gorm.DB) error {
-		previousMountPath := volumedb.MountPath
-		volumedb.MountPath = ""
-		volumedb.Status = database.VolumeStatusCONNECTED
+	// Remove from list.
+	volumedb.TargetPaths = append(volumedb.TargetPaths[:index], volumedb.TargetPaths[index+1:]...)
+	if len(volumedb.TargetPaths) == 0 {
+		volumedb.Status = database.VolumeStatusSTAGED
+	}
 
+	err = s.database.Transaction(func(tx *gorm.DB) error {
 		_, err = gorm.G[*database.Volume](tx).Updates(ctx, volumedb)
 		if err != nil {
 			return fmt.Errorf("failed to update volume in database: %w", err)
@@ -949,8 +1085,9 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 		if !ok {
 			return fmt.Errorf("unable to lookup consume target %s", volumedb.ClientID)
 		}
+
 		err = mount.With(consumeTarget.Executor).Umount(ctx, mount.UmountArguments{
-			Path: previousMountPath,
+			Path: req.Msg.MountPath,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to umount volume: %w", err)
@@ -966,6 +1103,15 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 	}
 	return connect.NewResponse(&zfsilov1.UnmountVolumeResponse{Volume: volumeapi}), nil
+}
+
+func indexOf(slice []string, val string) int {
+	for i, item := range slice {
+		if item == val {
+			return i
+		}
+	}
+	return -1
 }
 
 func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zfsilov1.StatsVolumeRequest]) (*connect.Response[zfsilov1.StatsVolumeResponse], error) {
@@ -984,8 +1130,8 @@ func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zf
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not published"))
 	case !volumedb.IsConnected():
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not connected"))
-	case !volumedb.IsMounted():
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not mounted"))
+	case !volumedb.IsStaged():
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not staged"))
 	}
 
 	var usage []*zfsilov1.StatsVolumeResponse_Stats_Usage
@@ -1019,9 +1165,12 @@ func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zf
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to lookup consume target: %s", volumedb.ClientID))
 		}
 
+		// Use staging path for stats.
+		statsPath := volumedb.StagingPath
+
 		valueString, err := literal.With(consumeTarget.Executor).Run(ctx, fmt.Sprintf(
 			"df '%s' --output=size,used,avail,itotal,iused,iavail | sed 1d",
-			volumedb.MountPath,
+			statsPath,
 		))
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get stats: %w", err))

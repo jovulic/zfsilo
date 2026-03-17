@@ -48,6 +48,10 @@ func (s *VolumeSyncer) Sync(ctx context.Context, volumedb *database.Volume) erro
 		return fmt.Errorf("failed to sync connect: %w", err)
 	}
 
+	if err := s.syncStage(ctx, volumedb); err != nil {
+		return fmt.Errorf("failed to sync stage: %w", err)
+	}
+
 	if err := s.syncMount(ctx, volumedb); err != nil {
 		return fmt.Errorf("failed to sync mount: %w", err)
 	}
@@ -82,17 +86,6 @@ func (s *VolumeSyncer) syncZFS(ctx context.Context, volumedb *database.Volume) e
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create zfs volume: %w", err)
-	}
-
-	// Format if filesystem.
-	if volumedb.Mode == database.VolumeModeFILESYSTEM {
-		err := fs.With(s.produceTarget.Executor).Format(ctx, fs.FormatArguments{
-			Device:        volumedb.DevicePathZFS(),
-			WaitForDevice: true,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to format zfs volume: %w", err)
-		}
 	}
 
 	return nil
@@ -392,88 +385,156 @@ func (s *VolumeSyncer) syncConnect(ctx context.Context, volumedb *database.Volum
 	return nil
 }
 
-func (s *VolumeSyncer) syncMount(ctx context.Context, volumedb *database.Volume) error {
-	// NOTE: We likely should check if the mount check failed for other reasons,
-	// but this syncs it up with the other check commands in semantics.
+func (s *VolumeSyncer) syncStage(ctx context.Context, volumedb *database.Volume) error {
 	checkMounted := func(consumer libcommand.Executor, mountPath string) bool {
 		isMounted, _ := mount.With(consumer).IsMounted(ctx, mountPath)
 		return isMounted
 	}
 
-	// If no client we can't connect. If no mount path we can't check.
-	if volumedb.ClientID == "" || volumedb.MountPath == "" {
+	if volumedb.ClientID == "" || volumedb.StagingPath == "" {
 		return nil
 	}
 
-	if volumedb.IsMounted() {
-		consumer, ok := s.consumeTargets[volumedb.ClientID]
-		if !ok {
-			return fmt.Errorf("unknown consumer: %s", volumedb.ClientID)
-		}
+	consumer, ok := s.consumeTargets[volumedb.ClientID]
+	if !ok {
+		return fmt.Errorf("unknown consumer: %s", volumedb.ClientID)
+	}
 
-		isMounted := checkMounted(consumer.Executor, volumedb.MountPath)
+	if volumedb.IsStaged() {
+		isMounted := checkMounted(consumer.Executor, volumedb.StagingPath)
 		if !isMounted {
-			slogctx.Info(ctx, "mounting volume during sync", "volumeId", volumedb.ID)
+			slogctx.Info(ctx, "staging volume during sync", "volumeId", volumedb.ID, "stagingPath", volumedb.StagingPath)
 
 			devicePath, err := volumedb.DevicePathClient()
 			if err != nil {
 				return fmt.Errorf("failed to get device path: %w", err)
 			}
 
-			// Prepare mount path.
-			switch volumedb.Mode {
-			case database.VolumeModeBLOCK:
-				_, err := literal.With(consumer.Executor).Run(ctx, fmt.Sprintf("install -m 0644 /dev/null %s", volumedb.MountPath))
+			if volumedb.Mode == database.VolumeModeFILESYSTEM {
+				fsType, err := fs.With(consumer.Executor).GetFSType(ctx, devicePath)
 				if err != nil {
-					return fmt.Errorf("failed to touch mount path: %w", err)
+					return fmt.Errorf("failed to get filesystem type: %w", err)
 				}
-				err = mount.With(consumer.Executor).Mount(ctx, mount.MountArguments{
-					SourcePath: devicePath,
-					TargetPath: volumedb.MountPath,
-					Options:    []string{"bind"},
-				})
-				if err != nil {
-					return fmt.Errorf("failed to mount volume: %w", err)
+				if fsType == "" {
+					err = fs.With(consumer.Executor).Format(ctx, fs.FormatArguments{
+						Device:        devicePath,
+						WaitForDevice: true,
+					})
+					if err != nil {
+						return fmt.Errorf("failed to format device: %w", err)
+					}
 				}
-			case database.VolumeModeFILESYSTEM:
-				_, err := literal.With(consumer.Executor).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", volumedb.MountPath))
-				if err != nil {
-					return fmt.Errorf("failed to touch mount path: %w", err)
-				}
-				err = mount.With(consumer.Executor).Mount(ctx, mount.MountArguments{
-					SourcePath: devicePath,
-					TargetPath: volumedb.MountPath,
-					FSType:     "ext4",
-					Options:    []string{"defaults"},
-				})
-				if err != nil {
-					return fmt.Errorf("failed to mount volume: %w", err)
-				}
+			}
 
-				_, err = literal.With(consumer.Executor).Run(ctx, fmt.Sprintf("chmod 0777 %s", volumedb.MountPath))
-				if err != nil {
-					return fmt.Errorf("failed to chmod mount path: %w", err)
-				}
-			case database.VolumeModeUNSPECIFIED:
-				fallthrough
-			default:
-				return fmt.Errorf("unsupported volume mode: %s", volumedb.Mode)
+			_, err = literal.With(consumer.Executor).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", volumedb.StagingPath))
+			if err != nil {
+				return fmt.Errorf("failed to create staging path: %w", err)
+			}
+
+			mountArgs := mount.MountArguments{
+				SourcePath: devicePath,
+				TargetPath: volumedb.StagingPath,
+			}
+			if volumedb.Mode == database.VolumeModeFILESYSTEM {
+				mountArgs.FSType = "ext4"
+				mountArgs.Options = []string{"defaults"}
+			} else {
+				mountArgs.Options = []string{"bind"}
+			}
+
+			err = mount.With(consumer.Executor).Mount(ctx, mountArgs)
+			if err != nil {
+				return fmt.Errorf("failed to stage volume: %w", err)
 			}
 		}
 	} else {
-		consumer, ok := s.consumeTargets[volumedb.ClientID]
-		if !ok {
-			return fmt.Errorf("unknown consumer: %s", volumedb.ClientID)
-		}
-
-		isMounted := checkMounted(consumer.Executor, volumedb.MountPath)
+		isMounted := checkMounted(consumer.Executor, volumedb.StagingPath)
 		if isMounted {
-			slogctx.Info(ctx, "unmounting volume during sync", "volumeId", volumedb.ID)
+			slogctx.Info(ctx, "unstaging volume during sync", "volumeId", volumedb.ID)
 			err := mount.With(consumer.Executor).Umount(ctx, mount.UmountArguments{
-				Path: volumedb.MountPath,
+				Path: volumedb.StagingPath,
 			})
 			if err != nil {
-				return fmt.Errorf("failed to unmount volume: %w", err)
+				return fmt.Errorf("failed to unstage volume: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (s *VolumeSyncer) syncMount(ctx context.Context, volumedb *database.Volume) error {
+	checkMounted := func(consumer libcommand.Executor, mountPath string) bool {
+		isMounted, _ := mount.With(consumer).IsMounted(ctx, mountPath)
+		return isMounted
+	}
+
+	if volumedb.ClientID == "" || volumedb.StagingPath == "" {
+		return nil
+	}
+
+	consumer, ok := s.consumeTargets[volumedb.ClientID]
+	if !ok {
+		return fmt.Errorf("unknown consumer: %s", volumedb.ClientID)
+	}
+
+	// Reconcile TargetPaths.
+	for _, targetPath := range volumedb.TargetPaths {
+		isMounted := checkMounted(consumer.Executor, targetPath)
+		if !isMounted {
+			slogctx.Info(ctx, "mounting volume during sync", "volumeId", volumedb.ID, "targetPath", targetPath)
+
+			if volumedb.Mode == database.VolumeModeBLOCK {
+				_, err := literal.With(consumer.Executor).Run(ctx, fmt.Sprintf("install -m 0644 /dev/null %s", targetPath))
+				if err != nil {
+					return fmt.Errorf("failed to touch mount path: %w", err)
+				}
+			} else {
+				_, err := literal.With(consumer.Executor).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", targetPath))
+				if err != nil {
+					return fmt.Errorf("failed to touch mount path: %w", err)
+				}
+			}
+
+			err := mount.With(consumer.Executor).Mount(ctx, mount.MountArguments{
+				SourcePath: volumedb.StagingPath,
+				TargetPath: targetPath,
+				Options:    []string{"bind"},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to bind mount volume: %w", err)
+			}
+
+			if volumedb.Mode == database.VolumeModeFILESYSTEM {
+				_, err = literal.With(consumer.Executor).Run(ctx, fmt.Sprintf("chmod 0777 %s", targetPath))
+				if err != nil {
+					return fmt.Errorf("failed to chmod mount path: %w", err)
+				}
+			}
+		}
+	}
+
+	// NOTE: We don't easily know all possible paths that COULD be mounted.
+	// But we can check if the volume status is not mounted and we have paths,
+	// or if we have paths in the DB that we want to ensure are NOT mounted if
+	// the volume status is below mounted.
+	// However, usually we'd want to unmount paths that are NOT in TargetPaths.
+	// That's harder without listing all mounts.
+	// For now, let's just handle the case where the volume is not intended to be mounted.
+	if !volumedb.IsMounted() {
+		// This is a bit weak because TargetPaths might still have entries.
+		// If status is not MOUNTED, we should ideally ensure NONE of the
+		// TargetPaths are mounted.
+		for _, targetPath := range volumedb.TargetPaths {
+			isMounted := checkMounted(consumer.Executor, targetPath)
+			if isMounted {
+				slogctx.Info(ctx, "unmounting volume during sync", "volumeId", volumedb.ID, "targetPath", targetPath)
+				err := mount.With(consumer.Executor).Umount(ctx, mount.UmountArguments{
+					Path: targetPath,
+				})
+				if err != nil {
+					return fmt.Errorf("failed to unmount volume: %w", err)
+				}
 			}
 		}
 	}
