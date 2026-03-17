@@ -143,17 +143,22 @@ func (n NVMeOF) Authorize(ctx context.Context, args AuthorizeArguments) error {
 		stringutil.Multiline(`
 			mkdir -p /sys/kernel/config/nvmet/hosts/%[1]s &&
 			ln -sf /sys/kernel/config/nvmet/hosts/%[1]s /sys/kernel/config/nvmet/subsystems/%[2]s/allowed_hosts/%[1]s &&
-			echo \"%[3]s\" > /sys/kernel/config/nvmet/hosts/%[1]s/dhchap_key
+			echo '%[3]s' > /sys/kernel/config/nvmet/hosts/%[1]s/dhchap_key
 		`),
 		args.InitiatorNQN, args.TargetNQN, args.InitiatorPassword,
 	)
 
 	if args.TargetPassword != "" {
-		cmd += fmt.Sprintf(" && echo \"%s\" > /sys/kernel/config/nvmet/hosts/%s/dhchap_ctrl_key", args.TargetPassword, args.InitiatorNQN)
+		cmd += fmt.Sprintf(" && echo '%s' > /sys/kernel/config/nvmet/hosts/%s/dhchap_ctrl_key", args.TargetPassword, args.InitiatorNQN)
 	}
 
-	if _, err := n.executor.Exec(ctx, cmd); err != nil {
-		return fmt.Errorf("failed to authorize initiator '%s' for target '%s' via sysfs: %w", args.InitiatorNQN, args.TargetNQN, err)
+	result, err := n.executor.Exec(ctx, cmd)
+	if err != nil {
+		stderr := ""
+		if result != nil {
+			stderr = result.Stderr
+		}
+		return fmt.Errorf("failed to authorize initiator '%s' for target '%s' via sysfs: %w, stderr: %s", args.InitiatorNQN, args.TargetNQN, err, stderr)
 	}
 
 	return nil
@@ -174,8 +179,13 @@ func (n NVMeOF) Unauthorize(ctx context.Context, args UnauthorizeArguments) erro
 		args.TargetNQN, args.InitiatorNQN, args.InitiatorNQN,
 	)
 
-	if _, err := n.executor.Exec(ctx, cmd); err != nil {
-		return fmt.Errorf("failed to unauthorize initiator '%s' for target '%s' via sysfs: %w", args.InitiatorNQN, args.TargetNQN, err)
+	result, err := n.executor.Exec(ctx, cmd)
+	if err != nil {
+		stderr := ""
+		if result != nil {
+			stderr = result.Stderr
+		}
+		return fmt.Errorf("failed to unauthorize initiator '%s' for target '%s' via sysfs: %w, stderr: %s", args.InitiatorNQN, args.TargetNQN, err, stderr)
 	}
 
 	return nil
