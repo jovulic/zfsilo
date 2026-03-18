@@ -1179,7 +1179,7 @@ func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zf
 		statsPath := volumedb.StagingPath
 
 		valueString, err := literal.With(consumeTarget.Executor).Run(ctx, fmt.Sprintf(
-			"df '%s' --output=size,used,avail,itotal,iused,iavail | sed 1d",
+			"df -BK '%s' --output=size,used,avail,itotal,iused,iavail | sed 1d",
 			statsPath,
 		))
 		if err != nil {
@@ -1188,21 +1188,21 @@ func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zf
 
 		valueParts := strings.Fields(valueString)
 
-		totalBytes, err := strconv.ParseInt(valueParts[0], 10, 64)
+		totalBytes, err := strconv.ParseInt(strings.TrimSuffix(valueParts[0], "K"), 10, 64)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse part[0]=%s: %w", valueParts[0], err))
 		}
-		totalBytes *= 1000
-		usedBytes, err := strconv.ParseInt(valueParts[1], 10, 64)
+		totalBytes *= 1024
+		usedBytes, err := strconv.ParseInt(strings.TrimSuffix(valueParts[1], "K"), 10, 64)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse part[1]=%s: %w", valueParts[1], err))
 		}
-		usedBytes *= 1000
-		availableBytes, err := strconv.ParseInt(valueParts[2], 10, 64)
+		usedBytes *= 1024
+		availableBytes, err := strconv.ParseInt(strings.TrimSuffix(valueParts[2], "K"), 10, 64)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse part[2]=%s: %w", valueParts[2], err))
 		}
-		availableBytes *= 1000
+		availableBytes *= 1024
 		totalInodes, err := strconv.ParseInt(valueParts[3], 10, 64)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse part[3]=%s: %w", valueParts[3], err))
