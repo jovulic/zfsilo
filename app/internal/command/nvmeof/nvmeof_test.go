@@ -192,8 +192,8 @@ func TestConnectAndDisconnectTarget(t *testing.T) {
 	devPath := fmt.Sprintf("/dev/zvol/%s", volName)
 	targetNQN := nvmeof.NQN(fmt.Sprintf("nqn.2014-08.org.nvmexpress:give:%s", volIdentifier))
 	initiatorNQN := nvmeof.NQN("nqn.2014-08.org.nvmexpress:take")
-	initiatorPassword := "DHHC-1:00:aGVsbG93b3JsZGhlbGxvd29ybGRoZWxsb3dvcmxkMTLKDm0S:"
-	targetPassword := "DHHC-1:00:5u0Yw3VEsqN6WnSWOPkOJNsvyvyyoMk9Qe1d7nj5TR6U8bbA:"
+	initiatorPassword := "initiator-secret-pass"
+	targetPassword := "target-mutual-pass"
 	targetEndpoint := "$(dig +short give)"
 
 	// Create ZFS volume.
@@ -255,4 +255,29 @@ func TestConnectAndDisconnectTarget(t *testing.T) {
 		TargetNQN: targetNQN,
 	})
 	require.NoError(t, err)
+}
+
+func TestGenerateDHCHAPKey(t *testing.T) {
+	tests := []struct {
+		name     string
+		password string
+		want     string
+	}{
+		{
+			name:     "empty password",
+			password: "",
+			want:     "",
+		},
+		{
+			name:     "traditional password",
+			password: "password123",
+			want:     "DHHC-1:00:75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U+rMwWD:",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := nvmeof.GenerateDHCHAPKey(tt.password)
+			require.Equal(t, tt.want, got)
+		})
+	}
 }

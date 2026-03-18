@@ -4,7 +4,11 @@ package nvmeof
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/binary"
 	"fmt"
+	"hash/crc32"
 	"strings"
 	"text/template"
 
@@ -12,6 +16,28 @@ import (
 	"github.com/jovulic/zfsilo/lib/genericutil"
 	"github.com/jovulic/zfsilo/lib/stringutil"
 )
+
+// GenerateDHCHAPKey generates a DH-HMAC-CHAP NVMe-oF password from a
+// traditional password. It uses SHA-256 to ensure the secret is exactly 32
+// bytes as required by NVMe, and appends a CRC32 checksum as specified in the
+// NVMe-oF standard.
+func GenerateDHCHAPKey(password string) string {
+	if password == "" {
+		return ""
+	}
+	hash := sha256.Sum256([]byte(password))
+
+	// The DHHC-1 format requires a 4-byte CRC32 (IEEE) appended to the key. The
+	// CRC is calculated over the key bytes and stored in little-endian.
+	crc := crc32.ChecksumIEEE(hash[:])
+
+	data := make([]byte, 36)
+	copy(data, hash[:])
+	binary.LittleEndian.PutUint32(data[32:], crc)
+
+	b64 := base64.StdEncoding.EncodeToString(data)
+	return fmt.Sprintf("DHHC-1:00:%s:", b64)
+}
 
 type NQN string
 
@@ -139,17 +165,21 @@ type AuthorizeArguments struct {
 func (n NVMeOF) Authorize(ctx context.Context, args AuthorizeArguments) error {
 	// Setup NVMe-oF authentication and ACLs using direct configfs (sysfs) commands.
 	// nvmetcli is avoided here due to version compatibility issues with DH-HMAC-CHAP.
+
+	initiatorPass := GenerateDHCHAPKey(args.InitiatorPassword)
+	targetPass := GenerateDHCHAPKey(args.TargetPassword)
+
 	cmd := fmt.Sprintf(
 		stringutil.Multiline(`
 			mkdir -p /sys/kernel/config/nvmet/hosts/%[1]s &&
 			ln -sf /sys/kernel/config/nvmet/hosts/%[1]s /sys/kernel/config/nvmet/subsystems/%[2]s/allowed_hosts/%[1]s &&
 			echo '%[3]s' > /sys/kernel/config/nvmet/hosts/%[1]s/dhchap_key
 		`),
-		args.InitiatorNQN, args.TargetNQN, args.InitiatorPassword,
+		args.InitiatorNQN, args.TargetNQN, initiatorPass,
 	)
 
-	if args.TargetPassword != "" {
-		cmd += fmt.Sprintf(" && echo '%s' > /sys/kernel/config/nvmet/hosts/%s/dhchap_ctrl_key", args.TargetPassword, args.InitiatorNQN)
+	if targetPass != "" {
+		cmd += fmt.Sprintf(" && echo '%s' > /sys/kernel/config/nvmet/hosts/%s/dhchap_ctrl_key", targetPass, args.InitiatorNQN)
 	}
 
 	result, err := n.executor.Exec(ctx, cmd)
@@ -195,8 +225,8 @@ type ConnectTargetArguments struct {
 	TargetNQN         NQN
 	TargetAddress     string
 	InitiatorNQN      NQN
-	InitiatorPassword string // DH-HMAC-CHAP key
-	TargetPassword    string // Optional mutual auth DH-HMAC-CHAP key
+	InitiatorPassword string // optional
+	TargetPassword    string // optional
 }
 
 var connectTargetTmpl = genericutil.Must(
@@ -208,8 +238,16 @@ var connectTargetTmpl = genericutil.Must(
 )
 
 func (n NVMeOF) ConnectTarget(ctx context.Context, args ConnectTargetArguments) error {
+	argsTmpl := ConnectTargetArguments{
+		TargetNQN:         args.TargetNQN,
+		TargetAddress:     args.TargetAddress,
+		InitiatorNQN:      args.InitiatorNQN,
+		InitiatorPassword: GenerateDHCHAPKey(args.InitiatorPassword),
+		TargetPassword:    GenerateDHCHAPKey(args.TargetPassword),
+	}
+
 	var buf bytes.Buffer
-	if err := connectTargetTmpl.Execute(&buf, args); err != nil {
+	if err := connectTargetTmpl.Execute(&buf, argsTmpl); err != nil {
 		return fmt.Errorf("failed to render connect target template: %w", err)
 	}
 
