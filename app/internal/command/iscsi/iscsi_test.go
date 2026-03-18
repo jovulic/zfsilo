@@ -92,8 +92,12 @@ func TestHost_IQN(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := host.New(tt.fields.domain, tt.fields.ownerTime, tt.fields.hostname)
-			if got := h.IQN(); got != tt.want {
+			h := host.New([]string{tt.want})
+			got, err := h.IQN()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
 				t.Errorf("Host.IQN() = %v, want %v", got, tt.want)
 			}
 		})
@@ -102,9 +106,7 @@ func TestHost_IQN(t *testing.T) {
 
 func TestHost_VolumeIQN(t *testing.T) {
 	type fields struct {
-		domain    string
-		ownerTime time.Time
-		hostname  string
+		id string
 	}
 	type args struct {
 		volumeName string
@@ -118,9 +120,7 @@ func TestHost_VolumeIQN(t *testing.T) {
 		{
 			name: "nominal",
 			fields: fields{
-				domain:    "linux-iscsi.org",
-				ownerTime: time.Date(2003, 1, 1, 0, 0, 0, 0, time.UTC),
-				hostname:  "give",
+				id: "iqn.2003-01.org.linux-iscsi.give",
 			},
 			args: args{
 				volumeName: "tank-ivol",
@@ -130,8 +130,12 @@ func TestHost_VolumeIQN(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tr := host.New(tt.fields.domain, tt.fields.ownerTime, tt.fields.hostname)
-			if got := tr.VolumeIQN(tt.args.volumeName); got != tt.want {
+			tr := host.New([]string{tt.fields.id})
+			got, err := tr.VolumeIQN(tt.args.volumeName)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
 				t.Errorf("Target.NewIQN() = %v, want %v", got, tt.want)
 			}
 		})

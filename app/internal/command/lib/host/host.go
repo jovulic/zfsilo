@@ -3,64 +3,55 @@
 package host
 
 import (
+	"errors"
 	"fmt"
 	"strings"
-	"time"
 )
 
 type Host struct {
-	domain    string
-	ownerTime time.Time
-	hostname  string
+	ids []string
 }
 
-func New(domain string, ownerTime time.Time, hostname string) *Host {
+func New(ids []string) *Host {
 	return &Host{
-		domain:    domain,
-		ownerTime: ownerTime,
-		hostname:  hostname,
+		ids: ids,
 	}
 }
 
-func (h *Host) IQN() string {
-	value := fmt.Sprintf(
-		"iqn.%s.%s.%s",
-		h.ownerTime.Format("2006-01"),
-		h.reverseDomain(),
-		h.hostname,
-	)
-	return h.sanitize(value)
-}
-
-func (h *Host) VolumeIQN(volumeID string) string {
-	value := fmt.Sprintf("%s:%s", h.IQN(), volumeID)
-	return h.sanitize(value)
-}
-
-func (h *Host) NQN() string {
-	value := fmt.Sprintf(
-		"nqn.%s.%s:%s",
-		h.ownerTime.Format("2006-01"),
-		h.reverseDomain(),
-		h.hostname,
-	)
-	return h.sanitize(value)
-}
-
-func (h *Host) VolumeNQN(volumeID string) string {
-	value := fmt.Sprintf("%s:%s", h.NQN(), volumeID)
-	return h.sanitize(value)
-}
-
-func (h *Host) reverseDomain() string {
-	parts := strings.Split(h.domain, ".")
-	if len(parts) == 1 {
-		parts = append(parts, "local")
+func (h *Host) IQN() (string, error) {
+	for _, id := range h.ids {
+		if strings.HasPrefix(id, "iqn.") {
+			return id, nil
+		}
 	}
-	for left, right := 0, len(parts)-1; left < right; left, right = left+1, right-1 {
-		parts[left], parts[right] = parts[right], parts[left]
+	return "", errors.New("no iqn defined")
+}
+
+func (h *Host) NQN() (string, error) {
+	for _, id := range h.ids {
+		if strings.HasPrefix(id, "nqn.") {
+			return id, nil
+		}
 	}
-	return strings.Join(parts, ".")
+	return "", errors.New("no nqn defined")
+}
+
+func (h *Host) VolumeIQN(volumeID string) (string, error) {
+	iqn, err := h.IQN()
+	if err != nil {
+		return "", err
+	}
+	value := fmt.Sprintf("%s:%s", iqn, volumeID)
+	return h.sanitize(value), nil
+}
+
+func (h *Host) VolumeNQN(volumeID string) (string, error) {
+	nqn, err := h.NQN()
+	if err != nil {
+		return "", err
+	}
+	value := fmt.Sprintf("%s:%s", nqn, volumeID)
+	return h.sanitize(value), nil
 }
 
 func (h *Host) sanitize(val string) string {

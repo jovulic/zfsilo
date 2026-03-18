@@ -98,9 +98,11 @@ func (s *VolumeSyncer) syncPublish(ctx context.Context, volumedb *database.Volum
 		}
 		switch volumedb.Transport {
 		case database.VolumeTransportISCSI:
-			return string(s.produceTarget.Host.VolumeIQN(volumedb.ID))
+			id, _ := s.produceTarget.Host.VolumeIQN(volumedb.ID)
+			return id
 		case database.VolumeTransportNVMEOF_TCP:
-			return string(s.produceTarget.Host.VolumeNQN(volumedb.ID))
+			id, _ := s.produceTarget.Host.VolumeNQN(volumedb.ID)
+			return id
 		case database.VolumeTransportUNSPECIFIED:
 			fallthrough
 		default:
@@ -200,9 +202,11 @@ func (s *VolumeSyncer) syncConnect(ctx context.Context, volumedb *database.Volum
 		}
 		switch volumedb.Transport {
 		case database.VolumeTransportISCSI:
-			return string(s.produceTarget.Host.VolumeIQN(volumedb.ID))
+			id, _ := s.produceTarget.Host.VolumeIQN(volumedb.ID)
+			return id
 		case database.VolumeTransportNVMEOF_TCP:
-			return string(s.produceTarget.Host.VolumeNQN(volumedb.ID))
+			id, _ := s.produceTarget.Host.VolumeNQN(volumedb.ID)
+			return id
 		case database.VolumeTransportUNSPECIFIED:
 			fallthrough
 		default:
@@ -261,7 +265,7 @@ func (s *VolumeSyncer) syncConnect(ctx context.Context, volumedb *database.Volum
 			case database.VolumeTransportISCSI:
 				err := iscsi.With(s.produceTarget.Executor).Authorize(ctx, iscsi.AuthorizeArguments{
 					TargetIQN:         iscsi.IQN(targetID),
-					InitiatorIQN:      iscsi.IQN(consumeTarget.ID),
+					InitiatorIQN:      iscsi.IQN(volumedb.ClientID),
 					InitiatorPassword: consumeTarget.Password,
 					TargetPassword:    s.produceTarget.Password,
 				})
@@ -271,7 +275,7 @@ func (s *VolumeSyncer) syncConnect(ctx context.Context, volumedb *database.Volum
 			case database.VolumeTransportNVMEOF_TCP:
 				err := nvmeof.With(s.produceTarget.Executor).Authorize(ctx, nvmeof.AuthorizeArguments{
 					TargetNQN:         nvmeof.NQN(targetID),
-					InitiatorNQN:      nvmeof.NQN(consumeTarget.ID),
+					InitiatorNQN:      nvmeof.NQN(volumedb.ClientID),
 					InitiatorPassword: consumeTarget.Password,
 					TargetPassword:    s.produceTarget.Password,
 				})
@@ -294,7 +298,7 @@ func (s *VolumeSyncer) syncConnect(ctx context.Context, volumedb *database.Volum
 				err := iscsi.With(consumeTarget.Executor).ConnectTarget(ctx, iscsi.ConnectTargetArguments{
 					TargetIQN:         iscsi.IQN(targetID),
 					TargetAddress:     volumedb.TargetAddress,
-					InitiatorIQN:      iscsi.IQN(consumeTarget.ID),
+					InitiatorIQN:      iscsi.IQN(volumedb.ClientID),
 					InitiatorPassword: consumeTarget.Password,
 					TargetPassword:    s.produceTarget.Password,
 				})
@@ -305,7 +309,7 @@ func (s *VolumeSyncer) syncConnect(ctx context.Context, volumedb *database.Volum
 				err := nvmeof.With(consumeTarget.Executor).ConnectTarget(ctx, nvmeof.ConnectTargetArguments{
 					TargetNQN:         nvmeof.NQN(targetID),
 					TargetAddress:     volumedb.TargetAddress,
-					InitiatorNQN:      nvmeof.NQN(consumeTarget.ID),
+					InitiatorNQN:      nvmeof.NQN(volumedb.ClientID),
 					InitiatorPassword: consumeTarget.Password,
 					TargetPassword:    s.produceTarget.Password,
 				})

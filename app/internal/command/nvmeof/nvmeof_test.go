@@ -98,8 +98,12 @@ func TestHost_NQN(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := host.New(tt.fields.domain, tt.fields.ownerTime, tt.fields.hostname)
-			if got := h.NQN(); got != tt.want {
+			h := host.New([]string{tt.want})
+			got, err := h.NQN()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
 				t.Errorf("Host.NQN() = %v, want %v", got, tt.want)
 			}
 		})
@@ -108,9 +112,7 @@ func TestHost_NQN(t *testing.T) {
 
 func TestHost_VolumeNQN(t *testing.T) {
 	type fields struct {
-		domain    string
-		ownerTime time.Time
-		hostname  string
+		id string
 	}
 	type args struct {
 		volumeName string
@@ -124,9 +126,7 @@ func TestHost_VolumeNQN(t *testing.T) {
 		{
 			name: "nominal",
 			fields: fields{
-				domain:    "nvmexpress.org",
-				ownerTime: time.Date(2014, 8, 1, 0, 0, 0, 0, time.UTC),
-				hostname:  "give",
+				id: "nqn.2014-08.org.nvmexpress:give",
 			},
 			args: args{
 				volumeName: "tank-ivol",
@@ -136,8 +136,12 @@ func TestHost_VolumeNQN(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tr := host.New(tt.fields.domain, tt.fields.ownerTime, tt.fields.hostname)
-			if got := tr.VolumeNQN(tt.args.volumeName); got != tt.want {
+			tr := host.New([]string{tt.fields.id})
+			got, err := tr.VolumeNQN(tt.args.volumeName)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
 				t.Errorf("Target.VolumeNQN() = %v, want %v", got, tt.want)
 			}
 		})

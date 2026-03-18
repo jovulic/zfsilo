@@ -13,7 +13,6 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"time"
 
 	"github.com/go-playground/mold/v4/modifiers"
 	"github.com/go-playground/validator/v10"
@@ -76,22 +75,15 @@ type ConfigCommandTarget struct {
 type ConfigCommandTargetProduce struct {
 	ConfigCommandTarget
 
-	Host     ConfigCommandHost `json:"host"`
-	Password SecretValue       `json:"password"`
+	IDs      []string    `json:"ids"      validate:"min=1"`
+	Password SecretValue `json:"password"`
 }
 
 type ConfigCommandTargetConsume struct {
 	ConfigCommandTarget
 
-	ClientID string      `json:"clientId"`
+	IDs      []string    `json:"ids"      validate:"min=1"`
 	Password SecretValue `json:"password"`
-}
-
-type ConfigCommandHost struct {
-	// NOTE: The linux-iscsi.org domain establish time of 01 2006.
-	Domain    string    `json:"domain"    mod:"default=linux-iscsi.org"`
-	OwnerTime time.Time `json:"ownerTime" mod:"default=2006-01-01T00:00:00Z"`
-	Hostname  string    `json:"hostname"  validate:"required"`
 }
 
 type Config struct {

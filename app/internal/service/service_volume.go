@@ -486,9 +486,17 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 
 	switch volumedb.Transport {
 	case database.VolumeTransportISCSI:
-		volumedb.TargetID = s.produceTarget.Host.VolumeIQN(volumedb.ID)
+		targetID, err := s.produceTarget.Host.VolumeIQN(volumedb.ID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to generate target ID: %w", err))
+		}
+		volumedb.TargetID = targetID
 	case database.VolumeTransportNVMEOF_TCP:
-		volumedb.TargetID = s.produceTarget.Host.VolumeNQN(volumedb.ID)
+		targetID, err := s.produceTarget.Host.VolumeNQN(volumedb.ID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to generate target ID: %w", err))
+		}
+		volumedb.TargetID = targetID
 	case database.VolumeTransportUNSPECIFIED:
 		fallthrough
 	default:
@@ -649,7 +657,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 			err = iscsi.With(s.produceTarget.Executor).Authorize(ctx, iscsi.AuthorizeArguments{
 				TargetIQN:         iscsi.IQN(volumedb.TargetID),
 				TargetPassword:    s.produceTarget.Password,
-				InitiatorIQN:      iscsi.IQN(consumeTarget.ID),
+				InitiatorIQN:      iscsi.IQN(volumedb.ClientID),
 				InitiatorPassword: consumeTarget.Password,
 			})
 			if err != nil {
@@ -660,7 +668,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 				TargetAddress:     volumedb.TargetAddress,
 				TargetIQN:         iscsi.IQN(volumedb.TargetID),
 				TargetPassword:    s.produceTarget.Password,
-				InitiatorIQN:      iscsi.IQN(consumeTarget.ID),
+				InitiatorIQN:      iscsi.IQN(volumedb.ClientID),
 				InitiatorPassword: consumeTarget.Password,
 			})
 		case database.VolumeTransportNVMEOF_TCP:
@@ -668,7 +676,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 			err = nvmeof.With(s.produceTarget.Executor).Authorize(ctx, nvmeof.AuthorizeArguments{
 				TargetNQN:         nvmeof.NQN(volumedb.TargetID),
 				TargetPassword:    s.produceTarget.Password,
-				InitiatorNQN:      nvmeof.NQN(consumeTarget.ID),
+				InitiatorNQN:      nvmeof.NQN(volumedb.ClientID),
 				InitiatorPassword: consumeTarget.Password,
 			})
 			if err != nil {
@@ -679,7 +687,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 				TargetAddress:     volumedb.TargetAddress,
 				TargetNQN:         nvmeof.NQN(volumedb.TargetID),
 				TargetPassword:    s.produceTarget.Password,
-				InitiatorNQN:      nvmeof.NQN(consumeTarget.ID),
+				InitiatorNQN:      nvmeof.NQN(volumedb.ClientID),
 				InitiatorPassword: consumeTarget.Password,
 			})
 		case database.VolumeTransportUNSPECIFIED:
