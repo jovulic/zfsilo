@@ -2,13 +2,18 @@ package service_test
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
 
+	"connectrpc.com/connect"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	zfsilov1 "github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1"
+	"github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1/zfsilov1connect"
 	"github.com/jovulic/zfsilo/csi/internal/service"
 	"github.com/jovulic/zfsilo/lib/command"
 	"github.com/kubernetes-csi/csi-test/v5/pkg/sanity"
@@ -17,6 +22,70 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+func wipeBackend(ctx context.Context, address, secret string) {
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	authInterceptor := connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			if secret != "" {
+				req.Header().Set("Authorization", "Bearer "+secret)
+			}
+			return next(ctx, req)
+		}
+	})
+
+	client := zfsilov1connect.NewVolumeServiceClient(
+		httpClient,
+		address,
+		connect.WithInterceptors(authInterceptor),
+	)
+
+	// List all volumes and delete them.
+	resp, err := client.ListVolumes(ctx, connect.NewRequest(&zfsilov1.ListVolumesRequest{
+		PageSize: 100,
+	}))
+	if err != nil {
+		fmt.Printf("failed to list volumes for wipe: %v\n", err)
+		return
+	}
+
+	for _, vol := range resp.Msg.Volumes {
+		// Try to tear down if needed.
+		if vol.Status >= zfsilov1.Volume_STATUS_MOUNTED {
+			for _, path := range vol.TargetPaths {
+				_, _ = client.UnmountVolume(ctx, connect.NewRequest(&zfsilov1.UnmountVolumeRequest{
+					Id:        vol.Id,
+					MountPath: path,
+				}))
+			}
+		}
+		if vol.Status >= zfsilov1.Volume_STATUS_STAGED {
+			_, _ = client.UnstageVolume(ctx, connect.NewRequest(&zfsilov1.UnstageVolumeRequest{
+				Id: vol.Id,
+			}))
+		}
+		if vol.Status >= zfsilov1.Volume_STATUS_CONNECTED {
+			_, _ = client.DisconnectVolume(ctx, connect.NewRequest(&zfsilov1.DisconnectVolumeRequest{
+				Id: vol.Id,
+			}))
+		}
+		if vol.Status >= zfsilov1.Volume_STATUS_PUBLISHED {
+			_, _ = client.UnpublishVolume(ctx, connect.NewRequest(&zfsilov1.UnpublishVolumeRequest{
+				Id: vol.Id,
+			}))
+		}
+
+		_, err := client.DeleteVolume(ctx, connect.NewRequest(&zfsilov1.DeleteVolumeRequest{Id: vol.Id}))
+		if err != nil {
+			fmt.Printf("failed to delete volume %s during wipe: %v\n", vol.Id, err)
+		}
+	}
+}
 
 func TestCSISanity(t *testing.T) {
 	if testing.Short() {
@@ -27,42 +96,39 @@ func TestCSISanity(t *testing.T) {
 	RunSpecs(t, "CSI Sanity Suite")
 }
 
-type prefixIDGenerator struct {
-	sanity.DefaultIDGenerator
-
-	prefix string
-}
-
-func (g *prefixIDGenerator) GenerateUniqueValidVolumeID() string {
-	return g.prefix + g.DefaultIDGenerator.GenerateUniqueValidVolumeID()
-}
-
 var _ = Describe("CSIService Sanity", func() {
 	for _, transport := range []string{"iscsi", "nvmeof"} {
-		Context(fmt.Sprintf("with %s transport", transport), func() {
+		transport := transport // capture
+		Context(fmt.Sprintf("with %s transport", transport), Ordered, func() {
 			var (
-				srv        *service.CSIService
-				grpcServer *grpc.Server
-				endpoint   string
-				stopChan   chan struct{}
-				config     sanity.TestConfig
+				srv                 *service.CSIService
+				grpcServer          *grpc.Server
+				endpoint            string
+				stopChan            chan struct{}
+				config              sanity.TestConfig
+				zfsiloAddress       string
+				secret              string
+				targetPortalAddress string
+				nodeID              string
+				clientIDs           map[string]string
+				parentDatasetID     string
 			)
 
-			BeforeEach(func() {
+			BeforeAll(func() {
 				ctx := context.Background()
 
-				// Clean up any existing directories from previous failed runs.
-				_ = os.RemoveAll("/tmp/csi-mount")
-				_ = os.RemoveAll("/tmp/csi-staging")
-
-				// Use environment variables for configuration, with sensible defaults for
-				// dev environment.
-				zfsiloAddress := os.Getenv("ZFSILO_ADDRESS")
+				zfsiloAddress = os.Getenv("ZFSILO_ADDRESS")
 				if zfsiloAddress == "" {
 					zfsiloAddress = "https://127.0.0.1:8080"
 				}
+				secret = os.Getenv("ZFSILO_SECRET")
+				if secret == "" {
+					secret = "sk_token"
+				}
 
-				targetPortalAddress := os.Getenv("ZFSILO_TARGET_PORTAL_ADDRESS")
+				wipeBackend(ctx, zfsiloAddress, secret)
+
+				targetPortalAddress = os.Getenv("ZFSILO_TARGET_PORTAL_ADDRESS")
 				if targetPortalAddress == "" {
 					// Dynamically resolve 'give' address from 'take' host perspective.
 					takeExecutor := command.NewRemoteExecutor(command.RemoteExecutorConfig{
@@ -74,6 +140,22 @@ var _ = Describe("CSIService Sanity", func() {
 					err := takeExecutor.Startup(ctx)
 					Expect(err).NotTo(HaveOccurred(), "failed to startup take executor")
 					defer takeExecutor.Shutdown(ctx)
+
+					giveExecutor := command.NewRemoteExecutor(command.RemoteExecutorConfig{
+						Address:  "127.0.0.1",
+						Port:     9000,
+						Username: "root",
+						Password: "",
+					})
+					err = giveExecutor.Startup(ctx)
+					Expect(err).NotTo(HaveOccurred(), "failed to startup give executor")
+					defer giveExecutor.Shutdown(ctx)
+
+					_, err = giveExecutor.Exec(ctx, "modprobe nvmet nvmet-tcp")
+					Expect(err).NotTo(HaveOccurred(), "failed to load nvmet modules on give")
+
+					_, err = takeExecutor.Exec(ctx, "modprobe nvme-tcp nvme-fabrics")
+					Expect(err).NotTo(HaveOccurred(), "failed to load nvme modules on take")
 
 					result, err := takeExecutor.Exec(ctx, "dig +short give")
 					Expect(err).NotTo(HaveOccurred(), "failed to resolve give address")
@@ -92,23 +174,26 @@ var _ = Describe("CSIService Sanity", func() {
 					nvmeofID = "nqn.2014-08.org.nvmexpress:take"
 				}
 
-				clientIDs := map[string]string{
+				clientIDs = map[string]string{
 					"iscsi":  iscsiID,
 					"nvmeof": nvmeofID,
 				}
 
 				// Build composite NodeID.
-				nodeID := fmt.Sprintf("iscsi=%s;nvmeof=%s", iscsiID, nvmeofID)
+				nodeID = fmt.Sprintf("iscsi=%s;nvmeof=%s", iscsiID, nvmeofID)
 
-				secret := os.Getenv("ZFSILO_SECRET")
-				if secret == "" {
-					secret = "sk_token"
-				}
-
-				parentDatasetID := os.Getenv("ZFSILO_PARENT_DATASET_ID")
+				parentDatasetID = os.Getenv("ZFSILO_PARENT_DATASET_ID")
 				if parentDatasetID == "" {
 					parentDatasetID = "tank"
 				}
+			})
+
+			BeforeEach(func() {
+				ctx := context.Background()
+
+				// Clean up any existing directories from previous failed runs.
+				_ = os.RemoveAll("/tmp/csi-mount")
+				_ = os.RemoveAll("/tmp/csi-staging")
 
 				srv = service.NewCSIService(service.CSIServiceConfig{
 					Secret:              secret,
@@ -143,10 +228,6 @@ var _ = Describe("CSIService Sanity", func() {
 				// Initialize sanity config.
 				config = sanity.NewTestConfig()
 				config.Address = endpoint
-				config.IDGen = &prefixIDGenerator{
-					prefix:             transport + "-",
-					DefaultIDGenerator: sanity.DefaultIDGenerator{},
-				}
 				config.DialOptions = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 				config.ControllerAddress = endpoint
 				config.ControllerDialOptions = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
@@ -171,7 +252,7 @@ var _ = Describe("CSIService Sanity", func() {
 			AfterEach(func() {
 				ctx := context.Background()
 				if grpcServer != nil {
-					grpcServer.GracefulStop()
+					grpcServer.Stop()
 					<-stopChan
 				}
 				if srv != nil {

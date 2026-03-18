@@ -45,21 +45,15 @@ func WireProduceTarget(conf config.Config) (ProduceTarget, error) {
 		return ProduceTarget{}, fmt.Errorf("failed to build produce executor: %w", err)
 	}
 
-	h := conf.Command.ProduceTarget.Host
-	if h.Hostname == "" {
-		return ProduceTarget{}, fmt.Errorf("produce target hostname is not set")
-	}
-
 	return ProduceTarget{
 		Executor: executor,
-		Host:     host.New(h.Domain, h.OwnerTime, h.Hostname),
+		Host:     host.New(conf.Command.ProduceTarget.IDs),
 		Password: string(conf.Command.ProduceTarget.Password),
 	}, nil
 }
 
 type ConsumeTarget struct {
 	Executor command.Executor
-	ID       string // Generic ID (IQN or NQN)
 	Password string
 }
 
@@ -72,10 +66,14 @@ func WireConsumeTarget(conf config.Config) (ConsumeTargetMap, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to process consume target %d: %w", i, err)
 		}
-		rets[target.ClientID] = ConsumeTarget{
+		
+		consumeTarget := ConsumeTarget{
 			Executor: executor,
-			ID:       target.ClientID,
 			Password: string(target.Password),
+		}
+		
+		for _, id := range target.IDs {
+			rets[id] = consumeTarget
 		}
 	}
 	return rets, nil

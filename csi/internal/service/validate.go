@@ -283,6 +283,34 @@ func validateControllerModifyVolumeRequest(req *csi.ControllerModifyVolumeReques
 	return nil
 }
 
+func validateNodeStageVolumeRequest(req *csi.NodeStageVolumeRequest) error {
+	if err := validateVolumeID(req.GetVolumeId()); err != nil {
+		return err
+	}
+
+	if err := validateStagingTargetPath(req.GetStagingTargetPath()); err != nil {
+		return err
+	}
+
+	if err := validateVolumeCapability(req.GetVolumeCapability()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateNodeUnstageVolumeRequest(req *csi.NodeUnstageVolumeRequest) error {
+	if err := validateVolumeID(req.GetVolumeId()); err != nil {
+		return err
+	}
+
+	if err := validateStagingTargetPath(req.GetStagingTargetPath()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func validateNodePublishVolumeRequest(req *csi.NodePublishVolumeRequest) error {
 	if err := validateVolumeID(req.GetVolumeId()); err != nil {
 		return err

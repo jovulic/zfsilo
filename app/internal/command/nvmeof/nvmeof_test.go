@@ -98,8 +98,12 @@ func TestHost_NQN(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := host.New(tt.fields.domain, tt.fields.ownerTime, tt.fields.hostname)
-			if got := h.NQN(); got != tt.want {
+			h := host.New([]string{tt.want})
+			got, err := h.NQN()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
 				t.Errorf("Host.NQN() = %v, want %v", got, tt.want)
 			}
 		})
@@ -108,9 +112,7 @@ func TestHost_NQN(t *testing.T) {
 
 func TestHost_VolumeNQN(t *testing.T) {
 	type fields struct {
-		domain    string
-		ownerTime time.Time
-		hostname  string
+		id string
 	}
 	type args struct {
 		volumeName string
@@ -124,9 +126,7 @@ func TestHost_VolumeNQN(t *testing.T) {
 		{
 			name: "nominal",
 			fields: fields{
-				domain:    "nvmexpress.org",
-				ownerTime: time.Date(2014, 8, 1, 0, 0, 0, 0, time.UTC),
-				hostname:  "give",
+				id: "nqn.2014-08.org.nvmexpress:give",
 			},
 			args: args{
 				volumeName: "tank-ivol",
@@ -136,8 +136,12 @@ func TestHost_VolumeNQN(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tr := host.New(tt.fields.domain, tt.fields.ownerTime, tt.fields.hostname)
-			if got := tr.VolumeNQN(tt.args.volumeName); got != tt.want {
+			tr := host.New([]string{tt.fields.id})
+			got, err := tr.VolumeNQN(tt.args.volumeName)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
 				t.Errorf("Target.VolumeNQN() = %v, want %v", got, tt.want)
 			}
 		})
@@ -188,8 +192,8 @@ func TestConnectAndDisconnectTarget(t *testing.T) {
 	devPath := fmt.Sprintf("/dev/zvol/%s", volName)
 	targetNQN := nvmeof.NQN(fmt.Sprintf("nqn.2014-08.org.nvmexpress:give:%s", volIdentifier))
 	initiatorNQN := nvmeof.NQN("nqn.2014-08.org.nvmexpress:take")
-	initiatorPassword := "DHHC-1:00:aGVsbG93b3JsZGhlbGxvd29ybGRoZWxsb3dvcmxkMTLKDm0S:"
-	targetPassword := "DHHC-1:00:5u0Yw3VEsqN6WnSWOPkOJNsvyvyyoMk9Qe1d7nj5TR6U8bbA:"
+	initiatorPassword := "initiator-secret-pass"
+	targetPassword := "target-mutual-pass"
 	targetEndpoint := "$(dig +short give)"
 
 	// Create ZFS volume.
@@ -251,4 +255,29 @@ func TestConnectAndDisconnectTarget(t *testing.T) {
 		TargetNQN: targetNQN,
 	})
 	require.NoError(t, err)
+}
+
+func TestGenerateDHCHAPKey(t *testing.T) {
+	tests := []struct {
+		name     string
+		password string
+		want     string
+	}{
+		{
+			name:     "empty password",
+			password: "",
+			want:     "",
+		},
+		{
+			name:     "traditional password",
+			password: "password123",
+			want:     "DHHC-1:00:75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U+rMwWD:",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := nvmeof.GenerateDHCHAPKey(tt.password)
+			require.Equal(t, tt.want, got)
+		})
+	}
 }

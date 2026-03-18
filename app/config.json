@@ -25,9 +25,10 @@
         "username": "root",
         "password": ""
       },
-      "host": {
-        "hostname": "give"
-      },
+      "ids": [
+        "iqn.2006-01.org.linux-iscsi.give",
+        "nqn.2014-08.org.nvmexpress:give"
+      ],
       "password": "mutualpassword"
     },
     "consumeTargets": [
@@ -39,7 +40,10 @@
           "username": "root",
           "password": ""
         },
-        "clientId": "iqn.2006-01.org.linux-iscsi.take",
+        "ids": [
+          "iqn.2006-01.org.linux-iscsi.take",
+          "nqn.2014-08.org.nvmexpress:take"
+        ],
         "password": "password"
       }
     ]

@@ -2,6 +2,7 @@
 package database
 
 import (
+	"crypto/sha256"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
@@ -52,6 +53,7 @@ const (
 	VolumeStatusINITIAL                         // INITIAL
 	VolumeStatusPUBLISHED                       // PUBLISHED
 	VolumeStatusCONNECTED                       // CONNECTED
+	VolumeStatusSTAGED                          // STAGED
 	VolumeStatusMOUNTED                         // MOUNTED
 )
 
@@ -80,7 +82,8 @@ type Volume struct {
 	ClientID      string
 	TargetID      string
 	TargetAddress string
-	MountPath     string
+	StagingPath   string
+	TargetPaths   datatypes.JSONSlice[string]
 }
 
 func (v *Volume) IsPublished() bool {
@@ -89,6 +92,10 @@ func (v *Volume) IsPublished() bool {
 
 func (v *Volume) IsConnected() bool {
 	return v.Status >= VolumeStatusCONNECTED
+}
+
+func (v *Volume) IsStaged() bool {
+	return v.Status >= VolumeStatusSTAGED
 }
 
 func (v *Volume) IsMounted() bool {
@@ -100,7 +107,7 @@ func (v *Volume) DevicePathClient() (string, error) {
 	case VolumeTransportISCSI:
 		return BuildDevicePathISCSIClient(v.TargetAddress, v.TargetID), nil
 	case VolumeTransportNVMEOF_TCP:
-		return BuildDevicePathNVMeOFClient(v.TargetID), nil
+		return BuildDevicePathNVMeOFClient(v.ID), nil
 	case VolumeTransportUNSPECIFIED:
 		fallthrough
 	default:
@@ -133,11 +140,15 @@ func BuildDevicePathISCSIServer(iqn string) string {
 	return fmt.Sprintf("/sys/kernel/config/target/iscsi/%s", iqn)
 }
 
-func BuildDevicePathNVMeOFClient(nqn string) string {
-	// NVMe-oF devices often appear in /dev/disk/by-id/nvme-<NQN>
-	// Note: Depending on the system, it might need to be sanitized or prefixed.
-	// For now, using a common pattern.
-	return fmt.Sprintf("/dev/disk/by-id/nvme-%s", nqn)
+func BuildDevicePathNVMeOFClient(volumeID string) string {
+	// NVMe serial numbers are limited to 20 characters. We use a truncated
+	// SHA-256 hash of the VolumeID to stay within the limit, matching the logic
+	// in the nvmeof command package.
+	hash := sha256.Sum256([]byte(volumeID))
+	serial := fmt.Sprintf("%x", hash)[:20]
+
+	// NVMe-oF devices appear in /dev/disk/by-id/nvme-Linux_<serial>_1.
+	return fmt.Sprintf("/dev/disk/by-id/nvme-Linux_%s_1", serial)
 }
 
 func BuildDevicePathNVMeOFServer(nqn string) string {

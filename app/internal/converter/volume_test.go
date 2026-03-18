@@ -34,7 +34,8 @@ func TestVolumeConversion(t *testing.T) {
 		ClientID:      "iqn.client",
 		TargetID:      "iqn.target",
 		TargetAddress: "127.0.0.1:3260",
-		MountPath:     "/mnt/vol",
+		StagingPath:   "/mnt/vol",
+		TargetPaths:   datatypes.JSONSlice[string]{"/var/lib/kubelet/pods/pod1/volumes/vol1"},
 		Options: datatypes.NewJSONType(database.VolumeOptionList{
 			{Key: "snap", Value: "true"},
 			{Key: "atime", Value: "off"},
@@ -56,7 +57,8 @@ func TestVolumeConversion(t *testing.T) {
 		ClientId:      proto.String("iqn.client"),
 		TargetId:      proto.String("iqn.target"),
 		TargetAddress: proto.String("127.0.0.1:3260"),
-		MountPath:     proto.String("/mnt/vol"),
+		StagingPath:   proto.String("/mnt/vol"),
+		TargetPaths:   []string{"/var/lib/kubelet/pods/pod1/volumes/vol1"},
 		Options: []*zfsilov1.Volume_Option{
 			{Key: "snap", Value: "true"},
 			{Key: "atime", Value: "off"},
@@ -86,7 +88,8 @@ func TestVolumeConversion(t *testing.T) {
 		require.Equal(t, *expectedAPIVolume.ClientId, *actualAPIVolume.ClientId)
 		require.Equal(t, *expectedAPIVolume.TargetId, *actualAPIVolume.TargetId)
 		require.Equal(t, *expectedAPIVolume.TargetAddress, *actualAPIVolume.TargetAddress)
-		require.Equal(t, *expectedAPIVolume.MountPath, *actualAPIVolume.MountPath)
+		require.Equal(t, *expectedAPIVolume.StagingPath, *actualAPIVolume.StagingPath)
+		require.Equal(t, expectedAPIVolume.TargetPaths, actualAPIVolume.TargetPaths)
 		require.True(t, expectedAPIVolume.CreateTime.AsTime().Equal(actualAPIVolume.CreateTime.AsTime()))
 		require.True(t, expectedAPIVolume.UpdateTime.AsTime().Equal(actualAPIVolume.UpdateTime.AsTime()))
 		require.ElementsMatch(t, expectedAPIVolume.Options, actualAPIVolume.Options)
@@ -110,7 +113,8 @@ func TestVolumeConversion(t *testing.T) {
 		require.Equal(t, dbVolume.ClientID, actualDBVolume.ClientID)
 		require.Equal(t, dbVolume.TargetID, actualDBVolume.TargetID)
 		require.Equal(t, dbVolume.TargetAddress, actualDBVolume.TargetAddress)
-		require.Equal(t, dbVolume.MountPath, actualDBVolume.MountPath)
+		require.Equal(t, dbVolume.StagingPath, actualDBVolume.StagingPath)
+		require.Equal(t, dbVolume.TargetPaths, actualDBVolume.TargetPaths)
 
 		// Timestamps can have timezone differences, so comparing them with Equal
 		// is best.

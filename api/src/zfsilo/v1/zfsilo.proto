@@ -69,6 +69,8 @@ service VolumeService {
   rpc UnpublishVolume(UnpublishVolumeRequest) returns (UnpublishVolumeResponse) {}
   rpc ConnectVolume(ConnectVolumeRequest) returns (ConnectVolumeResponse) {}
   rpc DisconnectVolume(DisconnectVolumeRequest) returns (DisconnectVolumeResponse) {}
+  rpc StageVolume(StageVolumeRequest) returns (StageVolumeResponse) {}
+  rpc UnstageVolume(UnstageVolumeRequest) returns (UnstageVolumeResponse) {}
   rpc MountVolume(MountVolumeRequest) returns (MountVolumeResponse) {}
   rpc UnmountVolume(UnmountVolumeRequest) returns (UnmountVolumeResponse) {}
   rpc StatsVolume(StatsVolumeRequest) returns (StatsVolumeResponse) {}
@@ -102,7 +104,8 @@ message Volume {
     STATUS_INITIAL = 1;
     STATUS_PUBLISHED = 2;
     STATUS_CONNECTED = 3;
-    STATUS_MOUNTED = 4;
+    STATUS_STAGED = 4;
+    STATUS_MOUNTED = 5;
   }
 
   enum Transport {
@@ -174,12 +177,19 @@ message Volume {
     },
     (buf.validate.field).string = {host_and_port: true}
   ];
-  optional string mount_path = 16 [
+  optional string staging_path = 16 [
     (gnostic.openapi.v3.property) = {
-      description: "The mount path on the client."
+      description: "The staging path on the client."
       read_only: true
     },
     (buf.validate.field).string = {pattern: "^(/[^/ ]*)+/?$"}
+  ];
+  repeated string target_paths = 17 [
+    (gnostic.openapi.v3.property) = {
+      description: "The target paths on the client where the volume is mounted."
+      read_only: true
+    },
+    (buf.validate.field).repeated.items.string = {pattern: "^(/[^/ ]*)+/?$"}
   ];
 }
 
@@ -301,13 +311,36 @@ message DisconnectVolumeResponse {
   Volume volume = 1;
 }
 
-message MountVolumeRequest {
-  enum Mode {
-    MODE_UNSPECIFIED = 0;
-    MODE_BLOCK = 1;
-    MODE_FILESYSTEM = 2;
-  }
+message StageVolumeRequest {
+  string id = 1 [
+    (gnostic.openapi.v3.property) = {description: "The id of the volume to be staged."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
+  ];
+  string staging_path = 2 [
+    (gnostic.openapi.v3.property) = {description: "The staging path."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^(/[^/ ]*)+/?$"
+  ];
+}
 
+message StageVolumeResponse {
+  Volume volume = 1;
+}
+
+message UnstageVolumeRequest {
+  string id = 1 [
+    (gnostic.openapi.v3.property) = {description: "The id of the volume to be unstaged."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
+  ];
+}
+
+message UnstageVolumeResponse {
+  Volume volume = 1;
+}
+
+message MountVolumeRequest {
   string id = 1 [
     (gnostic.openapi.v3.property) = {description: "The id of the volume to be mounted."},
     (buf.validate.field).required = true,
@@ -329,6 +362,11 @@ message UnmountVolumeRequest {
     (gnostic.openapi.v3.property) = {description: "The id of the volume to be unmounted."},
     (buf.validate.field).required = true,
     (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
+  ];
+  string mount_path = 2 [
+    (gnostic.openapi.v3.property) = {description: "The mount path."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^(/[^/ ]*)+/?$"
   ];
 }
 

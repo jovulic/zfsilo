@@ -63,6 +63,12 @@ const (
 	// VolumeServiceDisconnectVolumeProcedure is the fully-qualified name of the VolumeService's
 	// DisconnectVolume RPC.
 	VolumeServiceDisconnectVolumeProcedure = "/zfsilo.v1.VolumeService/DisconnectVolume"
+	// VolumeServiceStageVolumeProcedure is the fully-qualified name of the VolumeService's StageVolume
+	// RPC.
+	VolumeServiceStageVolumeProcedure = "/zfsilo.v1.VolumeService/StageVolume"
+	// VolumeServiceUnstageVolumeProcedure is the fully-qualified name of the VolumeService's
+	// UnstageVolume RPC.
+	VolumeServiceUnstageVolumeProcedure = "/zfsilo.v1.VolumeService/UnstageVolume"
 	// VolumeServiceMountVolumeProcedure is the fully-qualified name of the VolumeService's MountVolume
 	// RPC.
 	VolumeServiceMountVolumeProcedure = "/zfsilo.v1.VolumeService/MountVolume"
@@ -161,6 +167,8 @@ type VolumeServiceClient interface {
 	UnpublishVolume(context.Context, *connect.Request[v1.UnpublishVolumeRequest]) (*connect.Response[v1.UnpublishVolumeResponse], error)
 	ConnectVolume(context.Context, *connect.Request[v1.ConnectVolumeRequest]) (*connect.Response[v1.ConnectVolumeResponse], error)
 	DisconnectVolume(context.Context, *connect.Request[v1.DisconnectVolumeRequest]) (*connect.Response[v1.DisconnectVolumeResponse], error)
+	StageVolume(context.Context, *connect.Request[v1.StageVolumeRequest]) (*connect.Response[v1.StageVolumeResponse], error)
+	UnstageVolume(context.Context, *connect.Request[v1.UnstageVolumeRequest]) (*connect.Response[v1.UnstageVolumeResponse], error)
 	MountVolume(context.Context, *connect.Request[v1.MountVolumeRequest]) (*connect.Response[v1.MountVolumeResponse], error)
 	UnmountVolume(context.Context, *connect.Request[v1.UnmountVolumeRequest]) (*connect.Response[v1.UnmountVolumeResponse], error)
 	StatsVolume(context.Context, *connect.Request[v1.StatsVolumeRequest]) (*connect.Response[v1.StatsVolumeResponse], error)
@@ -233,6 +241,18 @@ func NewVolumeServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(volumeServiceMethods.ByName("DisconnectVolume")),
 			connect.WithClientOptions(opts...),
 		),
+		stageVolume: connect.NewClient[v1.StageVolumeRequest, v1.StageVolumeResponse](
+			httpClient,
+			baseURL+VolumeServiceStageVolumeProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("StageVolume")),
+			connect.WithClientOptions(opts...),
+		),
+		unstageVolume: connect.NewClient[v1.UnstageVolumeRequest, v1.UnstageVolumeResponse](
+			httpClient,
+			baseURL+VolumeServiceUnstageVolumeProcedure,
+			connect.WithSchema(volumeServiceMethods.ByName("UnstageVolume")),
+			connect.WithClientOptions(opts...),
+		),
 		mountVolume: connect.NewClient[v1.MountVolumeRequest, v1.MountVolumeResponse](
 			httpClient,
 			baseURL+VolumeServiceMountVolumeProcedure,
@@ -277,6 +297,8 @@ type volumeServiceClient struct {
 	unpublishVolume  *connect.Client[v1.UnpublishVolumeRequest, v1.UnpublishVolumeResponse]
 	connectVolume    *connect.Client[v1.ConnectVolumeRequest, v1.ConnectVolumeResponse]
 	disconnectVolume *connect.Client[v1.DisconnectVolumeRequest, v1.DisconnectVolumeResponse]
+	stageVolume      *connect.Client[v1.StageVolumeRequest, v1.StageVolumeResponse]
+	unstageVolume    *connect.Client[v1.UnstageVolumeRequest, v1.UnstageVolumeResponse]
 	mountVolume      *connect.Client[v1.MountVolumeRequest, v1.MountVolumeResponse]
 	unmountVolume    *connect.Client[v1.UnmountVolumeRequest, v1.UnmountVolumeResponse]
 	statsVolume      *connect.Client[v1.StatsVolumeRequest, v1.StatsVolumeResponse]
@@ -329,6 +351,16 @@ func (c *volumeServiceClient) DisconnectVolume(ctx context.Context, req *connect
 	return c.disconnectVolume.CallUnary(ctx, req)
 }
 
+// StageVolume calls zfsilo.v1.VolumeService.StageVolume.
+func (c *volumeServiceClient) StageVolume(ctx context.Context, req *connect.Request[v1.StageVolumeRequest]) (*connect.Response[v1.StageVolumeResponse], error) {
+	return c.stageVolume.CallUnary(ctx, req)
+}
+
+// UnstageVolume calls zfsilo.v1.VolumeService.UnstageVolume.
+func (c *volumeServiceClient) UnstageVolume(ctx context.Context, req *connect.Request[v1.UnstageVolumeRequest]) (*connect.Response[v1.UnstageVolumeResponse], error) {
+	return c.unstageVolume.CallUnary(ctx, req)
+}
+
 // MountVolume calls zfsilo.v1.VolumeService.MountVolume.
 func (c *volumeServiceClient) MountVolume(ctx context.Context, req *connect.Request[v1.MountVolumeRequest]) (*connect.Response[v1.MountVolumeResponse], error) {
 	return c.mountVolume.CallUnary(ctx, req)
@@ -365,6 +397,8 @@ type VolumeServiceHandler interface {
 	UnpublishVolume(context.Context, *connect.Request[v1.UnpublishVolumeRequest]) (*connect.Response[v1.UnpublishVolumeResponse], error)
 	ConnectVolume(context.Context, *connect.Request[v1.ConnectVolumeRequest]) (*connect.Response[v1.ConnectVolumeResponse], error)
 	DisconnectVolume(context.Context, *connect.Request[v1.DisconnectVolumeRequest]) (*connect.Response[v1.DisconnectVolumeResponse], error)
+	StageVolume(context.Context, *connect.Request[v1.StageVolumeRequest]) (*connect.Response[v1.StageVolumeResponse], error)
+	UnstageVolume(context.Context, *connect.Request[v1.UnstageVolumeRequest]) (*connect.Response[v1.UnstageVolumeResponse], error)
 	MountVolume(context.Context, *connect.Request[v1.MountVolumeRequest]) (*connect.Response[v1.MountVolumeResponse], error)
 	UnmountVolume(context.Context, *connect.Request[v1.UnmountVolumeRequest]) (*connect.Response[v1.UnmountVolumeResponse], error)
 	StatsVolume(context.Context, *connect.Request[v1.StatsVolumeRequest]) (*connect.Response[v1.StatsVolumeResponse], error)
@@ -433,6 +467,18 @@ func NewVolumeServiceHandler(svc VolumeServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(volumeServiceMethods.ByName("DisconnectVolume")),
 		connect.WithHandlerOptions(opts...),
 	)
+	volumeServiceStageVolumeHandler := connect.NewUnaryHandler(
+		VolumeServiceStageVolumeProcedure,
+		svc.StageVolume,
+		connect.WithSchema(volumeServiceMethods.ByName("StageVolume")),
+		connect.WithHandlerOptions(opts...),
+	)
+	volumeServiceUnstageVolumeHandler := connect.NewUnaryHandler(
+		VolumeServiceUnstageVolumeProcedure,
+		svc.UnstageVolume,
+		connect.WithSchema(volumeServiceMethods.ByName("UnstageVolume")),
+		connect.WithHandlerOptions(opts...),
+	)
 	volumeServiceMountVolumeHandler := connect.NewUnaryHandler(
 		VolumeServiceMountVolumeProcedure,
 		svc.MountVolume,
@@ -483,6 +529,10 @@ func NewVolumeServiceHandler(svc VolumeServiceHandler, opts ...connect.HandlerOp
 			volumeServiceConnectVolumeHandler.ServeHTTP(w, r)
 		case VolumeServiceDisconnectVolumeProcedure:
 			volumeServiceDisconnectVolumeHandler.ServeHTTP(w, r)
+		case VolumeServiceStageVolumeProcedure:
+			volumeServiceStageVolumeHandler.ServeHTTP(w, r)
+		case VolumeServiceUnstageVolumeProcedure:
+			volumeServiceUnstageVolumeHandler.ServeHTTP(w, r)
 		case VolumeServiceMountVolumeProcedure:
 			volumeServiceMountVolumeHandler.ServeHTTP(w, r)
 		case VolumeServiceUnmountVolumeProcedure:
@@ -536,6 +586,14 @@ func (UnimplementedVolumeServiceHandler) ConnectVolume(context.Context, *connect
 
 func (UnimplementedVolumeServiceHandler) DisconnectVolume(context.Context, *connect.Request[v1.DisconnectVolumeRequest]) (*connect.Response[v1.DisconnectVolumeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.DisconnectVolume is not implemented"))
+}
+
+func (UnimplementedVolumeServiceHandler) StageVolume(context.Context, *connect.Request[v1.StageVolumeRequest]) (*connect.Response[v1.StageVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.StageVolume is not implemented"))
+}
+
+func (UnimplementedVolumeServiceHandler) UnstageVolume(context.Context, *connect.Request[v1.UnstageVolumeRequest]) (*connect.Response[v1.UnstageVolumeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.VolumeService.UnstageVolume is not implemented"))
 }
 
 func (UnimplementedVolumeServiceHandler) MountVolume(context.Context, *connect.Request[v1.MountVolumeRequest]) (*connect.Response[v1.MountVolumeResponse], error) {

@@ -4,7 +4,11 @@ package nvmeof
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/binary"
 	"fmt"
+	"hash/crc32"
 	"strings"
 	"text/template"
 
@@ -12,6 +16,28 @@ import (
 	"github.com/jovulic/zfsilo/lib/genericutil"
 	"github.com/jovulic/zfsilo/lib/stringutil"
 )
+
+// GenerateDHCHAPKey generates a DH-HMAC-CHAP NVMe-oF password from a
+// traditional password. It uses SHA-256 to ensure the secret is exactly 32
+// bytes as required by NVMe, and appends a CRC32 checksum as specified in the
+// NVMe-oF standard.
+func GenerateDHCHAPKey(password string) string {
+	if password == "" {
+		return ""
+	}
+	hash := sha256.Sum256([]byte(password))
+
+	// The DHHC-1 format requires a 4-byte CRC32 (IEEE) appended to the key. The
+	// CRC is calculated over the key bytes and stored in little-endian.
+	crc := crc32.ChecksumIEEE(hash[:])
+
+	data := make([]byte, 36)
+	copy(data, hash[:])
+	binary.LittleEndian.PutUint32(data[32:], crc)
+
+	b64 := base64.StdEncoding.EncodeToString(data)
+	return fmt.Sprintf("DHHC-1:00:%s:", b64)
+}
 
 type NQN string
 
@@ -46,6 +72,7 @@ var publishVolumeTmpl = genericutil.Must(
 			# Disallow any host to connect (enforce ACLs)
 			cd /subsystems/{{.TargetNQN}}
 			set attr allow_any_host=0
+			set attr serial={{.Serial}}
 			# Add a namespace (1) to the subsystem
 			cd namespaces
 			create 1
@@ -71,8 +98,22 @@ var publishVolumeTmpl = genericutil.Must(
 )
 
 func (n NVMeOF) PublishVolume(ctx context.Context, args PublishVolumeArguments) error {
+	// NVMe serial numbers are limited to 20 characters. We use a truncated
+	// SHA-256 hash of the VolumeID to ensure uniqueness and fit within the
+	// limit.
+	hash := sha256.Sum256([]byte(args.VolumeID))
+	serial := fmt.Sprintf("%x", hash)[:20]
+
+	argsTmpl := struct {
+		PublishVolumeArguments
+		Serial string
+	}{
+		PublishVolumeArguments: args,
+		Serial:                 serial,
+	}
+
 	var buf bytes.Buffer
-	if err := publishVolumeTmpl.Execute(&buf, args); err != nil {
+	if err := publishVolumeTmpl.Execute(&buf, argsTmpl); err != nil {
 		return fmt.Errorf("failed to render publish volume template: %w", err)
 	}
 
@@ -139,21 +180,30 @@ type AuthorizeArguments struct {
 func (n NVMeOF) Authorize(ctx context.Context, args AuthorizeArguments) error {
 	// Setup NVMe-oF authentication and ACLs using direct configfs (sysfs) commands.
 	// nvmetcli is avoided here due to version compatibility issues with DH-HMAC-CHAP.
+
+	initiatorPass := GenerateDHCHAPKey(args.InitiatorPassword)
+	targetPass := GenerateDHCHAPKey(args.TargetPassword)
+
 	cmd := fmt.Sprintf(
 		stringutil.Multiline(`
 			mkdir -p /sys/kernel/config/nvmet/hosts/%[1]s &&
 			ln -sf /sys/kernel/config/nvmet/hosts/%[1]s /sys/kernel/config/nvmet/subsystems/%[2]s/allowed_hosts/%[1]s &&
-			echo \"%[3]s\" > /sys/kernel/config/nvmet/hosts/%[1]s/dhchap_key
+			echo '%[3]s' > /sys/kernel/config/nvmet/hosts/%[1]s/dhchap_key
 		`),
-		args.InitiatorNQN, args.TargetNQN, args.InitiatorPassword,
+		args.InitiatorNQN, args.TargetNQN, initiatorPass,
 	)
 
-	if args.TargetPassword != "" {
-		cmd += fmt.Sprintf(" && echo \"%s\" > /sys/kernel/config/nvmet/hosts/%s/dhchap_ctrl_key", args.TargetPassword, args.InitiatorNQN)
+	if targetPass != "" {
+		cmd += fmt.Sprintf(" && echo '%s' > /sys/kernel/config/nvmet/hosts/%s/dhchap_ctrl_key", targetPass, args.InitiatorNQN)
 	}
 
-	if _, err := n.executor.Exec(ctx, cmd); err != nil {
-		return fmt.Errorf("failed to authorize initiator '%s' for target '%s' via sysfs: %w", args.InitiatorNQN, args.TargetNQN, err)
+	result, err := n.executor.Exec(ctx, cmd)
+	if err != nil {
+		stderr := ""
+		if result != nil {
+			stderr = result.Stderr
+		}
+		return fmt.Errorf("failed to authorize initiator '%s' for target '%s' via sysfs: %w, stderr: %s", args.InitiatorNQN, args.TargetNQN, err, stderr)
 	}
 
 	return nil
@@ -174,8 +224,13 @@ func (n NVMeOF) Unauthorize(ctx context.Context, args UnauthorizeArguments) erro
 		args.TargetNQN, args.InitiatorNQN, args.InitiatorNQN,
 	)
 
-	if _, err := n.executor.Exec(ctx, cmd); err != nil {
-		return fmt.Errorf("failed to unauthorize initiator '%s' for target '%s' via sysfs: %w", args.InitiatorNQN, args.TargetNQN, err)
+	result, err := n.executor.Exec(ctx, cmd)
+	if err != nil {
+		stderr := ""
+		if result != nil {
+			stderr = result.Stderr
+		}
+		return fmt.Errorf("failed to unauthorize initiator '%s' for target '%s' via sysfs: %w, stderr: %s", args.InitiatorNQN, args.TargetNQN, err, stderr)
 	}
 
 	return nil
@@ -185,21 +240,42 @@ type ConnectTargetArguments struct {
 	TargetNQN         NQN
 	TargetAddress     string
 	InitiatorNQN      NQN
-	InitiatorPassword string // DH-HMAC-CHAP key
-	TargetPassword    string // Optional mutual auth DH-HMAC-CHAP key
+	InitiatorPassword string // optional
+	TargetPassword    string // optional
 }
 
 var connectTargetTmpl = genericutil.Must(
 	template.New("connect_target").Parse(
 		stringutil.Multiline(`
-			( nvme connect -t tcp -n '{{.TargetNQN}}' -a "{{.TargetAddress}}" -s '4420' -q '{{.InitiatorNQN}}' {{if .InitiatorPassword}}-S '{{.InitiatorPassword}}'{{end}} {{if .TargetPassword}}-C '{{.TargetPassword}}'{{end}} )
+			( nvme connect -t tcp -n '{{.TargetNQN}}' -a "{{.Host}}" -s '{{.Port}}' -q '{{.InitiatorNQN}}' {{if .InitiatorPassword}}-S '{{.InitiatorPassword}}'{{end}} {{if .TargetPassword}}-C '{{.TargetPassword}}'{{end}} )
 		`),
 	),
 )
 
 func (n NVMeOF) ConnectTarget(ctx context.Context, args ConnectTargetArguments) error {
+	host, port, _ := strings.Cut(args.TargetAddress, ":")
+	if port == "" {
+		port = "4420"
+	}
+
+	argsTmpl := struct {
+		TargetNQN         NQN
+		Host              string
+		Port              string
+		InitiatorNQN      NQN
+		InitiatorPassword string
+		TargetPassword    string
+	}{
+		TargetNQN:         args.TargetNQN,
+		Host:              host,
+		Port:              port,
+		InitiatorNQN:      args.InitiatorNQN,
+		InitiatorPassword: GenerateDHCHAPKey(args.InitiatorPassword),
+		TargetPassword:    GenerateDHCHAPKey(args.TargetPassword),
+	}
+
 	var buf bytes.Buffer
-	if err := connectTargetTmpl.Execute(&buf, args); err != nil {
+	if err := connectTargetTmpl.Execute(&buf, argsTmpl); err != nil {
 		return fmt.Errorf("failed to render connect target template: %w", err)
 	}
 
@@ -257,9 +333,9 @@ func (n NVMeOF) RescanTarget(ctx context.Context, args RescanTargetArguments) er
 	var cmd string
 	if args.TargetNQN != "" {
 		// Find the device associated with the NQN and rescan it.
-		// We grep for the device name (e.g., nvme0) in the output of list-subsys.
+		// We grep for the NQN in the output of list-subsys.
 		cmd = fmt.Sprintf(
-			"DEV=$(nvme list-subsys -n '%s' | grep -oE 'nvme[0-9]+' | head -n 1) && [ -n \"$DEV\" ] && nvme ns-rescan /dev/$DEV",
+			"DEV=$(nvme list-subsys | grep -B 1 'NQN=%s' | grep -oE 'nvme[0-9]+' | head -n 1) && [ -n \"$DEV\" ] && nvme ns-rescan /dev/$DEV",
 			args.TargetNQN,
 		)
 	} else {
