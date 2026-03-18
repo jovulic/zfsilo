@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	zfsilov1 "github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1"
@@ -849,7 +850,8 @@ func (s *VolumeService) StageVolume(ctx context.Context, req *connect.Request[zf
 			return fmt.Errorf("failed to get device path: %w", err)
 		}
 		exists, err := fs.With(consumeTarget.Executor).Exists(ctx, fs.ExistsArguments{
-			Device: devicePath,
+			Device:  devicePath,
+			Timeout: 30 * time.Second,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to check for block device %s: %w", devicePath, err)
