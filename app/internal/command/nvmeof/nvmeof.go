@@ -232,15 +232,28 @@ type ConnectTargetArguments struct {
 var connectTargetTmpl = genericutil.Must(
 	template.New("connect_target").Parse(
 		stringutil.Multiline(`
-			( nvme connect -t tcp -n '{{.TargetNQN}}' -a "{{.TargetAddress}}" -s '4420' -q '{{.InitiatorNQN}}' {{if .InitiatorPassword}}-S '{{.InitiatorPassword}}'{{end}} {{if .TargetPassword}}-C '{{.TargetPassword}}'{{end}} )
+			( nvme connect -t tcp -n '{{.TargetNQN}}' -a "{{.Host}}" -s '{{.Port}}' -q '{{.InitiatorNQN}}' {{if .InitiatorPassword}}-S '{{.InitiatorPassword}}'{{end}} {{if .TargetPassword}}-C '{{.TargetPassword}}'{{end}} )
 		`),
 	),
 )
 
 func (n NVMeOF) ConnectTarget(ctx context.Context, args ConnectTargetArguments) error {
-	argsTmpl := ConnectTargetArguments{
+	host, port, _ := strings.Cut(args.TargetAddress, ":")
+	if port == "" {
+		port = "4420"
+	}
+
+	argsTmpl := struct {
+		TargetNQN         NQN
+		Host              string
+		Port              string
+		InitiatorNQN      NQN
+		InitiatorPassword string
+		TargetPassword    string
+	}{
 		TargetNQN:         args.TargetNQN,
-		TargetAddress:     args.TargetAddress,
+		Host:              host,
+		Port:              port,
 		InitiatorNQN:      args.InitiatorNQN,
 		InitiatorPassword: GenerateDHCHAPKey(args.InitiatorPassword),
 		TargetPassword:    GenerateDHCHAPKey(args.TargetPassword),
