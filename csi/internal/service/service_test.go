@@ -101,13 +101,17 @@ var _ = Describe("CSIService Sanity", func() {
 		transport := transport // capture
 		Context(fmt.Sprintf("with %s transport", transport), Ordered, func() {
 			var (
-				srv           *service.CSIService
-				grpcServer    *grpc.Server
-				endpoint      string
-				stopChan      chan struct{}
-				config        sanity.TestConfig
-				zfsiloAddress string
-				secret        string
+				srv                 *service.CSIService
+				grpcServer          *grpc.Server
+				endpoint            string
+				stopChan            chan struct{}
+				config              sanity.TestConfig
+				zfsiloAddress       string
+				secret              string
+				targetPortalAddress string
+				nodeID              string
+				clientIDs           map[string]string
+				parentDatasetID     string
 			)
 
 			BeforeAll(func() {
@@ -123,25 +127,8 @@ var _ = Describe("CSIService Sanity", func() {
 				}
 
 				wipeBackend(ctx, zfsiloAddress, secret)
-			})
 
-			BeforeEach(func() {
-				ctx := context.Background()
-
-				// Clean up any existing directories from previous failed runs.
-				_ = os.RemoveAll("/tmp/csi-mount")
-				_ = os.RemoveAll("/tmp/csi-staging")
-
-				// Use environment variables for configuration, with sensible defaults for
-				// dev environment.
-				if zfsiloAddress == "" {
-					zfsiloAddress = os.Getenv("ZFSILO_ADDRESS")
-					if zfsiloAddress == "" {
-						zfsiloAddress = "https://127.0.0.1:8080"
-					}
-				}
-
-				targetPortalAddress := os.Getenv("ZFSILO_TARGET_PORTAL_ADDRESS")
+				targetPortalAddress = os.Getenv("ZFSILO_TARGET_PORTAL_ADDRESS")
 				if targetPortalAddress == "" {
 					// Dynamically resolve 'give' address from 'take' host perspective.
 					takeExecutor := command.NewRemoteExecutor(command.RemoteExecutorConfig{
@@ -187,25 +174,26 @@ var _ = Describe("CSIService Sanity", func() {
 					nvmeofID = "nqn.2014-08.org.nvmexpress:take"
 				}
 
-				clientIDs := map[string]string{
+				clientIDs = map[string]string{
 					"iscsi":  iscsiID,
 					"nvmeof": nvmeofID,
 				}
 
 				// Build composite NodeID.
-				nodeID := fmt.Sprintf("iscsi=%s;nvmeof=%s", iscsiID, nvmeofID)
+				nodeID = fmt.Sprintf("iscsi=%s;nvmeof=%s", iscsiID, nvmeofID)
 
-				if secret == "" {
-					secret = os.Getenv("ZFSILO_SECRET")
-					if secret == "" {
-						secret = "sk_token"
-					}
-				}
-
-				parentDatasetID := os.Getenv("ZFSILO_PARENT_DATASET_ID")
+				parentDatasetID = os.Getenv("ZFSILO_PARENT_DATASET_ID")
 				if parentDatasetID == "" {
 					parentDatasetID = "tank"
 				}
+			})
+
+			BeforeEach(func() {
+				ctx := context.Background()
+
+				// Clean up any existing directories from previous failed runs.
+				_ = os.RemoveAll("/tmp/csi-mount")
+				_ = os.RemoveAll("/tmp/csi-staging")
 
 				srv = service.NewCSIService(service.CSIServiceConfig{
 					Secret:              secret,
@@ -264,7 +252,7 @@ var _ = Describe("CSIService Sanity", func() {
 			AfterEach(func() {
 				ctx := context.Background()
 				if grpcServer != nil {
-					grpcServer.GracefulStop()
+					grpcServer.Stop()
 					<-stopChan
 				}
 				if srv != nil {
