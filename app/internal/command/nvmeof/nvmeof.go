@@ -72,6 +72,7 @@ var publishVolumeTmpl = genericutil.Must(
 			# Disallow any host to connect (enforce ACLs)
 			cd /subsystems/{{.TargetNQN}}
 			set attr allow_any_host=0
+			set attr serial={{.Serial}}
 			# Add a namespace (1) to the subsystem
 			cd namespaces
 			create 1
@@ -97,8 +98,22 @@ var publishVolumeTmpl = genericutil.Must(
 )
 
 func (n NVMeOF) PublishVolume(ctx context.Context, args PublishVolumeArguments) error {
+	// NVMe serial numbers are limited to 20 characters. We use a truncated
+	// SHA-256 hash of the VolumeID to ensure uniqueness and fit within the
+	// limit.
+	hash := sha256.Sum256([]byte(args.VolumeID))
+	serial := fmt.Sprintf("%x", hash)[:20]
+
+	argsTmpl := struct {
+		PublishVolumeArguments
+		Serial string
+	}{
+		PublishVolumeArguments: args,
+		Serial:                 serial,
+	}
+
 	var buf bytes.Buffer
-	if err := publishVolumeTmpl.Execute(&buf, args); err != nil {
+	if err := publishVolumeTmpl.Execute(&buf, argsTmpl); err != nil {
 		return fmt.Errorf("failed to render publish volume template: %w", err)
 	}
 
@@ -318,9 +333,9 @@ func (n NVMeOF) RescanTarget(ctx context.Context, args RescanTargetArguments) er
 	var cmd string
 	if args.TargetNQN != "" {
 		// Find the device associated with the NQN and rescan it.
-		// We grep for the device name (e.g., nvme0) in the output of list-subsys.
+		// We grep for the NQN in the output of list-subsys.
 		cmd = fmt.Sprintf(
-			"DEV=$(nvme list-subsys -n '%s' | grep -oE 'nvme[0-9]+' | head -n 1) && [ -n \"$DEV\" ] && nvme ns-rescan /dev/$DEV",
+			"DEV=$(nvme list-subsys | grep -B 1 'NQN=%s' | grep -oE 'nvme[0-9]+' | head -n 1) && [ -n \"$DEV\" ] && nvme ns-rescan /dev/$DEV",
 			args.TargetNQN,
 		)
 	} else {
