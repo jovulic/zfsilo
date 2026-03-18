@@ -98,7 +98,6 @@ func TestCSISanity(t *testing.T) {
 
 var _ = Describe("CSIService Sanity", func() {
 	for _, transport := range []string{"iscsi", "nvmeof"} {
-		transport := transport // capture
 		Context(fmt.Sprintf("with %s transport", transport), Ordered, func() {
 			var (
 				srv                 *service.CSIService

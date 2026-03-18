@@ -106,6 +106,7 @@ func (n NVMeOF) PublishVolume(ctx context.Context, args PublishVolumeArguments) 
 
 	argsTmpl := struct {
 		PublishVolumeArguments
+
 		Serial string
 	}{
 		PublishVolumeArguments: args,
