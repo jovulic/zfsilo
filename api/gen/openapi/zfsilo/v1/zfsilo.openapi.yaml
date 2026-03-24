@@ -47,6 +47,181 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/zfsilo.v1.GetCapacityResponse'
+  /zfsilo.v1.HostService/GetHost:
+    post:
+      tags:
+        - zfsilo.v1.HostService
+      summary: GetHost
+      operationId: zfsilo.v1.HostService.GetHost
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.GetHostRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.GetHostResponse'
+  /zfsilo.v1.HostService/ListHosts:
+    post:
+      tags:
+        - zfsilo.v1.HostService
+      summary: ListHosts
+      operationId: zfsilo.v1.HostService.ListHosts
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.ListHostsRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.ListHostsResponse'
+  /zfsilo.v1.HostService/CreateHost:
+    post:
+      tags:
+        - zfsilo.v1.HostService
+      summary: CreateHost
+      operationId: zfsilo.v1.HostService.CreateHost
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.CreateHostRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.CreateHostResponse'
+  /zfsilo.v1.HostService/UpdateHost:
+    post:
+      tags:
+        - zfsilo.v1.HostService
+      summary: UpdateHost
+      operationId: zfsilo.v1.HostService.UpdateHost
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.UpdateHostRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.UpdateHostResponse'
+  /zfsilo.v1.HostService/DeleteHost:
+    post:
+      tags:
+        - zfsilo.v1.HostService
+      summary: DeleteHost
+      operationId: zfsilo.v1.HostService.DeleteHost
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/zfsilo.v1.DeleteHostRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zfsilo.v1.DeleteHostResponse'
   /zfsilo.v1.VolumeService/GetVolume:
     post:
       tags:
@@ -809,20 +984,15 @@ components:
           title: id
           pattern: ^vol_[a-zA-Z0-9-_]+$
           description: The id of the volume to be connected.
-        clientId:
+        clientHost:
           type: string
-          title: client_id
-          pattern: ^(iqn|nqn).*$
-          description: The client identifier.
-        targetAddress:
-          type: string
-          title: target_address
-          description: The target address.
+          title: client_host
+          minLength: 1
+          description: The resource name of the host to connect the volume to.
       title: ConnectVolumeRequest
       required:
         - id
-        - clientId
-        - targetAddress
+        - clientHost
       additionalProperties: false
     zfsilo.v1.ConnectVolumeResponse:
       type: object
@@ -831,6 +1001,25 @@ components:
           title: volume
           $ref: '#/components/schemas/zfsilo.v1.Volume'
       title: ConnectVolumeResponse
+      additionalProperties: false
+    zfsilo.v1.CreateHostRequest:
+      type: object
+      properties:
+        host:
+          title: host
+          description: The host resource.
+          $ref: '#/components/schemas/zfsilo.v1.Host'
+      title: CreateHostRequest
+      required:
+        - host
+      additionalProperties: false
+    zfsilo.v1.CreateHostResponse:
+      type: object
+      properties:
+        host:
+          title: host
+          $ref: '#/components/schemas/zfsilo.v1.Host'
+      title: CreateHostResponse
       additionalProperties: false
     zfsilo.v1.CreateVolumeRequest:
       type: object
@@ -850,6 +1039,22 @@ components:
           title: volume
           $ref: '#/components/schemas/zfsilo.v1.Volume'
       title: CreateVolumeResponse
+      additionalProperties: false
+    zfsilo.v1.DeleteHostRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          title: id
+          pattern: ^hst_[a-zA-Z0-9-_]+$
+          description: The host id.
+      title: DeleteHostRequest
+      required:
+        - id
+      additionalProperties: false
+    zfsilo.v1.DeleteHostResponse:
+      type: object
+      title: DeleteHostResponse
       additionalProperties: false
     zfsilo.v1.DeleteVolumeRequest:
       type: object
@@ -905,6 +1110,27 @@ components:
       title: GetCapacityResponse
       additionalProperties: false
       description: The get capacity response.
+    zfsilo.v1.GetHostRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          title: id
+          pattern: ^hst_[a-zA-Z0-9-_]+$
+          description: The host id.
+      title: GetHostRequest
+      required:
+        - id
+      additionalProperties: false
+    zfsilo.v1.GetHostResponse:
+      type: object
+      properties:
+        host:
+          title: host
+          description: The host resource.
+          $ref: '#/components/schemas/zfsilo.v1.Host'
+      title: GetHostResponse
+      additionalProperties: false
     zfsilo.v1.GetVolumeRequest:
       type: object
       properties:
@@ -925,6 +1151,140 @@ components:
           description: The volume resource.
           $ref: '#/components/schemas/zfsilo.v1.Volume'
       title: GetVolumeResponse
+      additionalProperties: false
+    zfsilo.v1.Host:
+      type: object
+      properties:
+        createTime:
+          title: create_time
+          description: When the host was created.
+          readOnly: true
+          $ref: '#/components/schemas/google.protobuf.Timestamp'
+        updateTime:
+          title: update_time
+          description: When the host was last updated.
+          readOnly: true
+          $ref: '#/components/schemas/google.protobuf.Timestamp'
+        id:
+          type: string
+          title: id
+          pattern: ^hst_[a-zA-Z0-9-_]+$
+          description: The resource id. Immutable.
+        name:
+          type: string
+          title: name
+          pattern: ^hosts/hst_[a-zA-Z0-9-_]+$
+          description: The resource name. Immutable.
+        connection:
+          title: connection
+          description: Connection details for the host.
+          $ref: '#/components/schemas/zfsilo.v1.Host.Connection'
+        ids:
+          type: array
+          items:
+            type: string
+            description: List of IQN/NQN IDs
+          title: ids
+          description: List of IQN/NQN IDs
+        password:
+          type: string
+          title: password
+          description: Storage protocol password (e.g. CHAP)
+        byConfig:
+          type: boolean
+          title: by_config
+          description: Whether the host is maintained by the configuration file.
+          readOnly: true
+      title: Host
+      required:
+        - id
+        - name
+      additionalProperties: false
+      description: The host resource.
+    zfsilo.v1.Host.Connection:
+      type: object
+      oneOf:
+        - properties:
+            local:
+              title: local
+              $ref: '#/components/schemas/zfsilo.v1.Host.Connection.Local'
+          title: local
+          required:
+            - local
+        - properties:
+            remote:
+              title: remote
+              $ref: '#/components/schemas/zfsilo.v1.Host.Connection.Remote'
+          title: remote
+          required:
+            - remote
+      title: Connection
+      additionalProperties: false
+    zfsilo.v1.Host.Connection.Local:
+      type: object
+      properties:
+        runAsRoot:
+          type: boolean
+          title: run_as_root
+      title: Local
+      additionalProperties: false
+    zfsilo.v1.Host.Connection.Remote:
+      type: object
+      properties:
+        address:
+          type: string
+          title: address
+        port:
+          type: integer
+          title: port
+          format: int32
+        username:
+          type: string
+          title: username
+        password:
+          type: string
+          title: password
+        runAsRoot:
+          type: boolean
+          title: run_as_root
+      title: Remote
+      additionalProperties: false
+    zfsilo.v1.ListHostsRequest:
+      type: object
+      properties:
+        pageSize:
+          type: integer
+          title: page_size
+          format: int32
+          description: The page size.
+        filter:
+          type: string
+          title: filter
+          description: The filter to apply over hosts.
+        orderBy:
+          type: string
+          title: order_by
+          description: The ordering to apply over hosts.
+        pageToken:
+          type: string
+          title: page_token
+          description: The page token. Used in subsequent requests to page over hosts.
+      title: ListHostsRequest
+      additionalProperties: false
+    zfsilo.v1.ListHostsResponse:
+      type: object
+      properties:
+        hosts:
+          type: array
+          items:
+            $ref: '#/components/schemas/zfsilo.v1.Host'
+          title: hosts
+          description: The list of hosts.
+        nextPageToken:
+          type: string
+          title: next_page_token
+          description: The page token for the next page of hosts.
+      title: ListHostsResponse
       additionalProperties: false
     zfsilo.v1.ListVolumesRequest:
       type: object
@@ -1001,9 +1361,15 @@ components:
           title: transport
           description: The protocol used to expose this volume.
           $ref: '#/components/schemas/zfsilo.v1.Volume.Transport'
+        serverHost:
+          type: string
+          title: server_host
+          minLength: 1
+          description: The resource name of the host where the volume will be published.
       title: PublishVolumeRequest
       required:
         - id
+        - serverHost
       additionalProperties: false
     zfsilo.v1.PublishVolumeResponse:
       type: object
@@ -1185,6 +1551,25 @@ components:
           $ref: '#/components/schemas/zfsilo.v1.Volume'
       title: UnstageVolumeResponse
       additionalProperties: false
+    zfsilo.v1.UpdateHostRequest:
+      type: object
+      properties:
+        host:
+          title: host
+          description: The host to updated. Requires the host id to be specified and then include only the fields to be changed.
+          $ref: '#/components/schemas/google.protobuf.Struct'
+      title: UpdateHostRequest
+      required:
+        - host
+      additionalProperties: false
+    zfsilo.v1.UpdateHostResponse:
+      type: object
+      properties:
+        host:
+          title: host
+          $ref: '#/components/schemas/zfsilo.v1.Host'
+      title: UpdateHostResponse
+      additionalProperties: false
     zfsilo.v1.UpdateVolumeRequest:
       type: object
       properties:
@@ -1269,24 +1654,18 @@ components:
           nullable: true
           readOnly: true
           $ref: '#/components/schemas/zfsilo.v1.Volume.Transport'
-        clientId:
+        serverHost:
           type: string
-          title: client_id
-          pattern: ^(iqn|nqn).*$
-          description: The client identifier (e.g., Initiator IQN or Host NQN).
+          title: server_host
+          minLength: 1
+          description: The resource name of the host where the volume is published.
           nullable: true
           readOnly: true
-        targetId:
+        clientHost:
           type: string
-          title: target_id
-          pattern: ^(iqn|nqn).*$
-          description: The target identifier (e.g., Target IQN or Subsystem NQN).
-          nullable: true
-          readOnly: true
-        targetAddress:
-          type: string
-          title: target_address
-          description: The target address (host and port).
+          title: client_host
+          minLength: 1
+          description: The resource name of the host where the volume is connected.
           nullable: true
           readOnly: true
         stagingPath:
@@ -1389,4 +1768,5 @@ components:
 security: []
 tags:
   - name: zfsilo.v1.Service
+  - name: zfsilo.v1.HostService
   - name: zfsilo.v1.VolumeService

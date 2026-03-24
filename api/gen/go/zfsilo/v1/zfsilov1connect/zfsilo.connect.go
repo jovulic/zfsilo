@@ -23,6 +23,8 @@ const _ = connect.IsAtLeastVersion1_13_0
 const (
 	// ServiceName is the fully-qualified name of the Service service.
 	ServiceName = "zfsilo.v1.Service"
+	// HostServiceName is the fully-qualified name of the HostService service.
+	HostServiceName = "zfsilo.v1.HostService"
 	// VolumeServiceName is the fully-qualified name of the VolumeService service.
 	VolumeServiceName = "zfsilo.v1.VolumeService"
 )
@@ -37,6 +39,16 @@ const (
 const (
 	// ServiceGetCapacityProcedure is the fully-qualified name of the Service's GetCapacity RPC.
 	ServiceGetCapacityProcedure = "/zfsilo.v1.Service/GetCapacity"
+	// HostServiceGetHostProcedure is the fully-qualified name of the HostService's GetHost RPC.
+	HostServiceGetHostProcedure = "/zfsilo.v1.HostService/GetHost"
+	// HostServiceListHostsProcedure is the fully-qualified name of the HostService's ListHosts RPC.
+	HostServiceListHostsProcedure = "/zfsilo.v1.HostService/ListHosts"
+	// HostServiceCreateHostProcedure is the fully-qualified name of the HostService's CreateHost RPC.
+	HostServiceCreateHostProcedure = "/zfsilo.v1.HostService/CreateHost"
+	// HostServiceUpdateHostProcedure is the fully-qualified name of the HostService's UpdateHost RPC.
+	HostServiceUpdateHostProcedure = "/zfsilo.v1.HostService/UpdateHost"
+	// HostServiceDeleteHostProcedure is the fully-qualified name of the HostService's DeleteHost RPC.
+	HostServiceDeleteHostProcedure = "/zfsilo.v1.HostService/DeleteHost"
 	// VolumeServiceGetVolumeProcedure is the fully-qualified name of the VolumeService's GetVolume RPC.
 	VolumeServiceGetVolumeProcedure = "/zfsilo.v1.VolumeService/GetVolume"
 	// VolumeServiceListVolumesProcedure is the fully-qualified name of the VolumeService's ListVolumes
@@ -154,6 +166,180 @@ type UnimplementedServiceHandler struct{}
 
 func (UnimplementedServiceHandler) GetCapacity(context.Context, *connect.Request[v1.GetCapacityRequest]) (*connect.Response[v1.GetCapacityResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.Service.GetCapacity is not implemented"))
+}
+
+// HostServiceClient is a client for the zfsilo.v1.HostService service.
+type HostServiceClient interface {
+	GetHost(context.Context, *connect.Request[v1.GetHostRequest]) (*connect.Response[v1.GetHostResponse], error)
+	ListHosts(context.Context, *connect.Request[v1.ListHostsRequest]) (*connect.Response[v1.ListHostsResponse], error)
+	CreateHost(context.Context, *connect.Request[v1.CreateHostRequest]) (*connect.Response[v1.CreateHostResponse], error)
+	UpdateHost(context.Context, *connect.Request[v1.UpdateHostRequest]) (*connect.Response[v1.UpdateHostResponse], error)
+	DeleteHost(context.Context, *connect.Request[v1.DeleteHostRequest]) (*connect.Response[v1.DeleteHostResponse], error)
+}
+
+// NewHostServiceClient constructs a client for the zfsilo.v1.HostService service. By default, it
+// uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
+// uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
+// connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewHostServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) HostServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	hostServiceMethods := v1.File_zfsilo_v1_zfsilo_proto.Services().ByName("HostService").Methods()
+	return &hostServiceClient{
+		getHost: connect.NewClient[v1.GetHostRequest, v1.GetHostResponse](
+			httpClient,
+			baseURL+HostServiceGetHostProcedure,
+			connect.WithSchema(hostServiceMethods.ByName("GetHost")),
+			connect.WithClientOptions(opts...),
+		),
+		listHosts: connect.NewClient[v1.ListHostsRequest, v1.ListHostsResponse](
+			httpClient,
+			baseURL+HostServiceListHostsProcedure,
+			connect.WithSchema(hostServiceMethods.ByName("ListHosts")),
+			connect.WithClientOptions(opts...),
+		),
+		createHost: connect.NewClient[v1.CreateHostRequest, v1.CreateHostResponse](
+			httpClient,
+			baseURL+HostServiceCreateHostProcedure,
+			connect.WithSchema(hostServiceMethods.ByName("CreateHost")),
+			connect.WithClientOptions(opts...),
+		),
+		updateHost: connect.NewClient[v1.UpdateHostRequest, v1.UpdateHostResponse](
+			httpClient,
+			baseURL+HostServiceUpdateHostProcedure,
+			connect.WithSchema(hostServiceMethods.ByName("UpdateHost")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteHost: connect.NewClient[v1.DeleteHostRequest, v1.DeleteHostResponse](
+			httpClient,
+			baseURL+HostServiceDeleteHostProcedure,
+			connect.WithSchema(hostServiceMethods.ByName("DeleteHost")),
+			connect.WithClientOptions(opts...),
+		),
+	}
+}
+
+// hostServiceClient implements HostServiceClient.
+type hostServiceClient struct {
+	getHost    *connect.Client[v1.GetHostRequest, v1.GetHostResponse]
+	listHosts  *connect.Client[v1.ListHostsRequest, v1.ListHostsResponse]
+	createHost *connect.Client[v1.CreateHostRequest, v1.CreateHostResponse]
+	updateHost *connect.Client[v1.UpdateHostRequest, v1.UpdateHostResponse]
+	deleteHost *connect.Client[v1.DeleteHostRequest, v1.DeleteHostResponse]
+}
+
+// GetHost calls zfsilo.v1.HostService.GetHost.
+func (c *hostServiceClient) GetHost(ctx context.Context, req *connect.Request[v1.GetHostRequest]) (*connect.Response[v1.GetHostResponse], error) {
+	return c.getHost.CallUnary(ctx, req)
+}
+
+// ListHosts calls zfsilo.v1.HostService.ListHosts.
+func (c *hostServiceClient) ListHosts(ctx context.Context, req *connect.Request[v1.ListHostsRequest]) (*connect.Response[v1.ListHostsResponse], error) {
+	return c.listHosts.CallUnary(ctx, req)
+}
+
+// CreateHost calls zfsilo.v1.HostService.CreateHost.
+func (c *hostServiceClient) CreateHost(ctx context.Context, req *connect.Request[v1.CreateHostRequest]) (*connect.Response[v1.CreateHostResponse], error) {
+	return c.createHost.CallUnary(ctx, req)
+}
+
+// UpdateHost calls zfsilo.v1.HostService.UpdateHost.
+func (c *hostServiceClient) UpdateHost(ctx context.Context, req *connect.Request[v1.UpdateHostRequest]) (*connect.Response[v1.UpdateHostResponse], error) {
+	return c.updateHost.CallUnary(ctx, req)
+}
+
+// DeleteHost calls zfsilo.v1.HostService.DeleteHost.
+func (c *hostServiceClient) DeleteHost(ctx context.Context, req *connect.Request[v1.DeleteHostRequest]) (*connect.Response[v1.DeleteHostResponse], error) {
+	return c.deleteHost.CallUnary(ctx, req)
+}
+
+// HostServiceHandler is an implementation of the zfsilo.v1.HostService service.
+type HostServiceHandler interface {
+	GetHost(context.Context, *connect.Request[v1.GetHostRequest]) (*connect.Response[v1.GetHostResponse], error)
+	ListHosts(context.Context, *connect.Request[v1.ListHostsRequest]) (*connect.Response[v1.ListHostsResponse], error)
+	CreateHost(context.Context, *connect.Request[v1.CreateHostRequest]) (*connect.Response[v1.CreateHostResponse], error)
+	UpdateHost(context.Context, *connect.Request[v1.UpdateHostRequest]) (*connect.Response[v1.UpdateHostResponse], error)
+	DeleteHost(context.Context, *connect.Request[v1.DeleteHostRequest]) (*connect.Response[v1.DeleteHostResponse], error)
+}
+
+// NewHostServiceHandler builds an HTTP handler from the service implementation. It returns the path
+// on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewHostServiceHandler(svc HostServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	hostServiceMethods := v1.File_zfsilo_v1_zfsilo_proto.Services().ByName("HostService").Methods()
+	hostServiceGetHostHandler := connect.NewUnaryHandler(
+		HostServiceGetHostProcedure,
+		svc.GetHost,
+		connect.WithSchema(hostServiceMethods.ByName("GetHost")),
+		connect.WithHandlerOptions(opts...),
+	)
+	hostServiceListHostsHandler := connect.NewUnaryHandler(
+		HostServiceListHostsProcedure,
+		svc.ListHosts,
+		connect.WithSchema(hostServiceMethods.ByName("ListHosts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	hostServiceCreateHostHandler := connect.NewUnaryHandler(
+		HostServiceCreateHostProcedure,
+		svc.CreateHost,
+		connect.WithSchema(hostServiceMethods.ByName("CreateHost")),
+		connect.WithHandlerOptions(opts...),
+	)
+	hostServiceUpdateHostHandler := connect.NewUnaryHandler(
+		HostServiceUpdateHostProcedure,
+		svc.UpdateHost,
+		connect.WithSchema(hostServiceMethods.ByName("UpdateHost")),
+		connect.WithHandlerOptions(opts...),
+	)
+	hostServiceDeleteHostHandler := connect.NewUnaryHandler(
+		HostServiceDeleteHostProcedure,
+		svc.DeleteHost,
+		connect.WithSchema(hostServiceMethods.ByName("DeleteHost")),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/zfsilo.v1.HostService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case HostServiceGetHostProcedure:
+			hostServiceGetHostHandler.ServeHTTP(w, r)
+		case HostServiceListHostsProcedure:
+			hostServiceListHostsHandler.ServeHTTP(w, r)
+		case HostServiceCreateHostProcedure:
+			hostServiceCreateHostHandler.ServeHTTP(w, r)
+		case HostServiceUpdateHostProcedure:
+			hostServiceUpdateHostHandler.ServeHTTP(w, r)
+		case HostServiceDeleteHostProcedure:
+			hostServiceDeleteHostHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
+// UnimplementedHostServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedHostServiceHandler struct{}
+
+func (UnimplementedHostServiceHandler) GetHost(context.Context, *connect.Request[v1.GetHostRequest]) (*connect.Response[v1.GetHostResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.HostService.GetHost is not implemented"))
+}
+
+func (UnimplementedHostServiceHandler) ListHosts(context.Context, *connect.Request[v1.ListHostsRequest]) (*connect.Response[v1.ListHostsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.HostService.ListHosts is not implemented"))
+}
+
+func (UnimplementedHostServiceHandler) CreateHost(context.Context, *connect.Request[v1.CreateHostRequest]) (*connect.Response[v1.CreateHostResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.HostService.CreateHost is not implemented"))
+}
+
+func (UnimplementedHostServiceHandler) UpdateHost(context.Context, *connect.Request[v1.UpdateHostRequest]) (*connect.Response[v1.UpdateHostResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.HostService.UpdateHost is not implemented"))
+}
+
+func (UnimplementedHostServiceHandler) DeleteHost(context.Context, *connect.Request[v1.DeleteHostRequest]) (*connect.Response[v1.DeleteHostResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("zfsilo.v1.HostService.DeleteHost is not implemented"))
 }
 
 // VolumeServiceClient is a client for the zfsilo.v1.VolumeService service.

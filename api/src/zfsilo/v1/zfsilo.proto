@@ -59,6 +59,129 @@ message GetCapacityResponse {
   int64 available_capacity_bytes = 1 [(gnostic.openapi.v3.property) = {description: "The available capacity in bytes."}];
 }
 
+service HostService {
+  rpc GetHost(GetHostRequest) returns (GetHostResponse) {}
+  rpc ListHosts(ListHostsRequest) returns (ListHostsResponse) {}
+  rpc CreateHost(CreateHostRequest) returns (CreateHostResponse) {}
+  rpc UpdateHost(UpdateHostRequest) returns (UpdateHostResponse) {}
+  rpc DeleteHost(DeleteHostRequest) returns (DeleteHostResponse) {}
+}
+
+message Host {
+  option (buf.validate.message) = {
+    cel: {
+      id: "host.name_id_consistency"
+      message: "The 'name' field must be in the format 'hosts/{id}'"
+      expression: "this.name == 'hosts/' + this.id"
+    }
+  };
+  option (gnostic.openapi.v3.schema) = {description: "The host resource."};
+
+  message Connection {
+    message Local {
+      bool run_as_root = 1;
+    }
+
+    message Remote {
+      string address = 1;
+      int32 port = 2;
+      string username = 3;
+      string password = 4;
+      bool run_as_root = 5;
+    }
+
+    oneof type {
+      Local local = 1;
+      Remote remote = 2;
+    }
+  }
+
+  google.protobuf.Timestamp create_time = 1 [(gnostic.openapi.v3.property) = {
+    description: "When the host was created."
+    read_only: true
+  }];
+  google.protobuf.Timestamp update_time = 2 [(gnostic.openapi.v3.property) = {
+    description: "When the host was last updated."
+    read_only: true
+  }];
+  string id = 3 [
+    (gnostic.openapi.v3.property) = {description: "The resource id. Immutable."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^hst_[a-zA-Z0-9-_]+$"
+  ];
+  string name = 4 [
+    (gnostic.openapi.v3.property) = {description: "The resource name. Immutable."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^hosts/hst_[a-zA-Z0-9-_]+$"
+  ];
+  Connection connection = 5 [(gnostic.openapi.v3.property) = {description: "Connection details for the host."}];
+  repeated string ids = 6 [(gnostic.openapi.v3.property) = {description: "List of IQN/NQN IDs"}];
+  string password = 7 [(gnostic.openapi.v3.property) = {description: "Storage protocol password (e.g. CHAP)"}];
+  bool by_config = 8 [(gnostic.openapi.v3.property) = {
+    description: "Whether the host is maintained by the configuration file."
+    read_only: true
+  }];
+}
+
+message GetHostRequest {
+  string id = 1 [
+    (gnostic.openapi.v3.property) = {description: "The host id."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^hst_[a-zA-Z0-9-_]+$"
+  ];
+}
+
+message GetHostResponse {
+  Host host = 1 [(gnostic.openapi.v3.property) = {description: "The host resource."}];
+}
+
+message ListHostsRequest {
+  int32 page_size = 1 [
+    (gnostic.openapi.v3.property) = {description: "The page size."},
+    (buf.validate.field).int32.gte = 0
+  ];
+  string filter = 2 [(gnostic.openapi.v3.property) = {description: "The filter to apply over hosts."}];
+  string order_by = 3 [(gnostic.openapi.v3.property) = {description: "The ordering to apply over hosts."}];
+  string page_token = 4 [(gnostic.openapi.v3.property) = {description: "The page token. Used in subsequent requests to page over hosts."}];
+}
+
+message ListHostsResponse {
+  repeated Host hosts = 1 [(gnostic.openapi.v3.property) = {description: "The list of hosts."}];
+  string next_page_token = 2 [(gnostic.openapi.v3.property) = {description: "The page token for the next page of hosts."}];
+}
+
+message CreateHostRequest {
+  Host host = 1 [
+    (gnostic.openapi.v3.property) = {description: "The host resource."},
+    (buf.validate.field).required = true
+  ];
+}
+
+message CreateHostResponse {
+  Host host = 1;
+}
+
+message UpdateHostRequest {
+  google.protobuf.Struct host = 1 [
+    (gnostic.openapi.v3.property) = {description: "The host to updated. Requires the host id to be specified and then include only the fields to be changed."},
+    (buf.validate.field).required = true
+  ];
+}
+
+message UpdateHostResponse {
+  Host host = 1;
+}
+
+message DeleteHostRequest {
+  string id = 1 [
+    (gnostic.openapi.v3.property) = {description: "The host id."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.pattern = "^hst_[a-zA-Z0-9-_]+$"
+  ];
+}
+
+message DeleteHostResponse {}
+
 service VolumeService {
   rpc GetVolume(GetVolumeRequest) returns (GetVolumeResponse) {}
   rpc ListVolumes(ListVolumesRequest) returns (ListVolumesResponse) {}
@@ -156,26 +279,19 @@ message Volume {
     description: "The protocol used to expose this volume."
     read_only: true
   }];
-  optional string client_id = 13 [
+  optional string server_host = 13 [
     (gnostic.openapi.v3.property) = {
-      description: "The client identifier (e.g., Initiator IQN or Host NQN)."
+      description: "The resource name of the host where the volume is published."
       read_only: true
     },
-    (buf.validate.field).string = {pattern: "^(iqn|nqn).*$"}
+    (buf.validate.field).string.min_len = 1
   ];
-  optional string target_id = 14 [
+  optional string client_host = 14 [
     (gnostic.openapi.v3.property) = {
-      description: "The target identifier (e.g., Target IQN or Subsystem NQN)."
+      description: "The resource name of the host where the volume is connected."
       read_only: true
     },
-    (buf.validate.field).string = {pattern: "^(iqn|nqn).*$"}
-  ];
-  optional string target_address = 15 [
-    (gnostic.openapi.v3.property) = {
-      description: "The target address (host and port)."
-      read_only: true
-    },
-    (buf.validate.field).string = {host_and_port: true}
+    (buf.validate.field).string.min_len = 1
   ];
   optional string staging_path = 16 [
     (gnostic.openapi.v3.property) = {
@@ -259,6 +375,11 @@ message PublishVolumeRequest {
     (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
   ];
   Volume.Transport transport = 2 [(gnostic.openapi.v3.property) = {description: "The protocol used to expose this volume."}];
+  string server_host = 3 [
+    (gnostic.openapi.v3.property) = {description: "The resource name of the host where the volume will be published."},
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
 }
 
 message PublishVolumeResponse {
@@ -283,15 +404,10 @@ message ConnectVolumeRequest {
     (buf.validate.field).required = true,
     (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
   ];
-  string client_id = 2 [
-    (gnostic.openapi.v3.property) = {description: "The client identifier."},
+  string client_host = 2 [
+    (gnostic.openapi.v3.property) = {description: "The resource name of the host to connect the volume to."},
     (buf.validate.field).required = true,
-    (buf.validate.field).string.pattern = "^(iqn|nqn).*$"
-  ];
-  string target_address = 3 [
-    (gnostic.openapi.v3.property) = {description: "The target address."},
-    (buf.validate.field).required = true,
-    (buf.validate.field).string = {host_and_port: true}
+    (buf.validate.field).string.min_len = 1
   ];
 }
 
