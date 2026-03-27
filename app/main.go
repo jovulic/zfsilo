@@ -61,6 +61,11 @@ func main() {
 			os.Exit(1)
 		}
 
+		if err := app.Sync(ctx); err != nil {
+			slogctx.Error(ctx, "failed to sync app", slogctx.Err(err))
+			os.Exit(1)
+		}
+
 		_ = app
 
 		if err := term.Wait(ctx, time.Minute); err != nil {
