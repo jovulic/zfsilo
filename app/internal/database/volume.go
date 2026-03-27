@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
 type VolumeOption struct {
@@ -57,14 +58,35 @@ const (
 	VolumeStatusMOUNTED                         // MOUNTED
 )
 
-//go:generate stringer -type=VolumeTransport -linecomment volume.go
-type VolumeTransport int
+type VolumeTransportType string
 
 const (
-	VolumeTransportUNSPECIFIED VolumeTransport = iota // UNSPECIFIED
-	VolumeTransportISCSI                              // ISCSI
-	VolumeTransportNVMEOF_TCP                         // NVMEOF_TCP
+	VolumeTransportTypeUNSPECIFIED VolumeTransportType = "UNSPECIFIED"
+	VolumeTransportTypeISCSI       VolumeTransportType = "ISCSI"
+	VolumeTransportTypeNVMEOF_TCP  VolumeTransportType = "NVMEOF_TCP"
 )
+
+type VolumeTransportISCSI struct {
+	TargetAddress     string `json:"targetAddress,omitempty"`
+	TargetIQN         string `json:"targetIQN,omitempty"`
+	TargetPassword    string `json:"targetPassword,omitempty"`
+	InitiatorIQN      string `json:"initiatorIQN,omitempty"`
+	InitiatorPassword string `json:"initiatorPassword,omitempty"`
+}
+
+type VolumeTransportNVMEOF struct {
+	TargetAddress     string `json:"targetAddress,omitempty"`
+	TargetNQN         string `json:"targetNQN,omitempty"`
+	TargetPassword    string `json:"targetPassword,omitempty"`
+	InitiatorNQN      string `json:"initiatorNQN,omitempty"`
+	InitiatorPassword string `json:"initiatorPassword,omitempty"`
+}
+
+type VolumeTransport struct {
+	Type   VolumeTransportType    `json:"type"`
+	ISCSI  *VolumeTransportISCSI  `json:"iscsi,omitempty"`
+	NVMEOF *VolumeTransportNVMEOF `json:"nvmeof,omitempty"`
+}
 
 type Volume struct {
 	Struct        datatypes.JSON
@@ -76,14 +98,33 @@ type Volume struct {
 	Options       datatypes.JSONType[VolumeOptionList]
 	Sparse        bool
 	Mode          VolumeMode
-	Status        VolumeStatus
-	Transport     VolumeTransport
 	CapacityBytes int64 `gorm:"check:capacity_bytes > 0"`
-	ClientID      string
-	TargetID      string
-	TargetAddress string
+	Status        VolumeStatus
+	ServerHost    string
+	ClientHost    string
+	Transport     datatypes.JSONType[VolumeTransport]
 	StagingPath   string
 	TargetPaths   datatypes.JSONSlice[string]
+}
+
+func (v *Volume) BeforeSave(tx *gorm.DB) error {
+	return v.process(true)
+}
+
+func (v *Volume) BeforeUpdate(tx *gorm.DB) error {
+	return v.process(true)
+}
+
+func (v *Volume) AfterSave(tx *gorm.DB) error {
+	return v.process(false)
+}
+
+func (v *Volume) AfterUpdate(tx *gorm.DB) error {
+	return v.process(false)
+}
+
+func (v *Volume) AfterFind(tx *gorm.DB) error {
+	return v.process(false)
 }
 
 func (v *Volume) IsPublished() bool {
@@ -102,34 +143,92 @@ func (v *Volume) IsMounted() bool {
 	return v.Status >= VolumeStatusMOUNTED
 }
 
-func (v *Volume) DevicePathClient() (string, error) {
-	switch v.Transport {
-	case VolumeTransportISCSI:
-		return BuildDevicePathISCSIClient(v.TargetAddress, v.TargetID), nil
-	case VolumeTransportNVMEOF_TCP:
+func (v *Volume) DevicePathClient(targetAddress string, targetID string) (string, error) {
+	switch v.Transport.Data().Type {
+	case VolumeTransportTypeISCSI:
+		return BuildDevicePathISCSIClient(targetAddress, targetID), nil
+	case VolumeTransportTypeNVMEOF_TCP:
 		return BuildDevicePathNVMeOFClient(v.ID), nil
-	case VolumeTransportUNSPECIFIED:
+	case VolumeTransportTypeUNSPECIFIED:
 		fallthrough
 	default:
-		return "", fmt.Errorf("unsupported transport: %s", v.Transport)
+		return "", fmt.Errorf("unsupported transport: %s", v.Transport.Data().Type)
 	}
 }
 
-func (v *Volume) DevicePathServer() (string, error) {
-	switch v.Transport {
-	case VolumeTransportISCSI:
-		return BuildDevicePathISCSIServer(v.TargetID), nil
-	case VolumeTransportNVMEOF_TCP:
-		return BuildDevicePathNVMeOFServer(v.TargetID), nil
-	case VolumeTransportUNSPECIFIED:
+func (v *Volume) DevicePathServer(targetID string) (string, error) {
+	switch v.Transport.Data().Type {
+	case VolumeTransportTypeISCSI:
+		return BuildDevicePathISCSIServer(targetID), nil
+	case VolumeTransportTypeNVMEOF_TCP:
+		return BuildDevicePathNVMeOFServer(targetID), nil
+	case VolumeTransportTypeUNSPECIFIED:
 		fallthrough
 	default:
-		return "", fmt.Errorf("unsupported transport: %s", v.Transport)
+		return "", fmt.Errorf("unsupported transport: %s", v.Transport.Data().Type)
 	}
 }
 
 func (v *Volume) DevicePathZFS() string {
 	return BuildDevicePathZFS(v.DatasetID)
+}
+
+func (v *Volume) process(encrypt bool) error {
+	if len(encryptionKey) == 0 {
+		return nil
+	}
+
+	fn := decryptString
+	if encrypt {
+		fn = encryptString
+	}
+
+	{
+		transport := v.Transport.Data()
+		modified := false
+		if transport.ISCSI != nil {
+			if transport.ISCSI.TargetPassword != "" {
+				var err error
+				transport.ISCSI.TargetPassword, err = fn(transport.ISCSI.TargetPassword)
+				if err != nil {
+					return err
+				}
+				modified = true
+			}
+			if transport.ISCSI.InitiatorPassword != "" {
+				var err error
+				transport.ISCSI.InitiatorPassword, err = fn(transport.ISCSI.InitiatorPassword)
+				if err != nil {
+					return err
+				}
+				modified = true
+			}
+		}
+		if transport.NVMEOF != nil {
+			if transport.NVMEOF.TargetPassword != "" {
+				var err error
+				transport.NVMEOF.TargetPassword, err = fn(transport.NVMEOF.TargetPassword)
+				if err != nil {
+					return err
+				}
+				modified = true
+			}
+			if transport.NVMEOF.InitiatorPassword != "" {
+				var err error
+				transport.NVMEOF.InitiatorPassword, err = fn(transport.NVMEOF.InitiatorPassword)
+				if err != nil {
+					return err
+				}
+				modified = true
+			}
+		}
+
+		if modified {
+			v.Transport = datatypes.NewJSONType(transport)
+		}
+	}
+
+	return nil
 }
 
 func BuildDevicePathISCSIClient(address string, iqn string) string {
