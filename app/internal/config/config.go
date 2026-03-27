@@ -61,18 +61,30 @@ func (SecretValue) MarshalJSON() ([]byte, error) {
 	return json.Marshal("REDACTED")
 }
 
+type ConfigHostConnectionRemote struct {
+	Address   string      `json:"address"  validate:"required"`
+	Port      uint16      `json:"port"     mod:"default=22"    validate:"required"`
+	Username  string      `json:"username" validate:"required"`
+	Password  SecretValue `json:"password" validate:"required"`
+	RunAsRoot bool        `json:"runAsRoot"`
+}
+
+type ConfigHostConnectionLocal struct {
+	RunAsRoot bool `json:"runAsRoot"`
+}
+
+type ConfigHostConnection struct {
+	Type   string                      `json:"type"   mod:"default=LOCAL" validate:"oneof=LOCAL REMOTE"`
+	Local  *ConfigHostConnectionLocal  `json:"local"  validate:"required_if=Type LOCAL"`
+	Remote *ConfigHostConnectionRemote `json:"remote" validate:"required_if=Type REMOTE"`
+}
+
 type ConfigHost struct {
-	ID        string `json:"id"        validate:"required"`
-	Type      string `json:"type"      mod:"default=LOCAL" validate:"oneof=LOCAL REMOTE"`
-	RunAsRoot bool   `json:"runAsRoot"`
-	Remote    struct {
-		Address  string      `json:"address"  validate:"required_if=Type REMOTE"`
-		Port     uint16      `json:"port"     mod:"default=22"                   validate:"required_if=Type REMOTE"`
-		Username string      `json:"username" validate:"required_if=Type REMOTE"`
-		Password SecretValue `json:"password" validate:"required_if=Type REMOTE"`
-	} `json:"remote"`
-	IDs      []string    `json:"ids"      validate:"min=1"` // e.g., IQN, NQN
-	Password SecretValue `json:"password"`
+	ID         string               `json:"id"         validate:"required"`
+	Role       string               `json:"role"       mod:"default=CLIENT" validate:"oneof=CLIENT SERVER"`
+	Connection ConfigHostConnection `json:"connection"`
+	IDs        []string             `json:"ids"        validate:"min=1"` // e.g., IQN, NQN
+	Key        SecretValue          `json:"key"`
 }
 
 type Config struct {
