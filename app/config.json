@@ -16,36 +16,42 @@
   "database": {
     "dsn": "file::memory:?cache=shared"
   },
-  "command": {
-    "produceTarget": {
-      "type": "REMOTE",
-      "remote": {
-        "address": "127.0.0.1",
-        "port": 9000,
-        "username": "root",
-        "password": ""
+  "hosts": [
+    {
+      "id": "give",
+      "connection": {
+        "type": "REMOTE",
+        "remote": {
+          "address": "127.0.0.1",
+          "port": 9000,
+          "username": "root",
+          "password": "",
+          "runAsRoot": true
+        }
       },
       "ids": [
         "iqn.2006-01.org.linux-iscsi.give",
         "nqn.2014-08.org.nvmexpress:give"
       ],
-      "password": "mutualpassword"
+      "key": "mutualpassword"
     },
-    "consumeTargets": [
-      {
+    {
+      "id": "take",
+      "connection": {
         "type": "REMOTE",
         "remote": {
           "address": "127.0.0.1",
           "port": 9100,
           "username": "root",
-          "password": ""
-        },
-        "ids": [
-          "iqn.2006-01.org.linux-iscsi.take",
-          "nqn.2014-08.org.nvmexpress:take"
-        ],
-        "password": "password"
-      }
-    ]
-  }
+          "password": "",
+          "runAsRoot": true
+        }
+      },
+      "ids": [
+        "iqn.2006-01.org.linux-iscsi.take",
+        "nqn.2014-08.org.nvmexpress:take"
+      ],
+      "key": "password"
+    }
+  ]
 }
