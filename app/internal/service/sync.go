@@ -14,24 +14,22 @@ import (
 	"github.com/jovulic/zfsilo/app/internal/database"
 	libcommand "github.com/jovulic/zfsilo/lib/command"
 	slogctx "github.com/veqryn/slog-context"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
 type VolumeSyncer struct {
-	database       *gorm.DB
-	produceTarget  command.ProduceTarget
-	consumeTargets command.ConsumeTargetMap
+	database        *gorm.DB
+	executorFactory *command.ExecutorFactory
 }
 
 func NewVolumeSyncer(
 	database *gorm.DB,
-	produceTarget command.ProduceTarget,
-	consumeTargets command.ConsumeTargetMap,
+	executorFactory *command.ExecutorFactory,
 ) *VolumeSyncer {
 	return &VolumeSyncer{
-		database:       database,
-		produceTarget:  produceTarget,
-		consumeTargets: consumeTargets,
+		database:        database,
+		executorFactory: executorFactory,
 	}
 }
 
@@ -59,8 +57,33 @@ func (s *VolumeSyncer) Sync(ctx context.Context, volumedb *database.Volume) erro
 	return nil
 }
 
+func (s *VolumeSyncer) getExecutorForHost(ctx context.Context, hostID string) (libcommand.Executor, *database.Host, error) {
+	if hostID == "" {
+		return nil, nil, fmt.Errorf("host ID is empty")
+	}
+	// We search by ID, name, or any of the IDs in the JSON list.
+	// NOTE: We use SQLite specific JSON function here.
+	host, err := gorm.G[*database.Host](s.database).Where("id = ? OR name = ? OR EXISTS (SELECT 1 FROM json_each(identifiers) WHERE value = ?)", hostID, hostID, hostID).First(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get host %s: %w", hostID, err)
+	}
+	executor, err := s.executorFactory.BuildExecutor(host)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to build executor for host %s: %w", hostID, err)
+	}
+	return executor, host, nil
+}
+
 func (s *VolumeSyncer) syncZFS(ctx context.Context, volumedb *database.Volume) error {
-	exists, err := zfs.With(s.produceTarget.Executor).VolumeExists(ctx, zfs.VolumeExistsArguments{
+	if volumedb.ServerHost == "" {
+		return nil
+	}
+	executor, _, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
+	if err != nil {
+		return err
+	}
+
+	exists, err := zfs.With(executor).VolumeExists(ctx, zfs.VolumeExistsArguments{
 		Name: volumedb.DatasetID,
 	})
 	if err != nil {
@@ -78,7 +101,7 @@ func (s *VolumeSyncer) syncZFS(ctx context.Context, volumedb *database.Volume) e
 	for _, option := range volumedb.Options.Data() {
 		opts[option.Key] = option.Value
 	}
-	err = zfs.With(s.produceTarget.Executor).CreateVolume(ctx, zfs.CreateVolumeArguments{
+	err = zfs.With(executor).CreateVolume(ctx, zfs.CreateVolumeArguments{
 		Name:    volumedb.DatasetID,
 		Size:    uint64(volumedb.CapacityBytes),
 		Options: opts,
@@ -92,22 +115,26 @@ func (s *VolumeSyncer) syncZFS(ctx context.Context, volumedb *database.Volume) e
 }
 
 func (s *VolumeSyncer) syncPublish(ctx context.Context, volumedb *database.Volume) error {
-	getTargetID := func(volumedb *database.Volume) string {
-		if volumedb.TargetID != "" {
-			return volumedb.TargetID
-		}
-		switch volumedb.Transport {
-		case database.VolumeTransportISCSI:
-			id, _ := s.produceTarget.Host.VolumeIQN(volumedb.ID)
+	if volumedb.ServerHost == "" {
+		return nil
+	}
+	executor, host, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
+	if err != nil {
+		return err
+	}
+
+	getTargetID := func(volumedb *database.Volume, host *database.Host) string {
+		transport := volumedb.Transport.Data()
+		switch transport.Type {
+		case database.VolumeTransportTypeISCSI:
+			id, _ := host.VolumeIQN(volumedb.ID)
 			return id
-		case database.VolumeTransportNVMEOF_TCP:
-			id, _ := s.produceTarget.Host.VolumeNQN(volumedb.ID)
+		case database.VolumeTransportTypeNVMEOF_TCP:
+			id, _ := host.VolumeNQN(volumedb.ID)
 			return id
-		case database.VolumeTransportUNSPECIFIED:
-			fallthrough
+		case database.VolumeTransportTypeUNSPECIFIED:
+			return ""
 		default:
-			// If transport is not set yet, we can't compute a default ID.
-			// But syncPublish usually happens when it SHOULD be published.
 			return ""
 		}
 	}
@@ -116,28 +143,29 @@ func (s *VolumeSyncer) syncPublish(ctx context.Context, volumedb *database.Volum
 			return false
 		}
 		var path string
-		switch transport {
-		case database.VolumeTransportISCSI:
+		switch transport.Type {
+		case database.VolumeTransportTypeISCSI:
 			path = fmt.Sprintf("/sys/kernel/config/target/iscsi/%s", targetID)
-		case database.VolumeTransportNVMEOF_TCP:
+		case database.VolumeTransportTypeNVMEOF_TCP:
 			path = fmt.Sprintf("/sys/kernel/config/nvmet/subsystems/%s", targetID)
-		case database.VolumeTransportUNSPECIFIED:
-			fallthrough
+		case database.VolumeTransportTypeUNSPECIFIED:
+			return false
 		default:
 			return false
 		}
-		_, err := literal.With(s.produceTarget.Executor).Run(ctx, fmt.Sprintf("ls -d %s", path))
+		_, err := literal.With(executor).Run(ctx, fmt.Sprintf("ls -d %s", path))
 		return err == nil
 	}
 
+	transport := volumedb.Transport.Data()
+	targetID := getTargetID(volumedb, host)
 	if volumedb.IsPublished() {
-		targetID := getTargetID(volumedb)
-		isPublished := checkPublished(volumedb.Transport, targetID)
+		isPublished := checkPublished(transport, targetID)
 		if !isPublished {
-			slogctx.Info(ctx, "publishing volume during sync", "volumeId", volumedb.ID, "transport", volumedb.Transport)
-			switch volumedb.Transport {
-			case database.VolumeTransportISCSI:
-				err := iscsi.With(s.produceTarget.Executor).PublishVolume(ctx, iscsi.PublishVolumeArguments{
+			slogctx.Info(ctx, "publishing volume during sync", "volumeId", volumedb.ID, "transport", transport.Type)
+			switch transport.Type {
+			case database.VolumeTransportTypeISCSI:
+				err := iscsi.With(executor).PublishVolume(ctx, iscsi.PublishVolumeArguments{
 					VolumeID:   volumedb.ID,
 					DevicePath: volumedb.DevicePathZFS(),
 					TargetIQN:  iscsi.IQN(targetID),
@@ -145,8 +173,8 @@ func (s *VolumeSyncer) syncPublish(ctx context.Context, volumedb *database.Volum
 				if err != nil {
 					return fmt.Errorf("failed to publish iscsi volume: %w", err)
 				}
-			case database.VolumeTransportNVMEOF_TCP:
-				err := nvmeof.With(s.produceTarget.Executor).PublishVolume(ctx, nvmeof.PublishVolumeArguments{
+			case database.VolumeTransportTypeNVMEOF_TCP:
+				err := nvmeof.With(executor).PublishVolume(ctx, nvmeof.PublishVolumeArguments{
 					VolumeID:   volumedb.ID,
 					DevicePath: volumedb.DevicePathZFS(),
 					TargetNQN:  nvmeof.NQN(targetID),
@@ -154,38 +182,34 @@ func (s *VolumeSyncer) syncPublish(ctx context.Context, volumedb *database.Volum
 				if err != nil {
 					return fmt.Errorf("failed to publish nvmeof volume: %w", err)
 				}
-			case database.VolumeTransportUNSPECIFIED:
-				fallthrough
+			case database.VolumeTransportTypeUNSPECIFIED:
+				return fmt.Errorf("no transport specified for volume publish")
 			default:
 				return fmt.Errorf("no transport specified on volume")
 			}
 		}
 	} else {
-		// Even if not intended to be published, check if it IS published and clean up.
-		// Note: We might need to check both transports if we don't know which one was used.
-		// For simplicity, we check the current transport if set, or just skip.
-		targetID := getTargetID(volumedb)
-		isPublished := checkPublished(volumedb.Transport, targetID)
+		isPublished := checkPublished(transport, targetID)
 		if isPublished {
 			slogctx.Info(ctx, "unpublishing volume during sync", "volumeId", volumedb.ID)
-			switch volumedb.Transport {
-			case database.VolumeTransportISCSI:
-				err := iscsi.With(s.produceTarget.Executor).UnpublishVolume(ctx, iscsi.UnpublishVolumeArguments{
+			switch transport.Type {
+			case database.VolumeTransportTypeISCSI:
+				err := iscsi.With(executor).UnpublishVolume(ctx, iscsi.UnpublishVolumeArguments{
 					VolumeID:  volumedb.ID,
 					TargetIQN: iscsi.IQN(targetID),
 				})
 				if err != nil {
 					return fmt.Errorf("failed to unpublish iscsi volume: %w", err)
 				}
-			case database.VolumeTransportNVMEOF_TCP:
-				err := nvmeof.With(s.produceTarget.Executor).UnpublishVolume(ctx, nvmeof.UnpublishVolumeArguments{
+			case database.VolumeTransportTypeNVMEOF_TCP:
+				err := nvmeof.With(executor).UnpublishVolume(ctx, nvmeof.UnpublishVolumeArguments{
 					TargetNQN: nvmeof.NQN(targetID),
 				})
 				if err != nil {
 					return fmt.Errorf("failed to unpublish nvmeof volume: %w", err)
 				}
-			case database.VolumeTransportUNSPECIFIED:
-				fallthrough
+			case database.VolumeTransportTypeUNSPECIFIED:
+				return fmt.Errorf("no transport specified for volume publish")
 			default:
 				return fmt.Errorf("no transport specified on volume")
 			}
@@ -196,190 +220,200 @@ func (s *VolumeSyncer) syncPublish(ctx context.Context, volumedb *database.Volum
 }
 
 func (s *VolumeSyncer) syncConnect(ctx context.Context, volumedb *database.Volume) error {
-	getTargetID := func(volumedb *database.Volume) string {
-		if volumedb.TargetID != "" {
-			return volumedb.TargetID
-		}
-		switch volumedb.Transport {
-		case database.VolumeTransportISCSI:
-			id, _ := s.produceTarget.Host.VolumeIQN(volumedb.ID)
+	if volumedb.ServerHost == "" || volumedb.ClientHost == "" {
+		return nil
+	}
+	publishExecutor, publishHost, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
+	if err != nil {
+		return err
+	}
+	connectExecutor, connectHost, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
+	if err != nil {
+		return err
+	}
+
+	getTargetID := func(volumedb *database.Volume, host *database.Host) string {
+		switch volumedb.Transport.Data().Type {
+		case database.VolumeTransportTypeISCSI:
+			id, _ := host.VolumeIQN(volumedb.ID)
 			return id
-		case database.VolumeTransportNVMEOF_TCP:
-			id, _ := s.produceTarget.Host.VolumeNQN(volumedb.ID)
+		case database.VolumeTransportTypeNVMEOF_TCP:
+			id, _ := host.VolumeNQN(volumedb.ID)
 			return id
-		case database.VolumeTransportUNSPECIFIED:
-			fallthrough
+		case database.VolumeTransportTypeUNSPECIFIED:
+			return ""
 		default:
 			return ""
 		}
 	}
-	checkAuthorized := func(transport database.VolumeTransport, targetID, clientID string) bool {
+	getClientID := func(transport datatypes.JSONType[database.VolumeTransport], host *database.Host) string {
+		switch transport.Data().Type {
+		case database.VolumeTransportTypeISCSI:
+			id, _ := host.IQN()
+			return id
+		case database.VolumeTransportTypeNVMEOF_TCP:
+			id, _ := host.NQN()
+			return id
+		case database.VolumeTransportTypeUNSPECIFIED:
+			return ""
+		default:
+			return ""
+		}
+	}
+	checkAuthorized := func(transport datatypes.JSONType[database.VolumeTransport], targetID, clientID string) bool {
 		var path string
-		switch transport {
-		case database.VolumeTransportISCSI:
+		switch transport.Data().Type {
+		case database.VolumeTransportTypeISCSI:
 			path = fmt.Sprintf("/sys/kernel/config/target/iscsi/%s/tpgt_1/acls/%s", targetID, clientID)
-		case database.VolumeTransportNVMEOF_TCP:
+		case database.VolumeTransportTypeNVMEOF_TCP:
 			path = fmt.Sprintf("/sys/kernel/config/nvmet/subsystems/%s/allowed_hosts/%s", targetID, clientID)
-		case database.VolumeTransportUNSPECIFIED:
-			fallthrough
+		case database.VolumeTransportTypeUNSPECIFIED:
+			return false
 		default:
 			return false
 		}
-		_, err := literal.With(s.produceTarget.Executor).Run(ctx, fmt.Sprintf("ls -d %s", path))
+		_, err := literal.With(publishExecutor).Run(ctx, fmt.Sprintf("ls -d %s", path))
 		return err == nil
 	}
-	checkConnected := func(transport database.VolumeTransport, consumer libcommand.Executor, targetID string) bool {
+	checkConnected := func(transport datatypes.JSONType[database.VolumeTransport], targetID string) bool {
 		var cmd string
-		switch transport {
-		case database.VolumeTransportISCSI:
+		switch transport.Data().Type {
+		case database.VolumeTransportTypeISCSI:
 			cmd = fmt.Sprintf("iscsiadm -m session | grep -q %s", targetID)
-		case database.VolumeTransportNVMEOF_TCP:
+		case database.VolumeTransportTypeNVMEOF_TCP:
 			cmd = fmt.Sprintf("nvme list-subsys -n %s", targetID)
-		case database.VolumeTransportUNSPECIFIED:
-			fallthrough
+		case database.VolumeTransportTypeUNSPECIFIED:
+			return false
 		default:
 			return false
 		}
-		_, err := literal.With(consumer).Run(ctx, cmd)
+		_, err := literal.With(connectExecutor).Run(ctx, cmd)
 		return err == nil
 	}
 
-	// If we don't have a client, we can't connect.
-	if volumedb.ClientID == "" {
-		return nil
-	}
+	targetID := getTargetID(volumedb, publishHost)
+	clientID := getClientID(volumedb.Transport, connectHost)
+	targetAddress := publishHost.Connection.Data().Remote.Address
+	targetPassword := publishHost.Key
+	initiatorPassword := connectHost.Key
 
 	if volumedb.IsConnected() {
-		consumeTarget, ok := s.consumeTargets[volumedb.ClientID]
-		if !ok {
-			return fmt.Errorf("unknown consume target: %s", volumedb.ClientID)
-		}
-
-		targetID := getTargetID(volumedb)
-
 		// Reconcile authorization.
-		isAuthorized := checkAuthorized(volumedb.Transport, targetID, volumedb.ClientID)
+		isAuthorized := checkAuthorized(volumedb.Transport, targetID, clientID)
 		if !isAuthorized {
-			slogctx.Info(ctx, "authorizing client during sync", "volumeId", volumedb.ID, "clientId", volumedb.ClientID)
-			switch volumedb.Transport {
-			case database.VolumeTransportISCSI:
-				err := iscsi.With(s.produceTarget.Executor).Authorize(ctx, iscsi.AuthorizeArguments{
+			slogctx.Info(ctx, "authorizing client during sync", "volumeId", volumedb.ID, "clientId", clientID)
+			switch volumedb.Transport.Data().Type {
+			case database.VolumeTransportTypeISCSI:
+				err := iscsi.With(publishExecutor).Authorize(ctx, iscsi.AuthorizeArguments{
 					TargetIQN:         iscsi.IQN(targetID),
-					InitiatorIQN:      iscsi.IQN(volumedb.ClientID),
-					InitiatorPassword: consumeTarget.Password,
-					TargetPassword:    s.produceTarget.Password,
+					InitiatorIQN:      iscsi.IQN(clientID),
+					InitiatorPassword: initiatorPassword,
+					TargetPassword:    targetPassword,
 				})
 				if err != nil {
 					return fmt.Errorf("failed to authorize iscsi client: %w", err)
 				}
-			case database.VolumeTransportNVMEOF_TCP:
-				err := nvmeof.With(s.produceTarget.Executor).Authorize(ctx, nvmeof.AuthorizeArguments{
+			case database.VolumeTransportTypeNVMEOF_TCP:
+				err := nvmeof.With(publishExecutor).Authorize(ctx, nvmeof.AuthorizeArguments{
 					TargetNQN:         nvmeof.NQN(targetID),
-					InitiatorNQN:      nvmeof.NQN(volumedb.ClientID),
-					InitiatorPassword: consumeTarget.Password,
-					TargetPassword:    s.produceTarget.Password,
+					InitiatorNQN:      nvmeof.NQN(clientID),
+					InitiatorPassword: initiatorPassword,
+					TargetPassword:    targetPassword,
 				})
 				if err != nil {
 					return fmt.Errorf("failed to authorize nvmeof client: %w", err)
 				}
-			case database.VolumeTransportUNSPECIFIED:
-				fallthrough
+			case database.VolumeTransportTypeUNSPECIFIED:
+				return fmt.Errorf("no transport specified for volume publish")
 			default:
 				return fmt.Errorf("no transport specified on volume")
 			}
 		}
 
 		// Reconcile connection.
-		isConnected := checkConnected(volumedb.Transport, consumeTarget.Executor, targetID)
+		isConnected := checkConnected(volumedb.Transport, targetID)
 		if !isConnected {
 			slogctx.Info(ctx, "connecting volume during sync", "volumeId", volumedb.ID)
-			switch volumedb.Transport {
-			case database.VolumeTransportISCSI:
-				err := iscsi.With(consumeTarget.Executor).ConnectTarget(ctx, iscsi.ConnectTargetArguments{
+			switch volumedb.Transport.Data().Type {
+			case database.VolumeTransportTypeISCSI:
+				err := iscsi.With(connectExecutor).ConnectTarget(ctx, iscsi.ConnectTargetArguments{
 					TargetIQN:         iscsi.IQN(targetID),
-					TargetAddress:     volumedb.TargetAddress,
-					InitiatorIQN:      iscsi.IQN(volumedb.ClientID),
-					InitiatorPassword: consumeTarget.Password,
-					TargetPassword:    s.produceTarget.Password,
+					TargetAddress:     targetAddress,
+					InitiatorIQN:      iscsi.IQN(clientID),
+					InitiatorPassword: initiatorPassword,
+					TargetPassword:    targetPassword,
 				})
 				if err != nil {
 					return fmt.Errorf("failed to connect iscsi volume: %w", err)
 				}
-			case database.VolumeTransportNVMEOF_TCP:
-				err := nvmeof.With(consumeTarget.Executor).ConnectTarget(ctx, nvmeof.ConnectTargetArguments{
+			case database.VolumeTransportTypeNVMEOF_TCP:
+				err := nvmeof.With(connectExecutor).ConnectTarget(ctx, nvmeof.ConnectTargetArguments{
 					TargetNQN:         nvmeof.NQN(targetID),
-					TargetAddress:     volumedb.TargetAddress,
-					InitiatorNQN:      nvmeof.NQN(volumedb.ClientID),
-					InitiatorPassword: consumeTarget.Password,
-					TargetPassword:    s.produceTarget.Password,
+					TargetAddress:     targetAddress,
+					InitiatorNQN:      nvmeof.NQN(clientID),
+					InitiatorPassword: initiatorPassword,
+					TargetPassword:    targetPassword,
 				})
 				if err != nil {
 					return fmt.Errorf("failed to connect nvmeof volume: %w", err)
 				}
-			case database.VolumeTransportUNSPECIFIED:
-				fallthrough
+			case database.VolumeTransportTypeUNSPECIFIED:
+				return fmt.Errorf("no transport specified for volume publish")
 			default:
 				return fmt.Errorf("no transport specified on volume")
 			}
 		}
 	} else {
-		consumeTarget, ok := s.consumeTargets[volumedb.ClientID]
-		if !ok {
-			return fmt.Errorf("unknown consume target: %s", volumedb.ClientID)
-		}
-
-		targetID := getTargetID(volumedb)
-
 		// Reconcile connection.
-		isConnected := checkConnected(volumedb.Transport, consumeTarget.Executor, targetID)
+		isConnected := checkConnected(volumedb.Transport, targetID)
 		if isConnected {
 			slogctx.Info(ctx, "disconnecting volume during sync", "volumeId", volumedb.ID)
-			switch volumedb.Transport {
-			case database.VolumeTransportISCSI:
-				err := iscsi.With(consumeTarget.Executor).DisconnectTarget(ctx, iscsi.DisconnectTargetArguments{
+			switch volumedb.Transport.Data().Type {
+			case database.VolumeTransportTypeISCSI:
+				err := iscsi.With(connectExecutor).DisconnectTarget(ctx, iscsi.DisconnectTargetArguments{
 					TargetIQN:     iscsi.IQN(targetID),
-					TargetAddress: volumedb.TargetAddress,
+					TargetAddress: targetAddress,
 				})
 				if err != nil {
 					return fmt.Errorf("failed to disconnect iscsi volume: %w", err)
 				}
-			case database.VolumeTransportNVMEOF_TCP:
-				err := nvmeof.With(consumeTarget.Executor).DisconnectTarget(ctx, nvmeof.DisconnectTargetArguments{
+			case database.VolumeTransportTypeNVMEOF_TCP:
+				err := nvmeof.With(connectExecutor).DisconnectTarget(ctx, nvmeof.DisconnectTargetArguments{
 					TargetNQN: nvmeof.NQN(targetID),
 				})
 				if err != nil {
 					return fmt.Errorf("failed to disconnect nvmeof volume: %w", err)
 				}
-			case database.VolumeTransportUNSPECIFIED:
-				fallthrough
+			case database.VolumeTransportTypeUNSPECIFIED:
+				return fmt.Errorf("no transport specified for volume publish")
 			default:
 				return fmt.Errorf("no transport specified on volume")
 			}
 		}
 
 		// Reconcile authorization.
-		isAuthorized := checkAuthorized(volumedb.Transport, targetID, volumedb.ClientID)
+		isAuthorized := checkAuthorized(volumedb.Transport, targetID, clientID)
 		if isAuthorized {
-			slogctx.Info(ctx, "unauthorizing client during sync", "volumeId", volumedb.ID, "clientId", volumedb.ClientID)
-			switch volumedb.Transport {
-			case database.VolumeTransportISCSI:
-				err := iscsi.With(s.produceTarget.Executor).Unauthorize(ctx, iscsi.UnauthorizeArguments{
+			slogctx.Info(ctx, "unauthorizing client during sync", "volumeId", volumedb.ID, "clientId", clientID)
+			switch volumedb.Transport.Data().Type {
+			case database.VolumeTransportTypeISCSI:
+				err := iscsi.With(publishExecutor).Unauthorize(ctx, iscsi.UnauthorizeArguments{
 					TargetIQN:    iscsi.IQN(targetID),
-					InitiatorIQN: iscsi.IQN(volumedb.ClientID),
+					InitiatorIQN: iscsi.IQN(clientID),
 				})
 				if err != nil {
 					return fmt.Errorf("failed to unauthorize iscsi client: %w", err)
 				}
-			case database.VolumeTransportNVMEOF_TCP:
-				err := nvmeof.With(s.produceTarget.Executor).Unauthorize(ctx, nvmeof.UnauthorizeArguments{
+			case database.VolumeTransportTypeNVMEOF_TCP:
+				err := nvmeof.With(publishExecutor).Unauthorize(ctx, nvmeof.UnauthorizeArguments{
 					TargetNQN:    nvmeof.NQN(targetID),
-					InitiatorNQN: nvmeof.NQN(volumedb.ClientID),
+					InitiatorNQN: nvmeof.NQN(clientID),
 				})
 				if err != nil {
 					return fmt.Errorf("failed to unauthorize nvmeof client: %w", err)
 				}
-			case database.VolumeTransportUNSPECIFIED:
-				fallthrough
+			case database.VolumeTransportTypeUNSPECIFIED:
+				return fmt.Errorf("no transport specified for volume publish")
 			default:
 				return fmt.Errorf("no transport specified on volume")
 			}
@@ -390,37 +424,58 @@ func (s *VolumeSyncer) syncConnect(ctx context.Context, volumedb *database.Volum
 }
 
 func (s *VolumeSyncer) syncStage(ctx context.Context, volumedb *database.Volume) error {
-	checkMounted := func(consumer libcommand.Executor, mountPath string) bool {
-		isMounted, _ := mount.With(consumer).IsMounted(ctx, mountPath)
-		return isMounted
-	}
-
-	if volumedb.ClientID == "" || volumedb.StagingPath == "" {
+	if volumedb.ServerHost == "" || volumedb.ClientHost == "" || volumedb.StagingPath == "" {
 		return nil
 	}
 
-	consumer, ok := s.consumeTargets[volumedb.ClientID]
-	if !ok {
-		return fmt.Errorf("unknown consumer: %s", volumedb.ClientID)
+	publishExecutor, publishHost, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
+	if err != nil {
+		return err
+	}
+	_ = publishExecutor
+	connectExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
+	if err != nil {
+		return err
+	}
+
+	checkMounted := func(mountPath string) bool {
+		isMounted, _ := mount.With(connectExecutor).IsMounted(ctx, mountPath)
+		return isMounted
 	}
 
 	if volumedb.IsStaged() {
-		isMounted := checkMounted(consumer.Executor, volumedb.StagingPath)
+		isMounted := checkMounted(volumedb.StagingPath)
 		if !isMounted {
 			slogctx.Info(ctx, "staging volume during sync", "volumeId", volumedb.ID, "stagingPath", volumedb.StagingPath)
 
-			devicePath, err := volumedb.DevicePathClient()
+			getTargetID := func(volumedb *database.Volume, host *database.Host) string {
+				switch volumedb.Transport.Data().Type {
+				case database.VolumeTransportTypeISCSI:
+					id, _ := host.VolumeIQN(volumedb.ID)
+					return id
+				case database.VolumeTransportTypeNVMEOF_TCP:
+					id, _ := host.VolumeNQN(volumedb.ID)
+					return id
+				case database.VolumeTransportTypeUNSPECIFIED:
+					return ""
+				default:
+					return ""
+				}
+			}
+			targetID := getTargetID(volumedb, publishHost)
+			targetAddress := publishHost.Connection.Data().Remote.Address
+			devicePath, err := volumedb.DevicePathClient(targetAddress, targetID)
 			if err != nil {
 				return fmt.Errorf("failed to get device path: %w", err)
 			}
 
 			if volumedb.Mode == database.VolumeModeFILESYSTEM {
-				fsType, err := fs.With(consumer.Executor).GetFSType(ctx, devicePath)
+				fsType, err := fs.With(connectExecutor).GetFSType(ctx, devicePath)
 				if err != nil {
 					return fmt.Errorf("failed to get filesystem type: %w", err)
 				}
 				if fsType == "" {
-					err = fs.With(consumer.Executor).Format(ctx, fs.FormatArguments{
+					err = fs.With(connectExecutor).Format(ctx, fs.FormatArguments{
 						Device:        devicePath,
 						WaitForDevice: true,
 					})
@@ -430,7 +485,7 @@ func (s *VolumeSyncer) syncStage(ctx context.Context, volumedb *database.Volume)
 				}
 			}
 
-			_, err = literal.With(consumer.Executor).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", volumedb.StagingPath))
+			_, err = literal.With(connectExecutor).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", volumedb.StagingPath))
 			if err != nil {
 				return fmt.Errorf("failed to create staging path: %w", err)
 			}
@@ -446,16 +501,16 @@ func (s *VolumeSyncer) syncStage(ctx context.Context, volumedb *database.Volume)
 				mountArgs.Options = []string{"bind"}
 			}
 
-			err = mount.With(consumer.Executor).Mount(ctx, mountArgs)
+			err = mount.With(connectExecutor).Mount(ctx, mountArgs)
 			if err != nil {
 				return fmt.Errorf("failed to stage volume: %w", err)
 			}
 		}
 	} else {
-		isMounted := checkMounted(consumer.Executor, volumedb.StagingPath)
+		isMounted := checkMounted(volumedb.StagingPath)
 		if isMounted {
 			slogctx.Info(ctx, "unstaging volume during sync", "volumeId", volumedb.ID)
-			err := mount.With(consumer.Executor).Umount(ctx, mount.UmountArguments{
+			err := mount.With(connectExecutor).Umount(ctx, mount.UmountArguments{
 				Path: volumedb.StagingPath,
 			})
 			if err != nil {
@@ -468,39 +523,39 @@ func (s *VolumeSyncer) syncStage(ctx context.Context, volumedb *database.Volume)
 }
 
 func (s *VolumeSyncer) syncMount(ctx context.Context, volumedb *database.Volume) error {
-	checkMounted := func(consumer libcommand.Executor, mountPath string) bool {
-		isMounted, _ := mount.With(consumer).IsMounted(ctx, mountPath)
-		return isMounted
-	}
-
-	if volumedb.ClientID == "" || volumedb.StagingPath == "" {
+	if volumedb.ClientHost == "" || volumedb.StagingPath == "" {
 		return nil
 	}
 
-	consumer, ok := s.consumeTargets[volumedb.ClientID]
-	if !ok {
-		return fmt.Errorf("unknown consumer: %s", volumedb.ClientID)
+	connectExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
+	if err != nil {
+		return err
+	}
+
+	checkMounted := func(mountPath string) bool {
+		isMounted, _ := mount.With(connectExecutor).IsMounted(ctx, mountPath)
+		return isMounted
 	}
 
 	// Reconcile TargetPaths.
 	for _, targetPath := range volumedb.TargetPaths {
-		isMounted := checkMounted(consumer.Executor, targetPath)
+		isMounted := checkMounted(targetPath)
 		if !isMounted {
 			slogctx.Info(ctx, "mounting volume during sync", "volumeId", volumedb.ID, "targetPath", targetPath)
 
 			if volumedb.Mode == database.VolumeModeBLOCK {
-				_, err := literal.With(consumer.Executor).Run(ctx, fmt.Sprintf("install -m 0644 /dev/null %s", targetPath))
+				_, err := literal.With(connectExecutor).Run(ctx, fmt.Sprintf("install -m 0644 /dev/null %s", targetPath))
 				if err != nil {
 					return fmt.Errorf("failed to touch mount path: %w", err)
 				}
 			} else {
-				_, err := literal.With(consumer.Executor).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", targetPath))
+				_, err := literal.With(connectExecutor).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", targetPath))
 				if err != nil {
 					return fmt.Errorf("failed to touch mount path: %w", err)
 				}
 			}
 
-			err := mount.With(consumer.Executor).Mount(ctx, mount.MountArguments{
+			err := mount.With(connectExecutor).Mount(ctx, mount.MountArguments{
 				SourcePath: volumedb.StagingPath,
 				TargetPath: targetPath,
 				Options:    []string{"bind"},
@@ -510,7 +565,7 @@ func (s *VolumeSyncer) syncMount(ctx context.Context, volumedb *database.Volume)
 			}
 
 			if volumedb.Mode == database.VolumeModeFILESYSTEM {
-				_, err = literal.With(consumer.Executor).Run(ctx, fmt.Sprintf("chmod 0777 %s", targetPath))
+				_, err = literal.With(connectExecutor).Run(ctx, fmt.Sprintf("chmod 0777 %s", targetPath))
 				if err != nil {
 					return fmt.Errorf("failed to chmod mount path: %w", err)
 				}
@@ -518,22 +573,12 @@ func (s *VolumeSyncer) syncMount(ctx context.Context, volumedb *database.Volume)
 		}
 	}
 
-	// NOTE: We don't easily know all possible paths that COULD be mounted.
-	// But we can check if the volume status is not mounted and we have paths,
-	// or if we have paths in the DB that we want to ensure are NOT mounted if
-	// the volume status is below mounted.
-	// However, usually we'd want to unmount paths that are NOT in TargetPaths.
-	// That's harder without listing all mounts.
-	// For now, let's just handle the case where the volume is not intended to be mounted.
 	if !volumedb.IsMounted() {
-		// This is a bit weak because TargetPaths might still have entries.
-		// If status is not MOUNTED, we should ideally ensure NONE of the
-		// TargetPaths are mounted.
 		for _, targetPath := range volumedb.TargetPaths {
-			isMounted := checkMounted(consumer.Executor, targetPath)
+			isMounted := checkMounted(targetPath)
 			if isMounted {
 				slogctx.Info(ctx, "unmounting volume during sync", "volumeId", volumedb.ID, "targetPath", targetPath)
-				err := mount.With(consumer.Executor).Umount(ctx, mount.UmountArguments{
+				err := mount.With(connectExecutor).Umount(ctx, mount.UmountArguments{
 					Path: targetPath,
 				})
 				if err != nil {
