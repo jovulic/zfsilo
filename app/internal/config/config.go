@@ -62,10 +62,10 @@ func (SecretValue) MarshalJSON() ([]byte, error) {
 }
 
 type ConfigHostConnectionRemote struct {
-	Address   string      `json:"address"  validate:"required"`
-	Port      uint16      `json:"port"     mod:"default=22"    validate:"required"`
-	Username  string      `json:"username" validate:"required"`
-	Password  SecretValue `json:"password" validate:"required"`
+	Address   string      `json:"address"   validate:"required"`
+	Port      uint16      `json:"port"      mod:"default=22"    validate:"required"`
+	Username  string      `json:"username"  validate:"required"`
+	Password  SecretValue `json:"password"  validate:"required"`
 	RunAsRoot bool        `json:"runAsRoot"`
 }
 
@@ -74,7 +74,7 @@ type ConfigHostConnectionLocal struct {
 }
 
 type ConfigHostConnection struct {
-	Type   string                      `json:"type"   mod:"default=LOCAL" validate:"oneof=LOCAL REMOTE"`
+	Type   string                      `json:"type"   mod:"default=LOCAL"                validate:"oneof=LOCAL REMOTE"`
 	Local  *ConfigHostConnectionLocal  `json:"local"  validate:"required_if=Type LOCAL"`
 	Remote *ConfigHostConnectionRemote `json:"remote" validate:"required_if=Type REMOTE"`
 }

@@ -84,6 +84,8 @@ func ConvertHostRoleFromAPIToDB(source zfsilov1.Host_Role) database.HostRole {
 		return database.HostRoleSERVER
 	case zfsilov1.Host_ROLE_CLIENT:
 		return database.HostRoleCLIENT
+	case zfsilov1.Host_ROLE_UNSPECIFIED:
+		return database.HostRoleUNSPECIFIED
 	default:
 		return database.HostRoleUNSPECIFIED
 	}
@@ -95,6 +97,8 @@ func ConvertHostRoleFromDBToAPI(source database.HostRole) zfsilov1.Host_Role {
 		return zfsilov1.Host_ROLE_SERVER
 	case database.HostRoleCLIENT:
 		return zfsilov1.Host_ROLE_CLIENT
+	case database.HostRoleUNSPECIFIED:
+		return zfsilov1.Host_ROLE_UNSPECIFIED
 	default:
 		return zfsilov1.Host_ROLE_UNSPECIFIED
 	}
