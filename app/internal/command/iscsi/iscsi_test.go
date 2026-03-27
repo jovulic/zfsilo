@@ -3,17 +3,32 @@ package iscsi_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/jovulic/zfsilo/app/internal/command/iscsi"
-	"github.com/jovulic/zfsilo/app/internal/command/lib/host"
 	"github.com/jovulic/zfsilo/app/internal/command/zfs"
 	"github.com/jovulic/zfsilo/lib/command"
 	"github.com/stretchr/testify/require"
 )
 
 const mb = 1 << 20
+
+func generateIQN(domain string, date time.Time, hostname string) string {
+	parts := strings.Split(domain, ".")
+	for i, j := 0, len(parts)-1; i < j; i, j = i+1, j-1 {
+		parts[i], parts[j] = parts[j], parts[i]
+	}
+	return fmt.Sprintf("iqn.%s.%s.%s", date.Format("2006-01"), strings.Join(parts, "."), hostname)
+}
+
+func generateVolumeIQN(hostIQN string, volumeID string) string {
+	res := fmt.Sprintf("%s:%s", hostIQN, volumeID)
+	res = strings.ToLower(res)
+	res = strings.ReplaceAll(res, "_", "-")
+	return res
+}
 
 var giveHostConfig = command.RemoteExecutorConfig{
 	Address:  "127.0.0.1",
@@ -69,7 +84,7 @@ func newTestClients(t *testing.T) *testClients {
 	}
 }
 
-func TestHost_IQN(t *testing.T) {
+func TestGenerateIQN(t *testing.T) {
 	type fields struct {
 		domain    string
 		ownerTime time.Time
@@ -92,37 +107,28 @@ func TestHost_IQN(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := host.New([]string{tt.want})
-			got, err := h.IQN()
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			got := generateIQN(tt.fields.domain, tt.fields.ownerTime, tt.fields.hostname)
 			if got != tt.want {
-				t.Errorf("Host.IQN() = %v, want %v", got, tt.want)
+				t.Errorf("generateIQN() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestHost_VolumeIQN(t *testing.T) {
-	type fields struct {
-		id string
-	}
+func TestGenerateVolumeIQN(t *testing.T) {
 	type args struct {
+		hostIQN    string
 		volumeName string
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   string
+		name string
+		args args
+		want string
 	}{
 		{
 			name: "nominal",
-			fields: fields{
-				id: "iqn.2003-01.org.linux-iscsi.give",
-			},
 			args: args{
+				hostIQN:    "iqn.2003-01.org.linux-iscsi.give",
 				volumeName: "tank-ivol",
 			},
 			want: "iqn.2003-01.org.linux-iscsi.give:tank-ivol",
@@ -130,13 +136,9 @@ func TestHost_VolumeIQN(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tr := host.New([]string{tt.fields.id})
-			got, err := tr.VolumeIQN(tt.args.volumeName)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			got := generateVolumeIQN(tt.args.hostIQN, tt.args.volumeName)
 			if got != tt.want {
-				t.Errorf("Target.NewIQN() = %v, want %v", got, tt.want)
+				t.Errorf("generateVolumeIQN() = %v, want %v", got, tt.want)
 			}
 		})
 	}
