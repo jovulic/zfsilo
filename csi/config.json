@@ -1,14 +1,18 @@
 {
+  "log": {
+    "level": "DEBUG",
+    "format": "TEXT"
+  },
   "service": {
+    "bindAddress": "0.0.0.0:9090",
     "secret": "password",
-    "zfsiloAddress": "127.0.0.1:9001",
-    "targetPortalAddress": "10.0.0.123:3260",
-    "clientId": {
+    "zfsiloAddress": "http://10.0.0.123:8080"
+  },
+  "node": {
+    "publishHost": "hst_give",
+    "host": {
       "type": "VALUE",
-      "value": "iqn.2006-01.org.linux-iscsi.take"
-    },
-    "knownClientIds": [
-      "iqn.2006-01.org.linux-iscsi.take"
-    ]
+      "value": "hst_take"
+    }
   }
 }
