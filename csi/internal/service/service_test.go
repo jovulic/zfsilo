@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -15,7 +14,6 @@ import (
 	zfsilov1 "github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1"
 	"github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1/zfsilov1connect"
 	"github.com/jovulic/zfsilo/csi/internal/service"
-	"github.com/jovulic/zfsilo/lib/command"
 	"github.com/kubernetes-csi/csi-test/v5/pkg/sanity"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -100,17 +98,15 @@ var _ = Describe("CSIService Sanity", func() {
 	for _, transport := range []string{"iscsi", "nvmeof"} {
 		Context(fmt.Sprintf("with %s transport", transport), Ordered, func() {
 			var (
-				srv                 *service.CSIService
-				grpcServer          *grpc.Server
-				endpoint            string
-				stopChan            chan struct{}
-				config              sanity.TestConfig
-				zfsiloAddress       string
-				secret              string
-				targetPortalAddress string
-				nodeID              string
-				clientIDs           map[string]string
-				parentDatasetID     string
+				srv             *service.CSIService
+				grpcServer      *grpc.Server
+				endpoint        string
+				stopChan        chan struct{}
+				config          sanity.TestConfig
+				zfsiloAddress   string
+				secret          string
+				nodeID          string
+				parentDatasetID string
 			)
 
 			BeforeAll(func() {
@@ -127,59 +123,10 @@ var _ = Describe("CSIService Sanity", func() {
 
 				wipeBackend(ctx, zfsiloAddress, secret)
 
-				targetPortalAddress = os.Getenv("ZFSILO_TARGET_PORTAL_ADDRESS")
-				if targetPortalAddress == "" {
-					// Dynamically resolve 'give' address from 'take' host perspective.
-					takeExecutor := command.NewRemoteExecutor(command.RemoteExecutorConfig{
-						Address:  "127.0.0.1",
-						Port:     9100,
-						Username: "root",
-						Password: "",
-					})
-					err := takeExecutor.Startup(ctx)
-					Expect(err).NotTo(HaveOccurred(), "failed to startup take executor")
-					defer takeExecutor.Shutdown(ctx)
-
-					giveExecutor := command.NewRemoteExecutor(command.RemoteExecutorConfig{
-						Address:  "127.0.0.1",
-						Port:     9000,
-						Username: "root",
-						Password: "",
-					})
-					err = giveExecutor.Startup(ctx)
-					Expect(err).NotTo(HaveOccurred(), "failed to startup give executor")
-					defer giveExecutor.Shutdown(ctx)
-
-					_, err = giveExecutor.Exec(ctx, "modprobe nvmet nvmet-tcp")
-					Expect(err).NotTo(HaveOccurred(), "failed to load nvmet modules on give")
-
-					_, err = takeExecutor.Exec(ctx, "modprobe nvme-tcp nvme-fabrics")
-					Expect(err).NotTo(HaveOccurred(), "failed to load nvme modules on take")
-
-					result, err := takeExecutor.Exec(ctx, "dig +short give")
-					Expect(err).NotTo(HaveOccurred(), "failed to resolve give address")
-					address := strings.TrimSpace(result.Stdout)
-					Expect(address).NotTo(BeEmpty(), "resolved give address is empty")
-
-					targetPortalAddress = address + ":3260"
+				nodeID = os.Getenv("ZFSILO_NODE_ID")
+				if nodeID == "" {
+					nodeID = "hst_take"
 				}
-
-				iscsiID := os.Getenv("ZFSILO_ISCSI_ID")
-				if iscsiID == "" {
-					iscsiID = "iqn.2006-01.org.linux-iscsi.take"
-				}
-				nvmeofID := os.Getenv("ZFSILO_NVMEOF_ID")
-				if nvmeofID == "" {
-					nvmeofID = "nqn.2014-08.org.nvmexpress:take"
-				}
-
-				clientIDs = map[string]string{
-					"iscsi":  iscsiID,
-					"nvmeof": nvmeofID,
-				}
-
-				// Build composite NodeID.
-				nodeID = fmt.Sprintf("iscsi=%s;nvmeof=%s", iscsiID, nvmeofID)
 
 				parentDatasetID = os.Getenv("ZFSILO_PARENT_DATASET_ID")
 				if parentDatasetID == "" {
@@ -195,11 +142,10 @@ var _ = Describe("CSIService Sanity", func() {
 				_ = os.RemoveAll("/tmp/csi-staging")
 
 				srv = service.NewCSIService(service.CSIServiceConfig{
-					Secret:              secret,
-					ZFSiloAddress:       zfsiloAddress,
-					TargetPortalAddress: targetPortalAddress,
-					ClientIDs:           clientIDs,
-					KnownClientIDs:      []string{nodeID},
+					Secret:        secret,
+					ZFSiloAddress: zfsiloAddress,
+					PublishHost:   "hst_give",
+					HostID:        nodeID,
 				})
 
 				err := srv.Start(ctx)
