@@ -35,14 +35,24 @@ type HostConnection struct {
 	Remote *HostConnectionRemote `json:"remote,omitempty"`
 }
 
+//go:generate stringer -type=HostRole -linecomment host.go
+type HostRole int
+
+const (
+	HostRoleUNSPECIFIED HostRole = iota // UNSPECIFIED
+	HostRoleSERVER                      // SERVER
+	HostRoleCLIENT                      // CLIENT
+)
+
 type Host struct {
 	CreateTime  time.Time `gorm:"autoCreateTime"`
 	UpdateTime  time.Time `gorm:"autoUpdateTime"`
 	ID          string    `gorm:"primaryKey"`
 	Name        string
+	Role        HostRole
 	Connection  datatypes.JSONType[HostConnection]
 	Identifiers datatypes.JSONSlice[string]
-	Password    string
+	Key         string
 	ByConfig    bool
 }
 
@@ -115,8 +125,8 @@ func (h *Host) process(encrypt bool) error {
 	var err error
 
 	{
-		if h.Password != "" {
-			h.Password, err = fn(h.Password)
+		if h.Key != "" {
+			h.Key, err = fn(h.Key)
 			if err != nil {
 				return err
 			}

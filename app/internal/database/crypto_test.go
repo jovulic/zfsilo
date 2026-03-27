@@ -27,8 +27,8 @@ func TestEncryption(t *testing.T) {
 	t.Run("Host encryption", func(t *testing.T) {
 		plainPassword := "super-secret-password"
 		host := &database.Host{
-			ID:       "host-1",
-			Password: plainPassword,
+			ID:  "host-1",
+			Key: plainPassword,
 			Connection: datatypes.NewJSONType(database.HostConnection{
 				Type: database.HostConnectionTypeRemote,
 				Remote: &database.HostConnectionRemote{
@@ -43,22 +43,22 @@ func TestEncryption(t *testing.T) {
 
 		// After Create, the model in memory should still have the plain password
 		// because AfterSave hook decrypts it back.
-		assert.Equal(t, plainPassword, host.Password)
+		assert.Equal(t, plainPassword, host.Key)
 		assert.Equal(t, plainPassword, host.Connection.Data().Remote.Password)
 
 		// Read back.
 		var retrieved database.Host
 		err = db.First(&retrieved, "id = ?", "host-1").Error
 		assert.NoError(t, err)
-		assert.Equal(t, plainPassword, retrieved.Password)
+		assert.Equal(t, plainPassword, retrieved.Key)
 		assert.Equal(t, plainPassword, retrieved.Connection.Data().Remote.Password)
 
 		// Check raw database content to ensure it's encrypted.
-		var rawPassword string
-		err = db.Raw("SELECT password FROM hosts WHERE id = ?", "host-1").Scan(&rawPassword).Error
+		var rawKey string
+		err = db.Raw("SELECT key FROM hosts WHERE id = ?", "host-1").Scan(&rawKey).Error
 		assert.NoError(t, err)
-		assert.NotEqual(t, plainPassword, rawPassword)
-		assert.NotEmpty(t, rawPassword)
+		assert.NotEqual(t, plainPassword, rawKey)
+		assert.NotEmpty(t, rawKey)
 
 		var rawConnection string
 		err = db.Raw("SELECT connection FROM hosts WHERE id = ?", "host-1").Scan(&rawConnection).Error

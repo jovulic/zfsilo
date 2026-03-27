@@ -30,8 +30,9 @@ func (c *HostConverterImpl) FromAPIToDB(source *v1.Host) (*database.Host, error)
 		databaseHost.Name = (*source).Name
 		databaseHost.Connection = iface.ConvertHostConnectionFromAPIToDB((*source).Connection)
 		databaseHost.Identifiers = c.stringListToDatatypesJSONSlice((*source).Ids)
-		databaseHost.Password = (*source).Password
+		databaseHost.Key = (*source).Key
 		databaseHost.ByConfig = (*source).ByConfig
+		databaseHost.Role = iface.ConvertHostRoleFromAPIToDB((*source).Role)
 		pDatabaseHost = &databaseHost
 	}
 	return pDatabaseHost, nil
@@ -68,8 +69,9 @@ func (c *HostConverterImpl) FromDBToAPI(source *database.Host) (*v1.Host, error)
 		zfsilov1Host.Name = (*source).Name
 		zfsilov1Host.Connection = iface.ConvertHostConnectionFromDBToAPI((*source).Connection)
 		zfsilov1Host.Ids = c.datatypesJSONSliceToStringList((*source).Identifiers)
-		zfsilov1Host.Password = (*source).Password
+		zfsilov1Host.Key = (*source).Key
 		zfsilov1Host.ByConfig = (*source).ByConfig
+		zfsilov1Host.Role = iface.ConvertHostRoleFromDBToAPI((*source).Role)
 		pZfsilov1Host = &zfsilov1Host
 	}
 	return pZfsilov1Host, nil

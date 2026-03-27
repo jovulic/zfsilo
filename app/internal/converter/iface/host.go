@@ -11,6 +11,8 @@ import (
 //goverter:output:package converterimpl
 //goverter:extend ConvertTimeToTimestamp
 //goverter:extend ConvertTimestampToTime
+//goverter:extend ConvertHostRoleFromDBToAPI
+//goverter:extend ConvertHostRoleFromAPIToDB
 type HostConverter interface {
 	//goverter:ignore state sizeCache unknownFields
 	//goverter:map ID Id
@@ -74,4 +76,26 @@ func ConvertHostConnectionFromDBToAPI(source datatypes.JSONType[database.HostCon
 		}
 	}
 	return dest
+}
+
+func ConvertHostRoleFromAPIToDB(source zfsilov1.Host_Role) database.HostRole {
+	switch source {
+	case zfsilov1.Host_ROLE_SERVER:
+		return database.HostRoleSERVER
+	case zfsilov1.Host_ROLE_CLIENT:
+		return database.HostRoleCLIENT
+	default:
+		return database.HostRoleUNSPECIFIED
+	}
+}
+
+func ConvertHostRoleFromDBToAPI(source database.HostRole) zfsilov1.Host_Role {
+	switch source {
+	case database.HostRoleSERVER:
+		return zfsilov1.Host_ROLE_SERVER
+	case database.HostRoleCLIENT:
+		return zfsilov1.Host_ROLE_CLIENT
+	default:
+		return zfsilov1.Host_ROLE_UNSPECIFIED
+	}
 }
