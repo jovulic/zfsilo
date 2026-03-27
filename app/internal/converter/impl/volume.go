@@ -39,18 +39,15 @@ func (c *VolumeConverterImpl) FromAPIToDB(source *v1.Volume) (*database.Volume, 
 			databaseVolume.Sparse = *(*source).Sparse
 		}
 		databaseVolume.Mode = iface.ConvertVolumeModeFromAPIToDB((*source).Mode)
-		databaseVolume.Status = iface.ConvertVolumeStatusFromAPIToDB((*source).Status)
-		databaseVolume.Transport = iface.ConvertVolumeTransportFromAPIToDB((*source).Transport)
 		databaseVolume.CapacityBytes = (*source).CapacityBytes
-		if (*source).ClientId != nil {
-			databaseVolume.ClientID = *(*source).ClientId
+		databaseVolume.Status = iface.ConvertVolumeStatusFromAPIToDB((*source).Status)
+		if (*source).ServerHost != nil {
+			databaseVolume.ServerHost = *(*source).ServerHost
 		}
-		if (*source).TargetId != nil {
-			databaseVolume.TargetID = *(*source).TargetId
+		if (*source).ClientHost != nil {
+			databaseVolume.ClientHost = *(*source).ClientHost
 		}
-		if (*source).TargetAddress != nil {
-			databaseVolume.TargetAddress = *(*source).TargetAddress
-		}
+		databaseVolume.Transport = iface.ConvertVolumeTransportFromAPIToDB((*source).Transport)
 		if (*source).StagingPath != nil {
 			databaseVolume.StagingPath = *(*source).StagingPath
 		}
@@ -102,14 +99,12 @@ func (c *VolumeConverterImpl) FromDBToAPI(source *database.Volume) (*v1.Volume, 
 		zfsilov1Volume.CapacityBytes = (*source).CapacityBytes
 		zfsilov1Volume.Status = iface.ConvertVolumeStatusFromDBToAPI((*source).Status)
 		zfsilov1Volume.Transport = iface.ConvertVolumeTransportFromDBToAPI((*source).Transport)
-		pString := (*source).ClientID
-		zfsilov1Volume.ClientId = &pString
-		pString2 := (*source).TargetID
-		zfsilov1Volume.TargetId = &pString2
-		pString3 := (*source).TargetAddress
-		zfsilov1Volume.TargetAddress = &pString3
-		pString4 := (*source).StagingPath
-		zfsilov1Volume.StagingPath = &pString4
+		pString := (*source).ServerHost
+		zfsilov1Volume.ServerHost = &pString
+		pString2 := (*source).ClientHost
+		zfsilov1Volume.ClientHost = &pString2
+		pString3 := (*source).StagingPath
+		zfsilov1Volume.StagingPath = &pString3
 		zfsilov1Volume.TargetPaths = c.datatypesJSONSliceToStringList((*source).TargetPaths)
 		pZfsilov1Volume = &zfsilov1Volume
 	}

@@ -30,10 +30,11 @@ func TestVolumeConversion(t *testing.T) {
 		Sparse:        true,
 		Mode:          database.VolumeModeBLOCK,
 		Status:        database.VolumeStatusINITIAL,
-		Transport:     database.VolumeTransportISCSI,
-		ClientID:      "iqn.client",
-		TargetID:      "iqn.target",
-		TargetAddress: "127.0.0.1:3260",
+		Transport: datatypes.NewJSONType(database.VolumeTransport{
+			Type: database.VolumeTransportTypeISCSI,
+		}),
+		ServerHost:    "hosts/hst-server",
+		ClientHost:    "hosts/hst-client",
 		StagingPath:   "/mnt/vol",
 		TargetPaths:   datatypes.JSONSlice[string]{"/var/lib/kubelet/pods/pod1/volumes/vol1"},
 		Options: datatypes.NewJSONType(database.VolumeOptionList{
@@ -54,9 +55,8 @@ func TestVolumeConversion(t *testing.T) {
 		Mode:          zfsilov1.Volume_MODE_BLOCK,
 		Status:        zfsilov1.Volume_STATUS_INITIAL,
 		Transport:     zfsilov1.Volume_TRANSPORT_ISCSI.Enum(),
-		ClientId:      proto.String("iqn.client"),
-		TargetId:      proto.String("iqn.target"),
-		TargetAddress: proto.String("127.0.0.1:3260"),
+		ServerHost:    proto.String("hosts/hst-server"),
+		ClientHost:    proto.String("hosts/hst-client"),
 		StagingPath:   proto.String("/mnt/vol"),
 		TargetPaths:   []string{"/var/lib/kubelet/pods/pod1/volumes/vol1"},
 		Options: []*zfsilov1.Volume_Option{
@@ -85,9 +85,8 @@ func TestVolumeConversion(t *testing.T) {
 		require.Equal(t, expectedAPIVolume.Mode, actualAPIVolume.Mode)
 		require.Equal(t, expectedAPIVolume.Status, actualAPIVolume.Status)
 		require.Equal(t, *expectedAPIVolume.Transport, *actualAPIVolume.Transport)
-		require.Equal(t, *expectedAPIVolume.ClientId, *actualAPIVolume.ClientId)
-		require.Equal(t, *expectedAPIVolume.TargetId, *actualAPIVolume.TargetId)
-		require.Equal(t, *expectedAPIVolume.TargetAddress, *actualAPIVolume.TargetAddress)
+		require.Equal(t, *expectedAPIVolume.ServerHost, *actualAPIVolume.ServerHost)
+		require.Equal(t, *expectedAPIVolume.ClientHost, *actualAPIVolume.ClientHost)
 		require.Equal(t, *expectedAPIVolume.StagingPath, *actualAPIVolume.StagingPath)
 		require.Equal(t, expectedAPIVolume.TargetPaths, actualAPIVolume.TargetPaths)
 		require.True(t, expectedAPIVolume.CreateTime.AsTime().Equal(actualAPIVolume.CreateTime.AsTime()))
@@ -110,9 +109,8 @@ func TestVolumeConversion(t *testing.T) {
 		require.Equal(t, dbVolume.Mode, actualDBVolume.Mode)
 		require.Equal(t, dbVolume.Status, actualDBVolume.Status)
 		require.Equal(t, dbVolume.Transport, actualDBVolume.Transport)
-		require.Equal(t, dbVolume.ClientID, actualDBVolume.ClientID)
-		require.Equal(t, dbVolume.TargetID, actualDBVolume.TargetID)
-		require.Equal(t, dbVolume.TargetAddress, actualDBVolume.TargetAddress)
+		require.Equal(t, dbVolume.ServerHost, actualDBVolume.ServerHost)
+		require.Equal(t, dbVolume.ClientHost, actualDBVolume.ClientHost)
 		require.Equal(t, dbVolume.StagingPath, actualDBVolume.StagingPath)
 		require.Equal(t, dbVolume.TargetPaths, actualDBVolume.TargetPaths)
 

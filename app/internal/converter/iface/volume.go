@@ -19,8 +19,6 @@ type VolumeConverter interface {
 	//goverter:ignore state sizeCache unknownFields
 	//goverter:map ID Id
 	//goverter:map DatasetID DatasetId
-	//goverter:map ClientID ClientId
-	//goverter:map TargetID TargetId
 	//goverter:map Options | ConvertVolumeOptionsFromDBToAPI
 	//goverter:map Mode | ConvertVolumeModeFromDBToAPI
 	//goverter:map Status | ConvertVolumeStatusFromDBToAPI
@@ -31,8 +29,6 @@ type VolumeConverter interface {
 	//goverter:useZeroValueOnPointerInconsistency
 	//goverter:map Id ID
 	//goverter:map DatasetId DatasetID
-	//goverter:map ClientId ClientID
-	//goverter:map TargetId TargetID
 	//goverter:map Options | ConvertVolumeOptionsFromAPIToDB
 	//goverter:map Mode | ConvertVolumeModeFromAPIToDB
 	//goverter:map Status | ConvertVolumeStatusFromAPIToDB
@@ -79,14 +75,35 @@ func ConvertVolumeStatusFromDBToAPI(source database.VolumeStatus) zfsilov1.Volum
 	return zfsilov1.Volume_Status(source)
 }
 
-func ConvertVolumeTransportFromAPIToDB(source *zfsilov1.Volume_Transport) database.VolumeTransport {
-	if source == nil {
-		return database.VolumeTransportUNSPECIFIED
+func ConvertVolumeTransportFromAPIToDB(source *zfsilov1.Volume_Transport) datatypes.JSONType[database.VolumeTransport] {
+	transport := database.VolumeTransport{
+		Type: database.VolumeTransportTypeUNSPECIFIED,
 	}
-	return database.VolumeTransport(*source)
+	if source != nil {
+		switch *source {
+		case zfsilov1.Volume_TRANSPORT_ISCSI:
+			transport.Type = database.VolumeTransportTypeISCSI
+		case zfsilov1.Volume_TRANSPORT_NVMEOF_TCP:
+			transport.Type = database.VolumeTransportTypeNVMEOF_TCP
+		case zfsilov1.Volume_TRANSPORT_UNSPECIFIED:
+			transport.Type = database.VolumeTransportTypeUNSPECIFIED
+		}
+	}
+	return datatypes.NewJSONType(transport)
 }
 
-func ConvertVolumeTransportFromDBToAPI(source database.VolumeTransport) *zfsilov1.Volume_Transport {
-	transport := zfsilov1.Volume_Transport(source)
+func ConvertVolumeTransportFromDBToAPI(source datatypes.JSONType[database.VolumeTransport]) *zfsilov1.Volume_Transport {
+	data := source.Data()
+	var transport zfsilov1.Volume_Transport
+	switch data.Type {
+	case database.VolumeTransportTypeISCSI:
+		transport = zfsilov1.Volume_TRANSPORT_ISCSI
+	case database.VolumeTransportTypeNVMEOF_TCP:
+		transport = zfsilov1.Volume_TRANSPORT_NVMEOF_TCP
+	case database.VolumeTransportTypeUNSPECIFIED:
+		transport = zfsilov1.Volume_TRANSPORT_UNSPECIFIED
+	default:
+		transport = zfsilov1.Volume_TRANSPORT_UNSPECIFIED
+	}
 	return &transport
 }
