@@ -520,7 +520,7 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 	err = s.database.Transaction(func(tx *gorm.DB) error {
 		executor, host, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
 		if err != nil {
-			return fmt.Errorf("failed to get producer executor: %w", err)
+			return err
 		}
 
 		transport := volumedb.Transport.Data()
@@ -600,6 +600,12 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 		return nil
 	})
 	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound || strings.Contains(err.Error(), "not found") {
+			if _, ok := err.(*connect.Error); ok {
+				return nil, err
+			}
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to publish volume: %w", err))
 	}
 
@@ -637,7 +643,7 @@ func (s *VolumeService) UnpublishVolume(ctx context.Context, req *connect.Reques
 	err = s.database.Transaction(func(tx *gorm.DB) error {
 		executor, host, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
 		if err != nil {
-			return fmt.Errorf("failed to get producer executor: %w", err)
+			return err
 		}
 
 		previousTransport := volumedb.Transport.Data()
@@ -721,12 +727,12 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 
 		producerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
 		if err != nil {
-			return fmt.Errorf("failed to get producer executor: %w", err)
+			return err
 		}
 
 		consumerExecutor, connectHost, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
 		if err != nil {
-			return fmt.Errorf("failed to get consumer executor: %w", err)
+			return err
 		}
 
 		transport := volumedb.Transport.Data()
@@ -818,7 +824,13 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 		return nil
 	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to connect volume: %w", err))
+		if connect.CodeOf(err) == connect.CodeNotFound || strings.Contains(err.Error(), "not found") {
+			if _, ok := err.(*connect.Error); ok {
+				return nil, err
+			}
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
@@ -855,12 +867,12 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 	err = s.database.Transaction(func(tx *gorm.DB) error {
 		producerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
 		if err != nil {
-			return fmt.Errorf("failed to get producer executor: %w", err)
+			return err
 		}
 
 		consumerExecutor, connectHost, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
 		if err != nil {
-			return fmt.Errorf("failed to get consumer executor: %w", err)
+			return err
 		}
 
 		transport := volumedb.Transport.Data()
@@ -942,7 +954,13 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 		return nil
 	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to disconnect volume: %w", err))
+		if connect.CodeOf(err) == connect.CodeNotFound || strings.Contains(err.Error(), "not found") {
+			if _, ok := err.(*connect.Error); ok {
+				return nil, err
+			}
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
@@ -990,7 +1008,7 @@ func (s *VolumeService) StageVolume(ctx context.Context, req *connect.Request[zf
 
 		consumerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
 		if err != nil {
-			return fmt.Errorf("failed to get consumer executor: %w", err)
+			return err
 		}
 
 		transport := volumedb.Transport.Data()
@@ -1067,7 +1085,13 @@ func (s *VolumeService) StageVolume(ctx context.Context, req *connect.Request[zf
 		return nil
 	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to stage volume: %w", err))
+		if connect.CodeOf(err) == connect.CodeNotFound || strings.Contains(err.Error(), "not found") {
+			if _, ok := err.(*connect.Error); ok {
+				return nil, err
+			}
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
@@ -1111,7 +1135,7 @@ func (s *VolumeService) UnstageVolume(ctx context.Context, req *connect.Request[
 
 		consumerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
 		if err != nil {
-			return fmt.Errorf("failed to get consumer executor: %w", err)
+			return err
 		}
 
 		err = mount.With(consumerExecutor).Umount(ctx, mount.UmountArguments{
@@ -1173,7 +1197,7 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 
 		consumerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
 		if err != nil {
-			return fmt.Errorf("failed to get consumer executor: %w", err)
+			return err
 		}
 
 		// Create mount path.
@@ -1210,7 +1234,13 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 		return nil
 	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to mount volume: %w", err))
+		if connect.CodeOf(err) == connect.CodeNotFound || strings.Contains(err.Error(), "not found") {
+			if _, ok := err.(*connect.Error); ok {
+				return nil, err
+			}
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
@@ -1255,7 +1285,7 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 
 		consumerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
 		if err != nil {
-			return fmt.Errorf("failed to get consumer executor: %w", err)
+			return err
 		}
 
 		err = mount.With(consumerExecutor).Umount(ctx, mount.UmountArguments{
@@ -1299,12 +1329,12 @@ func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zf
 
 	producerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get producer executor: %w", err))
+		return nil, err
 	}
 
 	consumerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get consumer executor: %w", err))
+		return nil, err
 	}
 
 	var usage []*zfsilov1.StatsVolumeResponse_Stats_Usage
@@ -1439,17 +1469,20 @@ func (s *VolumeService) SyncVolumes(ctx context.Context, _ *connect.Request[zfsi
 
 func (s *VolumeService) getExecutorForHost(ctx context.Context, hostID string) (libcommand.Executor, *database.Host, error) {
 	if hostID == "" {
-		return nil, nil, errors.New("host ID is empty")
+		return nil, nil, connect.NewError(connect.CodeInvalidArgument, errors.New("host ID is empty"))
 	}
 	// We search by ID, name, or any of the IDs in the JSON list.
 	// NOTE: We use SQLite specific JSON function here.
 	host, err := gorm.G[*database.Host](s.database).Where("id = ? OR name = ? OR EXISTS (SELECT 1 FROM json_each(identifiers) WHERE value = ?)", hostID, hostID, hostID).First(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get host %s: %w", hostID, err)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("host %s not found", hostID))
+		}
+		return nil, nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get host %s: %w", hostID, err))
 	}
 	executor, err := s.executorFactory.BuildExecutor(host)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to build executor for host %s: %w", hostID, err)
+		return nil, nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to build executor for host %s: %w", hostID, err))
 	}
 	return executor, host, nil
 }

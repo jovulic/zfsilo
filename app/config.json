@@ -5,7 +5,7 @@
   },
   "service": {
     "bindAddress": ":8080",
-    "externalServerUri": "dns:///:8080",
+    "externalServerURI": "dns:///:8080",
     "keys": [
       {
         "identity": "me",
@@ -14,7 +14,8 @@
     ]
   },
   "database": {
-    "dsn": "file::memory:?cache=shared"
+    "dsn": "file::memory:?cache=shared",
+    "encryptionKey": "password"
   },
   "hosts": [
     {
