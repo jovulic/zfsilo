@@ -21,7 +21,7 @@ func TestEncryption(t *testing.T) {
 
 	// Set encryption key.
 	key := "test-secret-key-that-is-long-enough"
-	err = database.InitEncryption(db, key)
+	err = database.InitCrypto(db, key)
 	assert.NoError(t, err)
 
 	t.Run("Host encryption", func(t *testing.T) {

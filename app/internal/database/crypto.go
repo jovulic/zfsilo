@@ -13,7 +13,7 @@ import (
 
 var encryptionKey []byte
 
-func InitEncryption(db *gorm.DB, secret string) error {
+func InitCrypto(db *gorm.DB, secret string) error {
 	if secret == "" {
 		return nil
 	}
