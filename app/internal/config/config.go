@@ -61,28 +61,17 @@ func (SecretValue) MarshalJSON() ([]byte, error) {
 	return json.Marshal("REDACTED")
 }
 
-type ConfigCommandTarget struct {
+type ConfigHost struct {
+	ID        string `json:"id"        validate:"required"`
 	Type      string `json:"type"      mod:"default=LOCAL" validate:"oneof=LOCAL REMOTE"`
 	RunAsRoot bool   `json:"runAsRoot"`
 	Remote    struct {
-		Address  string      `json:"address"  validate:"required_if=Mode remote"`
-		Port     uint16      `json:"port"     mod:"default=22"                   validate:"required_if=Mode REMOTE"`
-		Username string      `json:"username" validate:"required_if=Mode remote"`
-		Password SecretValue `json:"password" validate:"required_if=Mode remote"`
+		Address  string      `json:"address"  validate:"required_if=Type REMOTE"`
+		Port     uint16      `json:"port"     mod:"default=22"                   validate:"required_if=Type REMOTE"`
+		Username string      `json:"username" validate:"required_if=Type REMOTE"`
+		Password SecretValue `json:"password" validate:"required_if=Type REMOTE"`
 	} `json:"remote"`
-}
-
-type ConfigCommandTargetProduce struct {
-	ConfigCommandTarget
-
-	IDs      []string    `json:"ids"      validate:"min=1"`
-	Password SecretValue `json:"password"`
-}
-
-type ConfigCommandTargetConsume struct {
-	ConfigCommandTarget
-
-	IDs      []string    `json:"ids"      validate:"min=1"`
+	IDs      []string    `json:"ids"      validate:"min=1"` // e.g., IQN, NQN
 	Password SecretValue `json:"password"`
 }
 
@@ -100,12 +89,10 @@ type Config struct {
 		} `json:"keys"`
 	} `json:"service"`
 	Database struct {
-		DSN string `json:"dsn" validate:"required"`
+		DSN           string      `json:"dsn"           validate:"required"`
+		EncryptionKey SecretValue `json:"encryptionKey" validate:"required"`
 	} `json:"database"`
-	Command struct {
-		ProduceTarget  ConfigCommandTargetProduce   `json:"produceTarget"`
-		ConsumeTargets []ConfigCommandTargetConsume `json:"consumeTargets"`
-	} `json:"command"`
+	Hosts []ConfigHost `json:"hosts"`
 }
 
 func BuildConfig(ctx context.Context, configValue string) (Config, error) {
