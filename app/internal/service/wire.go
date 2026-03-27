@@ -28,31 +28,38 @@ var WireSet = wire.NewSet(
 	WireService,
 	WireVolumeSyncer,
 	WireVolumeService,
+	WireHostService,
 	WireServer,
 )
 
 func WireService(
-	produceTarget command.ProduceTarget,
+	database *gorm.DB,
+	executorFactory *command.ExecutorFactory,
 ) *Service {
-	return NewService(produceTarget)
+	return NewService(database, executorFactory)
+}
+
+func WireHostService(
+	database *gorm.DB,
+	converter converteriface.HostConverter,
+) *HostService {
+	return NewHostService(database, converter)
 }
 
 func WireVolumeSyncer(
 	database *gorm.DB,
-	produceTarget command.ProduceTarget,
-	consumeTargets command.ConsumeTargetMap,
+	executorFactory *command.ExecutorFactory,
 ) *VolumeSyncer {
-	return NewVolumeSyncer(database, produceTarget, consumeTargets)
+	return NewVolumeSyncer(database, executorFactory)
 }
 
 func WireVolumeService(
 	database *gorm.DB,
 	converter converteriface.VolumeConverter,
-	produceTarget command.ProduceTarget,
-	consumeTargets command.ConsumeTargetMap,
+	executorFactory *command.ExecutorFactory,
 	syncer *VolumeSyncer,
 ) *VolumeService {
-	return NewVolumeService(database, converter, produceTarget, consumeTargets, syncer)
+	return NewVolumeService(database, converter, executorFactory, syncer)
 }
 
 func WireServer(
@@ -61,6 +68,7 @@ func WireServer(
 	term *graterm.Terminator,
 	service *Service,
 	volumeService *VolumeService,
+	hostService *HostService,
 ) (*http.Server, error) {
 	cert, err := selfcert.GenerateCertificate()
 	if err != nil {
@@ -117,11 +125,25 @@ func WireServer(
 			mux.Handle(path, handler)
 		}
 
+		// Register host service.
+		{
+			path, handler := zfsilov1connect.NewHostServiceHandler(
+				hostService,
+				connect.WithInterceptors(
+					logInterceptor,
+					authnzInterceptor,
+					validateInterceptor,
+				),
+			)
+			mux.Handle(path, handler)
+		}
+
 		// Register grpc health.
 		{
 			checker := grpchealth.NewStaticChecker(
 				zfsilov1connect.ServiceName,
 				zfsilov1connect.VolumeServiceName,
+				zfsilov1connect.HostServiceName,
 			)
 			mux.Handle(grpchealth.NewHandler(checker,
 				connect.WithInterceptors(
@@ -136,6 +158,7 @@ func WireServer(
 		reflector := grpcreflect.NewStaticReflector(
 			zfsilov1connect.ServiceName,
 			zfsilov1connect.VolumeServiceName,
+			zfsilov1connect.HostServiceName,
 			grpchealth.HealthV1ServiceName,
 		)
 		mux.Handle(grpcreflect.NewHandlerV1(reflector))
