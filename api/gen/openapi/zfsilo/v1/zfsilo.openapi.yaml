@@ -794,6 +794,13 @@ components:
          `Value` type union.
 
          The JSON representation for `NullValue` is JSON `null`.
+    zfsilo.v1.Host.Role:
+      type: string
+      title: Role
+      enum:
+        - ROLE_UNSPECIFIED
+        - ROLE_SERVER
+        - ROLE_CLIENT
     zfsilo.v1.StatsVolumeResponse.Stats.Usage.Unit:
       type: string
       title: Unit
@@ -1186,10 +1193,14 @@ components:
             description: List of IQN/NQN IDs
           title: ids
           description: List of IQN/NQN IDs
-        password:
+        key:
           type: string
-          title: password
-          description: Storage protocol password (e.g. CHAP)
+          title: key
+          description: Storage protocol key (used for deriving secrets)
+        role:
+          title: role
+          description: The role of the host in the cluster.
+          $ref: '#/components/schemas/zfsilo.v1.Host.Role'
         byConfig:
           type: boolean
           title: by_config

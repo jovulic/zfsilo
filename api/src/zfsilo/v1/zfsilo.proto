@@ -96,6 +96,12 @@ message Host {
     }
   }
 
+  enum Role {
+    ROLE_UNSPECIFIED = 0;
+    ROLE_SERVER = 1;
+    ROLE_CLIENT = 2;
+  }
+
   google.protobuf.Timestamp create_time = 1 [(gnostic.openapi.v3.property) = {
     description: "When the host was created."
     read_only: true
@@ -116,8 +122,9 @@ message Host {
   ];
   Connection connection = 5 [(gnostic.openapi.v3.property) = {description: "Connection details for the host."}];
   repeated string ids = 6 [(gnostic.openapi.v3.property) = {description: "List of IQN/NQN IDs"}];
-  string password = 7 [(gnostic.openapi.v3.property) = {description: "Storage protocol password (e.g. CHAP)"}];
-  bool by_config = 8 [(gnostic.openapi.v3.property) = {
+  string key = 7 [(gnostic.openapi.v3.property) = {description: "Storage protocol key (used for deriving secrets)"}];
+  Role role = 8 [(gnostic.openapi.v3.property) = {description: "The role of the host in the cluster."}];
+  bool by_config = 9 [(gnostic.openapi.v3.property) = {
     description: "Whether the host is maintained by the configuration file."
     read_only: true
   }];

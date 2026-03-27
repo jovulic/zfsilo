@@ -25,6 +25,55 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type Host_Role int32
+
+const (
+	Host_ROLE_UNSPECIFIED Host_Role = 0
+	Host_ROLE_SERVER      Host_Role = 1
+	Host_ROLE_CLIENT      Host_Role = 2
+)
+
+// Enum value maps for Host_Role.
+var (
+	Host_Role_name = map[int32]string{
+		0: "ROLE_UNSPECIFIED",
+		1: "ROLE_SERVER",
+		2: "ROLE_CLIENT",
+	}
+	Host_Role_value = map[string]int32{
+		"ROLE_UNSPECIFIED": 0,
+		"ROLE_SERVER":      1,
+		"ROLE_CLIENT":      2,
+	}
+)
+
+func (x Host_Role) Enum() *Host_Role {
+	p := new(Host_Role)
+	*p = x
+	return p
+}
+
+func (x Host_Role) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Host_Role) Descriptor() protoreflect.EnumDescriptor {
+	return file_zfsilo_v1_zfsilo_proto_enumTypes[0].Descriptor()
+}
+
+func (Host_Role) Type() protoreflect.EnumType {
+	return &file_zfsilo_v1_zfsilo_proto_enumTypes[0]
+}
+
+func (x Host_Role) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Host_Role.Descriptor instead.
+func (Host_Role) EnumDescriptor() ([]byte, []int) {
+	return file_zfsilo_v1_zfsilo_proto_rawDescGZIP(), []int{2, 0}
+}
+
 type Volume_Mode int32
 
 const (
@@ -58,11 +107,11 @@ func (x Volume_Mode) String() string {
 }
 
 func (Volume_Mode) Descriptor() protoreflect.EnumDescriptor {
-	return file_zfsilo_v1_zfsilo_proto_enumTypes[0].Descriptor()
+	return file_zfsilo_v1_zfsilo_proto_enumTypes[1].Descriptor()
 }
 
 func (Volume_Mode) Type() protoreflect.EnumType {
-	return &file_zfsilo_v1_zfsilo_proto_enumTypes[0]
+	return &file_zfsilo_v1_zfsilo_proto_enumTypes[1]
 }
 
 func (x Volume_Mode) Number() protoreflect.EnumNumber {
@@ -116,11 +165,11 @@ func (x Volume_Status) String() string {
 }
 
 func (Volume_Status) Descriptor() protoreflect.EnumDescriptor {
-	return file_zfsilo_v1_zfsilo_proto_enumTypes[1].Descriptor()
+	return file_zfsilo_v1_zfsilo_proto_enumTypes[2].Descriptor()
 }
 
 func (Volume_Status) Type() protoreflect.EnumType {
-	return &file_zfsilo_v1_zfsilo_proto_enumTypes[1]
+	return &file_zfsilo_v1_zfsilo_proto_enumTypes[2]
 }
 
 func (x Volume_Status) Number() protoreflect.EnumNumber {
@@ -165,11 +214,11 @@ func (x Volume_Transport) String() string {
 }
 
 func (Volume_Transport) Descriptor() protoreflect.EnumDescriptor {
-	return file_zfsilo_v1_zfsilo_proto_enumTypes[2].Descriptor()
+	return file_zfsilo_v1_zfsilo_proto_enumTypes[3].Descriptor()
 }
 
 func (Volume_Transport) Type() protoreflect.EnumType {
-	return &file_zfsilo_v1_zfsilo_proto_enumTypes[2]
+	return &file_zfsilo_v1_zfsilo_proto_enumTypes[3]
 }
 
 func (x Volume_Transport) Number() protoreflect.EnumNumber {
@@ -214,11 +263,11 @@ func (x StatsVolumeResponse_Stats_Usage_Unit) String() string {
 }
 
 func (StatsVolumeResponse_Stats_Usage_Unit) Descriptor() protoreflect.EnumDescriptor {
-	return file_zfsilo_v1_zfsilo_proto_enumTypes[3].Descriptor()
+	return file_zfsilo_v1_zfsilo_proto_enumTypes[4].Descriptor()
 }
 
 func (StatsVolumeResponse_Stats_Usage_Unit) Type() protoreflect.EnumType {
-	return &file_zfsilo_v1_zfsilo_proto_enumTypes[3]
+	return &file_zfsilo_v1_zfsilo_proto_enumTypes[4]
 }
 
 func (x StatsVolumeResponse_Stats_Usage_Unit) Number() protoreflect.EnumNumber {
@@ -318,8 +367,9 @@ type Host struct {
 	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
 	Connection    *Host_Connection       `protobuf:"bytes,5,opt,name=connection,proto3" json:"connection,omitempty"`
 	Ids           []string               `protobuf:"bytes,6,rep,name=ids,proto3" json:"ids,omitempty"`
-	Password      string                 `protobuf:"bytes,7,opt,name=password,proto3" json:"password,omitempty"`
-	ByConfig      bool                   `protobuf:"varint,8,opt,name=by_config,json=byConfig,proto3" json:"by_config,omitempty"`
+	Key           string                 `protobuf:"bytes,7,opt,name=key,proto3" json:"key,omitempty"`
+	Role          Host_Role              `protobuf:"varint,8,opt,name=role,proto3,enum=zfsilo.v1.Host_Role" json:"role,omitempty"`
+	ByConfig      bool                   `protobuf:"varint,9,opt,name=by_config,json=byConfig,proto3" json:"by_config,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -396,11 +446,18 @@ func (x *Host) GetIds() []string {
 	return nil
 }
 
-func (x *Host) GetPassword() string {
+func (x *Host) GetKey() string {
 	if x != nil {
-		return x.Password
+		return x.Key
 	}
 	return ""
+}
+
+func (x *Host) GetRole() Host_Role {
+	if x != nil {
+		return x.Role
+	}
+	return Host_ROLE_UNSPECIFIED
 }
 
 func (x *Host) GetByConfig() bool {
@@ -2867,7 +2924,8 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\x16zfsilo/v1/zfsilo.proto\x12\tzfsilo.v1\x1a\x1bbuf/validate/validate.proto\x1a$gnostic/openapi/v3/annotations.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"5\n" +
 	"\x12GetCapacityRequest:\x1f\xbaG\x1c\x92\x02\x19The get capacity request.\"\x99\x01\n" +
 	"\x13GetCapacityResponse\x12`\n" +
-	"\x18available_capacity_bytes\x18\x01 \x01(\x03B&\xbaG#\x92\x02 The available capacity in bytes.R\x16availableCapacityBytes: \xbaG\x1d\x92\x02\x1aThe get capacity response.\"\x8d\t\n" +
+	"\x18available_capacity_bytes\x18\x01 \x01(\x03B&\xbaG#\x92\x02 The available capacity in bytes.R\x16availableCapacityBytes: \xbaG\x1d\x92\x02\x1aThe get capacity response.\"\xa4\n" +
+	"\n" +
 	"\x04Host\x12_\n" +
 	"\vcreate_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampB\"\xbaG\x1f\x18\x01\x92\x02\x1aWhen the host was created.R\n" +
 	"createTime\x12d\n" +
@@ -2878,9 +2936,10 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\n" +
 	"connection\x18\x05 \x01(\v2\x1a.zfsilo.v1.Host.ConnectionB&\xbaG#\x92\x02 Connection details for the host.R\n" +
 	"connection\x12+\n" +
-	"\x03ids\x18\x06 \x03(\tB\x19\xbaG\x16\x92\x02\x13List of IQN/NQN IDsR\x03ids\x12G\n" +
-	"\bpassword\x18\a \x01(\tB+\xbaG(\x92\x02%Storage protocol password (e.g. CHAP)R\bpassword\x12^\n" +
-	"\tby_config\x18\b \x01(\bBA\xbaG>\x18\x01\x92\x029Whether the host is maintained by the configuration file.R\bbyConfig\x1a\xc5\x02\n" +
+	"\x03ids\x18\x06 \x03(\tB\x19\xbaG\x16\x92\x02\x13List of IQN/NQN IDsR\x03ids\x12H\n" +
+	"\x03key\x18\a \x01(\tB6\xbaG3\x92\x020Storage protocol key (used for deriving secrets)R\x03key\x12T\n" +
+	"\x04role\x18\b \x01(\x0e2\x14.zfsilo.v1.Host.RoleB*\xbaG'\x92\x02$The role of the host in the cluster.R\x04role\x12^\n" +
+	"\tby_config\x18\t \x01(\bBA\xbaG>\x18\x01\x92\x029Whether the host is maintained by the configuration file.R\bbyConfig\x1a\xc5\x02\n" +
 	"\n" +
 	"Connection\x128\n" +
 	"\x05local\x18\x01 \x01(\v2 .zfsilo.v1.Host.Connection.LocalH\x00R\x05local\x12;\n" +
@@ -2893,7 +2952,11 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\busername\x18\x03 \x01(\tR\busername\x12\x1a\n" +
 	"\bpassword\x18\x04 \x01(\tR\bpassword\x12\x1e\n" +
 	"\vrun_as_root\x18\x05 \x01(\bR\trunAsRootB\x06\n" +
-	"\x04type:\x8d\x01\xbaG\x15\x92\x02\x12The host resource.\xbaHr\x1ap\n" +
+	"\x04type\">\n" +
+	"\x04Role\x12\x14\n" +
+	"\x10ROLE_UNSPECIFIED\x10\x00\x12\x0f\n" +
+	"\vROLE_SERVER\x10\x01\x12\x0f\n" +
+	"\vROLE_CLIENT\x10\x02:\x8d\x01\xbaG\x15\x92\x02\x12The host resource.\xbaHr\x1ap\n" +
 	"\x18host.name_id_consistency\x123The 'name' field must be in the format 'hosts/{id}'\x1a\x1fthis.name == 'hosts/' + this.id\"R\n" +
 	"\x0eGetHostRequest\x12@\n" +
 	"\x02id\x18\x01 \x01(\tB0\xbaG\x0f\x92\x02\fThe host id.\xbaH\x1b\xc8\x01\x01r\x162\x14^hst_[a-zA-Z0-9-_]+$R\x02id\"P\n" +
@@ -3108,154 +3171,156 @@ func file_zfsilo_v1_zfsilo_proto_rawDescGZIP() []byte {
 	return file_zfsilo_v1_zfsilo_proto_rawDescData
 }
 
-var file_zfsilo_v1_zfsilo_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_zfsilo_v1_zfsilo_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
 var file_zfsilo_v1_zfsilo_proto_msgTypes = make([]protoimpl.MessageInfo, 52)
 var file_zfsilo_v1_zfsilo_proto_goTypes = []any{
-	(Volume_Mode)(0),                          // 0: zfsilo.v1.Volume.Mode
-	(Volume_Status)(0),                        // 1: zfsilo.v1.Volume.Status
-	(Volume_Transport)(0),                     // 2: zfsilo.v1.Volume.Transport
-	(StatsVolumeResponse_Stats_Usage_Unit)(0), // 3: zfsilo.v1.StatsVolumeResponse.Stats.Usage.Unit
-	(*GetCapacityRequest)(nil),                // 4: zfsilo.v1.GetCapacityRequest
-	(*GetCapacityResponse)(nil),               // 5: zfsilo.v1.GetCapacityResponse
-	(*Host)(nil),                              // 6: zfsilo.v1.Host
-	(*GetHostRequest)(nil),                    // 7: zfsilo.v1.GetHostRequest
-	(*GetHostResponse)(nil),                   // 8: zfsilo.v1.GetHostResponse
-	(*ListHostsRequest)(nil),                  // 9: zfsilo.v1.ListHostsRequest
-	(*ListHostsResponse)(nil),                 // 10: zfsilo.v1.ListHostsResponse
-	(*CreateHostRequest)(nil),                 // 11: zfsilo.v1.CreateHostRequest
-	(*CreateHostResponse)(nil),                // 12: zfsilo.v1.CreateHostResponse
-	(*UpdateHostRequest)(nil),                 // 13: zfsilo.v1.UpdateHostRequest
-	(*UpdateHostResponse)(nil),                // 14: zfsilo.v1.UpdateHostResponse
-	(*DeleteHostRequest)(nil),                 // 15: zfsilo.v1.DeleteHostRequest
-	(*DeleteHostResponse)(nil),                // 16: zfsilo.v1.DeleteHostResponse
-	(*Volume)(nil),                            // 17: zfsilo.v1.Volume
-	(*GetVolumeRequest)(nil),                  // 18: zfsilo.v1.GetVolumeRequest
-	(*GetVolumeResponse)(nil),                 // 19: zfsilo.v1.GetVolumeResponse
-	(*ListVolumesRequest)(nil),                // 20: zfsilo.v1.ListVolumesRequest
-	(*ListVolumesResponse)(nil),               // 21: zfsilo.v1.ListVolumesResponse
-	(*CreateVolumeRequest)(nil),               // 22: zfsilo.v1.CreateVolumeRequest
-	(*CreateVolumeResponse)(nil),              // 23: zfsilo.v1.CreateVolumeResponse
-	(*UpdateVolumeRequest)(nil),               // 24: zfsilo.v1.UpdateVolumeRequest
-	(*UpdateVolumeResponse)(nil),              // 25: zfsilo.v1.UpdateVolumeResponse
-	(*DeleteVolumeRequest)(nil),               // 26: zfsilo.v1.DeleteVolumeRequest
-	(*DeleteVolumeResponse)(nil),              // 27: zfsilo.v1.DeleteVolumeResponse
-	(*PublishVolumeRequest)(nil),              // 28: zfsilo.v1.PublishVolumeRequest
-	(*PublishVolumeResponse)(nil),             // 29: zfsilo.v1.PublishVolumeResponse
-	(*UnpublishVolumeRequest)(nil),            // 30: zfsilo.v1.UnpublishVolumeRequest
-	(*UnpublishVolumeResponse)(nil),           // 31: zfsilo.v1.UnpublishVolumeResponse
-	(*ConnectVolumeRequest)(nil),              // 32: zfsilo.v1.ConnectVolumeRequest
-	(*ConnectVolumeResponse)(nil),             // 33: zfsilo.v1.ConnectVolumeResponse
-	(*DisconnectVolumeRequest)(nil),           // 34: zfsilo.v1.DisconnectVolumeRequest
-	(*DisconnectVolumeResponse)(nil),          // 35: zfsilo.v1.DisconnectVolumeResponse
-	(*StageVolumeRequest)(nil),                // 36: zfsilo.v1.StageVolumeRequest
-	(*StageVolumeResponse)(nil),               // 37: zfsilo.v1.StageVolumeResponse
-	(*UnstageVolumeRequest)(nil),              // 38: zfsilo.v1.UnstageVolumeRequest
-	(*UnstageVolumeResponse)(nil),             // 39: zfsilo.v1.UnstageVolumeResponse
-	(*MountVolumeRequest)(nil),                // 40: zfsilo.v1.MountVolumeRequest
-	(*MountVolumeResponse)(nil),               // 41: zfsilo.v1.MountVolumeResponse
-	(*UnmountVolumeRequest)(nil),              // 42: zfsilo.v1.UnmountVolumeRequest
-	(*UnmountVolumeResponse)(nil),             // 43: zfsilo.v1.UnmountVolumeResponse
-	(*StatsVolumeRequest)(nil),                // 44: zfsilo.v1.StatsVolumeRequest
-	(*StatsVolumeResponse)(nil),               // 45: zfsilo.v1.StatsVolumeResponse
-	(*SyncVolumeRequest)(nil),                 // 46: zfsilo.v1.SyncVolumeRequest
-	(*SyncVolumeResponse)(nil),                // 47: zfsilo.v1.SyncVolumeResponse
-	(*SyncVolumesRequest)(nil),                // 48: zfsilo.v1.SyncVolumesRequest
-	(*SyncVolumesResponse)(nil),               // 49: zfsilo.v1.SyncVolumesResponse
-	(*Host_Connection)(nil),                   // 50: zfsilo.v1.Host.Connection
-	(*Host_Connection_Local)(nil),             // 51: zfsilo.v1.Host.Connection.Local
-	(*Host_Connection_Remote)(nil),            // 52: zfsilo.v1.Host.Connection.Remote
-	(*Volume_Option)(nil),                     // 53: zfsilo.v1.Volume.Option
-	(*StatsVolumeResponse_Stats)(nil),         // 54: zfsilo.v1.StatsVolumeResponse.Stats
-	(*StatsVolumeResponse_Stats_Usage)(nil),   // 55: zfsilo.v1.StatsVolumeResponse.Stats.Usage
-	(*timestamppb.Timestamp)(nil),             // 56: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),                   // 57: google.protobuf.Struct
+	(Host_Role)(0),                            // 0: zfsilo.v1.Host.Role
+	(Volume_Mode)(0),                          // 1: zfsilo.v1.Volume.Mode
+	(Volume_Status)(0),                        // 2: zfsilo.v1.Volume.Status
+	(Volume_Transport)(0),                     // 3: zfsilo.v1.Volume.Transport
+	(StatsVolumeResponse_Stats_Usage_Unit)(0), // 4: zfsilo.v1.StatsVolumeResponse.Stats.Usage.Unit
+	(*GetCapacityRequest)(nil),                // 5: zfsilo.v1.GetCapacityRequest
+	(*GetCapacityResponse)(nil),               // 6: zfsilo.v1.GetCapacityResponse
+	(*Host)(nil),                              // 7: zfsilo.v1.Host
+	(*GetHostRequest)(nil),                    // 8: zfsilo.v1.GetHostRequest
+	(*GetHostResponse)(nil),                   // 9: zfsilo.v1.GetHostResponse
+	(*ListHostsRequest)(nil),                  // 10: zfsilo.v1.ListHostsRequest
+	(*ListHostsResponse)(nil),                 // 11: zfsilo.v1.ListHostsResponse
+	(*CreateHostRequest)(nil),                 // 12: zfsilo.v1.CreateHostRequest
+	(*CreateHostResponse)(nil),                // 13: zfsilo.v1.CreateHostResponse
+	(*UpdateHostRequest)(nil),                 // 14: zfsilo.v1.UpdateHostRequest
+	(*UpdateHostResponse)(nil),                // 15: zfsilo.v1.UpdateHostResponse
+	(*DeleteHostRequest)(nil),                 // 16: zfsilo.v1.DeleteHostRequest
+	(*DeleteHostResponse)(nil),                // 17: zfsilo.v1.DeleteHostResponse
+	(*Volume)(nil),                            // 18: zfsilo.v1.Volume
+	(*GetVolumeRequest)(nil),                  // 19: zfsilo.v1.GetVolumeRequest
+	(*GetVolumeResponse)(nil),                 // 20: zfsilo.v1.GetVolumeResponse
+	(*ListVolumesRequest)(nil),                // 21: zfsilo.v1.ListVolumesRequest
+	(*ListVolumesResponse)(nil),               // 22: zfsilo.v1.ListVolumesResponse
+	(*CreateVolumeRequest)(nil),               // 23: zfsilo.v1.CreateVolumeRequest
+	(*CreateVolumeResponse)(nil),              // 24: zfsilo.v1.CreateVolumeResponse
+	(*UpdateVolumeRequest)(nil),               // 25: zfsilo.v1.UpdateVolumeRequest
+	(*UpdateVolumeResponse)(nil),              // 26: zfsilo.v1.UpdateVolumeResponse
+	(*DeleteVolumeRequest)(nil),               // 27: zfsilo.v1.DeleteVolumeRequest
+	(*DeleteVolumeResponse)(nil),              // 28: zfsilo.v1.DeleteVolumeResponse
+	(*PublishVolumeRequest)(nil),              // 29: zfsilo.v1.PublishVolumeRequest
+	(*PublishVolumeResponse)(nil),             // 30: zfsilo.v1.PublishVolumeResponse
+	(*UnpublishVolumeRequest)(nil),            // 31: zfsilo.v1.UnpublishVolumeRequest
+	(*UnpublishVolumeResponse)(nil),           // 32: zfsilo.v1.UnpublishVolumeResponse
+	(*ConnectVolumeRequest)(nil),              // 33: zfsilo.v1.ConnectVolumeRequest
+	(*ConnectVolumeResponse)(nil),             // 34: zfsilo.v1.ConnectVolumeResponse
+	(*DisconnectVolumeRequest)(nil),           // 35: zfsilo.v1.DisconnectVolumeRequest
+	(*DisconnectVolumeResponse)(nil),          // 36: zfsilo.v1.DisconnectVolumeResponse
+	(*StageVolumeRequest)(nil),                // 37: zfsilo.v1.StageVolumeRequest
+	(*StageVolumeResponse)(nil),               // 38: zfsilo.v1.StageVolumeResponse
+	(*UnstageVolumeRequest)(nil),              // 39: zfsilo.v1.UnstageVolumeRequest
+	(*UnstageVolumeResponse)(nil),             // 40: zfsilo.v1.UnstageVolumeResponse
+	(*MountVolumeRequest)(nil),                // 41: zfsilo.v1.MountVolumeRequest
+	(*MountVolumeResponse)(nil),               // 42: zfsilo.v1.MountVolumeResponse
+	(*UnmountVolumeRequest)(nil),              // 43: zfsilo.v1.UnmountVolumeRequest
+	(*UnmountVolumeResponse)(nil),             // 44: zfsilo.v1.UnmountVolumeResponse
+	(*StatsVolumeRequest)(nil),                // 45: zfsilo.v1.StatsVolumeRequest
+	(*StatsVolumeResponse)(nil),               // 46: zfsilo.v1.StatsVolumeResponse
+	(*SyncVolumeRequest)(nil),                 // 47: zfsilo.v1.SyncVolumeRequest
+	(*SyncVolumeResponse)(nil),                // 48: zfsilo.v1.SyncVolumeResponse
+	(*SyncVolumesRequest)(nil),                // 49: zfsilo.v1.SyncVolumesRequest
+	(*SyncVolumesResponse)(nil),               // 50: zfsilo.v1.SyncVolumesResponse
+	(*Host_Connection)(nil),                   // 51: zfsilo.v1.Host.Connection
+	(*Host_Connection_Local)(nil),             // 52: zfsilo.v1.Host.Connection.Local
+	(*Host_Connection_Remote)(nil),            // 53: zfsilo.v1.Host.Connection.Remote
+	(*Volume_Option)(nil),                     // 54: zfsilo.v1.Volume.Option
+	(*StatsVolumeResponse_Stats)(nil),         // 55: zfsilo.v1.StatsVolumeResponse.Stats
+	(*StatsVolumeResponse_Stats_Usage)(nil),   // 56: zfsilo.v1.StatsVolumeResponse.Stats.Usage
+	(*timestamppb.Timestamp)(nil),             // 57: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),                   // 58: google.protobuf.Struct
 }
 var file_zfsilo_v1_zfsilo_proto_depIdxs = []int32{
-	56, // 0: zfsilo.v1.Host.create_time:type_name -> google.protobuf.Timestamp
-	56, // 1: zfsilo.v1.Host.update_time:type_name -> google.protobuf.Timestamp
-	50, // 2: zfsilo.v1.Host.connection:type_name -> zfsilo.v1.Host.Connection
-	6,  // 3: zfsilo.v1.GetHostResponse.host:type_name -> zfsilo.v1.Host
-	6,  // 4: zfsilo.v1.ListHostsResponse.hosts:type_name -> zfsilo.v1.Host
-	6,  // 5: zfsilo.v1.CreateHostRequest.host:type_name -> zfsilo.v1.Host
-	6,  // 6: zfsilo.v1.CreateHostResponse.host:type_name -> zfsilo.v1.Host
-	57, // 7: zfsilo.v1.UpdateHostRequest.host:type_name -> google.protobuf.Struct
-	6,  // 8: zfsilo.v1.UpdateHostResponse.host:type_name -> zfsilo.v1.Host
-	57, // 9: zfsilo.v1.Volume.struct:type_name -> google.protobuf.Struct
-	56, // 10: zfsilo.v1.Volume.create_time:type_name -> google.protobuf.Timestamp
-	56, // 11: zfsilo.v1.Volume.update_time:type_name -> google.protobuf.Timestamp
-	53, // 12: zfsilo.v1.Volume.options:type_name -> zfsilo.v1.Volume.Option
-	0,  // 13: zfsilo.v1.Volume.mode:type_name -> zfsilo.v1.Volume.Mode
-	1,  // 14: zfsilo.v1.Volume.status:type_name -> zfsilo.v1.Volume.Status
-	2,  // 15: zfsilo.v1.Volume.transport:type_name -> zfsilo.v1.Volume.Transport
-	17, // 16: zfsilo.v1.GetVolumeResponse.volume:type_name -> zfsilo.v1.Volume
-	17, // 17: zfsilo.v1.ListVolumesResponse.volumes:type_name -> zfsilo.v1.Volume
-	17, // 18: zfsilo.v1.CreateVolumeRequest.volume:type_name -> zfsilo.v1.Volume
-	17, // 19: zfsilo.v1.CreateVolumeResponse.volume:type_name -> zfsilo.v1.Volume
-	57, // 20: zfsilo.v1.UpdateVolumeRequest.volume:type_name -> google.protobuf.Struct
-	17, // 21: zfsilo.v1.UpdateVolumeResponse.volume:type_name -> zfsilo.v1.Volume
-	2,  // 22: zfsilo.v1.PublishVolumeRequest.transport:type_name -> zfsilo.v1.Volume.Transport
-	17, // 23: zfsilo.v1.PublishVolumeResponse.volume:type_name -> zfsilo.v1.Volume
-	17, // 24: zfsilo.v1.UnpublishVolumeResponse.volume:type_name -> zfsilo.v1.Volume
-	17, // 25: zfsilo.v1.ConnectVolumeResponse.volume:type_name -> zfsilo.v1.Volume
-	17, // 26: zfsilo.v1.DisconnectVolumeResponse.volume:type_name -> zfsilo.v1.Volume
-	17, // 27: zfsilo.v1.StageVolumeResponse.volume:type_name -> zfsilo.v1.Volume
-	17, // 28: zfsilo.v1.UnstageVolumeResponse.volume:type_name -> zfsilo.v1.Volume
-	17, // 29: zfsilo.v1.MountVolumeResponse.volume:type_name -> zfsilo.v1.Volume
-	17, // 30: zfsilo.v1.UnmountVolumeResponse.volume:type_name -> zfsilo.v1.Volume
-	54, // 31: zfsilo.v1.StatsVolumeResponse.stats:type_name -> zfsilo.v1.StatsVolumeResponse.Stats
-	51, // 32: zfsilo.v1.Host.Connection.local:type_name -> zfsilo.v1.Host.Connection.Local
-	52, // 33: zfsilo.v1.Host.Connection.remote:type_name -> zfsilo.v1.Host.Connection.Remote
-	55, // 34: zfsilo.v1.StatsVolumeResponse.Stats.usage:type_name -> zfsilo.v1.StatsVolumeResponse.Stats.Usage
-	3,  // 35: zfsilo.v1.StatsVolumeResponse.Stats.Usage.unit:type_name -> zfsilo.v1.StatsVolumeResponse.Stats.Usage.Unit
-	4,  // 36: zfsilo.v1.Service.GetCapacity:input_type -> zfsilo.v1.GetCapacityRequest
-	7,  // 37: zfsilo.v1.HostService.GetHost:input_type -> zfsilo.v1.GetHostRequest
-	9,  // 38: zfsilo.v1.HostService.ListHosts:input_type -> zfsilo.v1.ListHostsRequest
-	11, // 39: zfsilo.v1.HostService.CreateHost:input_type -> zfsilo.v1.CreateHostRequest
-	13, // 40: zfsilo.v1.HostService.UpdateHost:input_type -> zfsilo.v1.UpdateHostRequest
-	15, // 41: zfsilo.v1.HostService.DeleteHost:input_type -> zfsilo.v1.DeleteHostRequest
-	18, // 42: zfsilo.v1.VolumeService.GetVolume:input_type -> zfsilo.v1.GetVolumeRequest
-	20, // 43: zfsilo.v1.VolumeService.ListVolumes:input_type -> zfsilo.v1.ListVolumesRequest
-	22, // 44: zfsilo.v1.VolumeService.CreateVolume:input_type -> zfsilo.v1.CreateVolumeRequest
-	24, // 45: zfsilo.v1.VolumeService.UpdateVolume:input_type -> zfsilo.v1.UpdateVolumeRequest
-	26, // 46: zfsilo.v1.VolumeService.DeleteVolume:input_type -> zfsilo.v1.DeleteVolumeRequest
-	28, // 47: zfsilo.v1.VolumeService.PublishVolume:input_type -> zfsilo.v1.PublishVolumeRequest
-	30, // 48: zfsilo.v1.VolumeService.UnpublishVolume:input_type -> zfsilo.v1.UnpublishVolumeRequest
-	32, // 49: zfsilo.v1.VolumeService.ConnectVolume:input_type -> zfsilo.v1.ConnectVolumeRequest
-	34, // 50: zfsilo.v1.VolumeService.DisconnectVolume:input_type -> zfsilo.v1.DisconnectVolumeRequest
-	36, // 51: zfsilo.v1.VolumeService.StageVolume:input_type -> zfsilo.v1.StageVolumeRequest
-	38, // 52: zfsilo.v1.VolumeService.UnstageVolume:input_type -> zfsilo.v1.UnstageVolumeRequest
-	40, // 53: zfsilo.v1.VolumeService.MountVolume:input_type -> zfsilo.v1.MountVolumeRequest
-	42, // 54: zfsilo.v1.VolumeService.UnmountVolume:input_type -> zfsilo.v1.UnmountVolumeRequest
-	44, // 55: zfsilo.v1.VolumeService.StatsVolume:input_type -> zfsilo.v1.StatsVolumeRequest
-	46, // 56: zfsilo.v1.VolumeService.SyncVolume:input_type -> zfsilo.v1.SyncVolumeRequest
-	48, // 57: zfsilo.v1.VolumeService.SyncVolumes:input_type -> zfsilo.v1.SyncVolumesRequest
-	5,  // 58: zfsilo.v1.Service.GetCapacity:output_type -> zfsilo.v1.GetCapacityResponse
-	8,  // 59: zfsilo.v1.HostService.GetHost:output_type -> zfsilo.v1.GetHostResponse
-	10, // 60: zfsilo.v1.HostService.ListHosts:output_type -> zfsilo.v1.ListHostsResponse
-	12, // 61: zfsilo.v1.HostService.CreateHost:output_type -> zfsilo.v1.CreateHostResponse
-	14, // 62: zfsilo.v1.HostService.UpdateHost:output_type -> zfsilo.v1.UpdateHostResponse
-	16, // 63: zfsilo.v1.HostService.DeleteHost:output_type -> zfsilo.v1.DeleteHostResponse
-	19, // 64: zfsilo.v1.VolumeService.GetVolume:output_type -> zfsilo.v1.GetVolumeResponse
-	21, // 65: zfsilo.v1.VolumeService.ListVolumes:output_type -> zfsilo.v1.ListVolumesResponse
-	23, // 66: zfsilo.v1.VolumeService.CreateVolume:output_type -> zfsilo.v1.CreateVolumeResponse
-	25, // 67: zfsilo.v1.VolumeService.UpdateVolume:output_type -> zfsilo.v1.UpdateVolumeResponse
-	27, // 68: zfsilo.v1.VolumeService.DeleteVolume:output_type -> zfsilo.v1.DeleteVolumeResponse
-	29, // 69: zfsilo.v1.VolumeService.PublishVolume:output_type -> zfsilo.v1.PublishVolumeResponse
-	31, // 70: zfsilo.v1.VolumeService.UnpublishVolume:output_type -> zfsilo.v1.UnpublishVolumeResponse
-	33, // 71: zfsilo.v1.VolumeService.ConnectVolume:output_type -> zfsilo.v1.ConnectVolumeResponse
-	35, // 72: zfsilo.v1.VolumeService.DisconnectVolume:output_type -> zfsilo.v1.DisconnectVolumeResponse
-	37, // 73: zfsilo.v1.VolumeService.StageVolume:output_type -> zfsilo.v1.StageVolumeResponse
-	39, // 74: zfsilo.v1.VolumeService.UnstageVolume:output_type -> zfsilo.v1.UnstageVolumeResponse
-	41, // 75: zfsilo.v1.VolumeService.MountVolume:output_type -> zfsilo.v1.MountVolumeResponse
-	43, // 76: zfsilo.v1.VolumeService.UnmountVolume:output_type -> zfsilo.v1.UnmountVolumeResponse
-	45, // 77: zfsilo.v1.VolumeService.StatsVolume:output_type -> zfsilo.v1.StatsVolumeResponse
-	47, // 78: zfsilo.v1.VolumeService.SyncVolume:output_type -> zfsilo.v1.SyncVolumeResponse
-	49, // 79: zfsilo.v1.VolumeService.SyncVolumes:output_type -> zfsilo.v1.SyncVolumesResponse
-	58, // [58:80] is the sub-list for method output_type
-	36, // [36:58] is the sub-list for method input_type
-	36, // [36:36] is the sub-list for extension type_name
-	36, // [36:36] is the sub-list for extension extendee
-	0,  // [0:36] is the sub-list for field type_name
+	57, // 0: zfsilo.v1.Host.create_time:type_name -> google.protobuf.Timestamp
+	57, // 1: zfsilo.v1.Host.update_time:type_name -> google.protobuf.Timestamp
+	51, // 2: zfsilo.v1.Host.connection:type_name -> zfsilo.v1.Host.Connection
+	0,  // 3: zfsilo.v1.Host.role:type_name -> zfsilo.v1.Host.Role
+	7,  // 4: zfsilo.v1.GetHostResponse.host:type_name -> zfsilo.v1.Host
+	7,  // 5: zfsilo.v1.ListHostsResponse.hosts:type_name -> zfsilo.v1.Host
+	7,  // 6: zfsilo.v1.CreateHostRequest.host:type_name -> zfsilo.v1.Host
+	7,  // 7: zfsilo.v1.CreateHostResponse.host:type_name -> zfsilo.v1.Host
+	58, // 8: zfsilo.v1.UpdateHostRequest.host:type_name -> google.protobuf.Struct
+	7,  // 9: zfsilo.v1.UpdateHostResponse.host:type_name -> zfsilo.v1.Host
+	58, // 10: zfsilo.v1.Volume.struct:type_name -> google.protobuf.Struct
+	57, // 11: zfsilo.v1.Volume.create_time:type_name -> google.protobuf.Timestamp
+	57, // 12: zfsilo.v1.Volume.update_time:type_name -> google.protobuf.Timestamp
+	54, // 13: zfsilo.v1.Volume.options:type_name -> zfsilo.v1.Volume.Option
+	1,  // 14: zfsilo.v1.Volume.mode:type_name -> zfsilo.v1.Volume.Mode
+	2,  // 15: zfsilo.v1.Volume.status:type_name -> zfsilo.v1.Volume.Status
+	3,  // 16: zfsilo.v1.Volume.transport:type_name -> zfsilo.v1.Volume.Transport
+	18, // 17: zfsilo.v1.GetVolumeResponse.volume:type_name -> zfsilo.v1.Volume
+	18, // 18: zfsilo.v1.ListVolumesResponse.volumes:type_name -> zfsilo.v1.Volume
+	18, // 19: zfsilo.v1.CreateVolumeRequest.volume:type_name -> zfsilo.v1.Volume
+	18, // 20: zfsilo.v1.CreateVolumeResponse.volume:type_name -> zfsilo.v1.Volume
+	58, // 21: zfsilo.v1.UpdateVolumeRequest.volume:type_name -> google.protobuf.Struct
+	18, // 22: zfsilo.v1.UpdateVolumeResponse.volume:type_name -> zfsilo.v1.Volume
+	3,  // 23: zfsilo.v1.PublishVolumeRequest.transport:type_name -> zfsilo.v1.Volume.Transport
+	18, // 24: zfsilo.v1.PublishVolumeResponse.volume:type_name -> zfsilo.v1.Volume
+	18, // 25: zfsilo.v1.UnpublishVolumeResponse.volume:type_name -> zfsilo.v1.Volume
+	18, // 26: zfsilo.v1.ConnectVolumeResponse.volume:type_name -> zfsilo.v1.Volume
+	18, // 27: zfsilo.v1.DisconnectVolumeResponse.volume:type_name -> zfsilo.v1.Volume
+	18, // 28: zfsilo.v1.StageVolumeResponse.volume:type_name -> zfsilo.v1.Volume
+	18, // 29: zfsilo.v1.UnstageVolumeResponse.volume:type_name -> zfsilo.v1.Volume
+	18, // 30: zfsilo.v1.MountVolumeResponse.volume:type_name -> zfsilo.v1.Volume
+	18, // 31: zfsilo.v1.UnmountVolumeResponse.volume:type_name -> zfsilo.v1.Volume
+	55, // 32: zfsilo.v1.StatsVolumeResponse.stats:type_name -> zfsilo.v1.StatsVolumeResponse.Stats
+	52, // 33: zfsilo.v1.Host.Connection.local:type_name -> zfsilo.v1.Host.Connection.Local
+	53, // 34: zfsilo.v1.Host.Connection.remote:type_name -> zfsilo.v1.Host.Connection.Remote
+	56, // 35: zfsilo.v1.StatsVolumeResponse.Stats.usage:type_name -> zfsilo.v1.StatsVolumeResponse.Stats.Usage
+	4,  // 36: zfsilo.v1.StatsVolumeResponse.Stats.Usage.unit:type_name -> zfsilo.v1.StatsVolumeResponse.Stats.Usage.Unit
+	5,  // 37: zfsilo.v1.Service.GetCapacity:input_type -> zfsilo.v1.GetCapacityRequest
+	8,  // 38: zfsilo.v1.HostService.GetHost:input_type -> zfsilo.v1.GetHostRequest
+	10, // 39: zfsilo.v1.HostService.ListHosts:input_type -> zfsilo.v1.ListHostsRequest
+	12, // 40: zfsilo.v1.HostService.CreateHost:input_type -> zfsilo.v1.CreateHostRequest
+	14, // 41: zfsilo.v1.HostService.UpdateHost:input_type -> zfsilo.v1.UpdateHostRequest
+	16, // 42: zfsilo.v1.HostService.DeleteHost:input_type -> zfsilo.v1.DeleteHostRequest
+	19, // 43: zfsilo.v1.VolumeService.GetVolume:input_type -> zfsilo.v1.GetVolumeRequest
+	21, // 44: zfsilo.v1.VolumeService.ListVolumes:input_type -> zfsilo.v1.ListVolumesRequest
+	23, // 45: zfsilo.v1.VolumeService.CreateVolume:input_type -> zfsilo.v1.CreateVolumeRequest
+	25, // 46: zfsilo.v1.VolumeService.UpdateVolume:input_type -> zfsilo.v1.UpdateVolumeRequest
+	27, // 47: zfsilo.v1.VolumeService.DeleteVolume:input_type -> zfsilo.v1.DeleteVolumeRequest
+	29, // 48: zfsilo.v1.VolumeService.PublishVolume:input_type -> zfsilo.v1.PublishVolumeRequest
+	31, // 49: zfsilo.v1.VolumeService.UnpublishVolume:input_type -> zfsilo.v1.UnpublishVolumeRequest
+	33, // 50: zfsilo.v1.VolumeService.ConnectVolume:input_type -> zfsilo.v1.ConnectVolumeRequest
+	35, // 51: zfsilo.v1.VolumeService.DisconnectVolume:input_type -> zfsilo.v1.DisconnectVolumeRequest
+	37, // 52: zfsilo.v1.VolumeService.StageVolume:input_type -> zfsilo.v1.StageVolumeRequest
+	39, // 53: zfsilo.v1.VolumeService.UnstageVolume:input_type -> zfsilo.v1.UnstageVolumeRequest
+	41, // 54: zfsilo.v1.VolumeService.MountVolume:input_type -> zfsilo.v1.MountVolumeRequest
+	43, // 55: zfsilo.v1.VolumeService.UnmountVolume:input_type -> zfsilo.v1.UnmountVolumeRequest
+	45, // 56: zfsilo.v1.VolumeService.StatsVolume:input_type -> zfsilo.v1.StatsVolumeRequest
+	47, // 57: zfsilo.v1.VolumeService.SyncVolume:input_type -> zfsilo.v1.SyncVolumeRequest
+	49, // 58: zfsilo.v1.VolumeService.SyncVolumes:input_type -> zfsilo.v1.SyncVolumesRequest
+	6,  // 59: zfsilo.v1.Service.GetCapacity:output_type -> zfsilo.v1.GetCapacityResponse
+	9,  // 60: zfsilo.v1.HostService.GetHost:output_type -> zfsilo.v1.GetHostResponse
+	11, // 61: zfsilo.v1.HostService.ListHosts:output_type -> zfsilo.v1.ListHostsResponse
+	13, // 62: zfsilo.v1.HostService.CreateHost:output_type -> zfsilo.v1.CreateHostResponse
+	15, // 63: zfsilo.v1.HostService.UpdateHost:output_type -> zfsilo.v1.UpdateHostResponse
+	17, // 64: zfsilo.v1.HostService.DeleteHost:output_type -> zfsilo.v1.DeleteHostResponse
+	20, // 65: zfsilo.v1.VolumeService.GetVolume:output_type -> zfsilo.v1.GetVolumeResponse
+	22, // 66: zfsilo.v1.VolumeService.ListVolumes:output_type -> zfsilo.v1.ListVolumesResponse
+	24, // 67: zfsilo.v1.VolumeService.CreateVolume:output_type -> zfsilo.v1.CreateVolumeResponse
+	26, // 68: zfsilo.v1.VolumeService.UpdateVolume:output_type -> zfsilo.v1.UpdateVolumeResponse
+	28, // 69: zfsilo.v1.VolumeService.DeleteVolume:output_type -> zfsilo.v1.DeleteVolumeResponse
+	30, // 70: zfsilo.v1.VolumeService.PublishVolume:output_type -> zfsilo.v1.PublishVolumeResponse
+	32, // 71: zfsilo.v1.VolumeService.UnpublishVolume:output_type -> zfsilo.v1.UnpublishVolumeResponse
+	34, // 72: zfsilo.v1.VolumeService.ConnectVolume:output_type -> zfsilo.v1.ConnectVolumeResponse
+	36, // 73: zfsilo.v1.VolumeService.DisconnectVolume:output_type -> zfsilo.v1.DisconnectVolumeResponse
+	38, // 74: zfsilo.v1.VolumeService.StageVolume:output_type -> zfsilo.v1.StageVolumeResponse
+	40, // 75: zfsilo.v1.VolumeService.UnstageVolume:output_type -> zfsilo.v1.UnstageVolumeResponse
+	42, // 76: zfsilo.v1.VolumeService.MountVolume:output_type -> zfsilo.v1.MountVolumeResponse
+	44, // 77: zfsilo.v1.VolumeService.UnmountVolume:output_type -> zfsilo.v1.UnmountVolumeResponse
+	46, // 78: zfsilo.v1.VolumeService.StatsVolume:output_type -> zfsilo.v1.StatsVolumeResponse
+	48, // 79: zfsilo.v1.VolumeService.SyncVolume:output_type -> zfsilo.v1.SyncVolumeResponse
+	50, // 80: zfsilo.v1.VolumeService.SyncVolumes:output_type -> zfsilo.v1.SyncVolumesResponse
+	59, // [59:81] is the sub-list for method output_type
+	37, // [37:59] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_zfsilo_v1_zfsilo_proto_init() }
@@ -3273,7 +3338,7 @@ func file_zfsilo_v1_zfsilo_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zfsilo_v1_zfsilo_proto_rawDesc), len(file_zfsilo_v1_zfsilo_proto_rawDesc)),
-			NumEnums:      4,
+			NumEnums:      5,
 			NumMessages:   52,
 			NumExtensions: 0,
 			NumServices:   3,
