@@ -55,15 +55,15 @@ func (dict Parameters) Sparse() bool {
 	return value == "true"
 }
 
-func (dict Parameters) Transport() zfsilov1.Volume_Transport {
+func (dict Parameters) Transport() (zfsilov1.Volume_Transport, error) {
 	val := dict["transport"]
 	switch strings.ToLower(val) {
 	case "nvmeof", "nvmeof_tcp":
-		return zfsilov1.Volume_TRANSPORT_NVMEOF_TCP
+		return zfsilov1.Volume_TRANSPORT_NVMEOF_TCP, nil
 	case "", "iscsi":
-		return zfsilov1.Volume_TRANSPORT_ISCSI
+		return zfsilov1.Volume_TRANSPORT_ISCSI, nil
 	default:
-		panic(fmt.Sprintf("unsupported volume transport: %s", strings.ToLower(val)))
+		return zfsilov1.Volume_TRANSPORT_ISCSI, status.Errorf(codes.InvalidArgument, "unsupported volume transport: %s", val)
 	}
 }
 
@@ -222,6 +222,11 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 		})
 	}
 
+	transport, err := params.Transport()
+	if err != nil {
+		return nil, err
+	}
+
 	resp, err := s.volumeClient.CreateVolume(ctx, connect.NewRequest(&zfsilov1.CreateVolumeRequest{
 		Volume: &zfsilov1.Volume{
 			Id:            id,
@@ -231,7 +236,7 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 			CapacityBytes: capacityBytes,
 			Sparse:        proto.Bool(params.Sparse()),
 			Options:       zfsOptions,
-			Transport:     zfsilov1.Volume_Transport(params.Transport()).Enum(),
+			Transport:     transport.Enum(),
 		},
 	}))
 	if err != nil {
