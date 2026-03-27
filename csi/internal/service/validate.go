@@ -157,6 +157,10 @@ func validateCreateVolumeRequest(req *csi.CreateVolumeRequest) error {
 		return status.Error(codes.InvalidArgument, "parameters parent dataset id is empty")
 	}
 
+	if _, err := Parameters(req.GetParameters()).Transport(); err != nil {
+		return err
+	}
+
 	for key := range req.GetMutableParameters() {
 		if !strings.HasPrefix(key, "o_") {
 			return status.Errorf(codes.InvalidArgument, "unsupported mutable parameter: %s", key)

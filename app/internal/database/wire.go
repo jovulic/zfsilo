@@ -29,8 +29,12 @@ func WireDatabase(
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
+	if err := InitCrypto(db, string(config.Database.EncryptionKey)); err != nil {
+		return nil, fmt.Errorf("failed to init encryption: %w", err)
+	}
+
 	slogctx.Info(ctx, "running database automigrate")
-	if err := db.AutoMigrate(&Volume{}); err != nil {
+	if err := db.AutoMigrate(&Volume{}, &Host{}); err != nil {
 		return nil, fmt.Errorf("failed to perform automigrate: %w", err)
 	}
 

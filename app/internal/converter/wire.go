@@ -8,8 +8,13 @@ import (
 
 var WireSet = wire.NewSet(
 	WireVolumeConverter,
+	WireHostConverter,
 )
 
 func WireVolumeConverter() converteriface.VolumeConverter {
 	return &converterimpl.VolumeConverterImpl{}
+}
+
+func WireHostConverter() converteriface.HostConverter {
+	return &converterimpl.HostConverterImpl{}
 }

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"strings"
 	"sync"
 
 	"golang.org/x/crypto/ssh"
@@ -25,6 +26,48 @@ type CommandResult struct {
 
 type Executor interface {
 	Exec(ctx context.Context, command string) (*CommandResult, error)
+}
+
+type MockRule struct {
+	// CommandContains is a string that must be present in the command for the rule to match.
+	CommandContains string
+	// Stdout is the simulated standard output.
+	Stdout string
+	// Stderr is the simulated standard error.
+	Stderr string
+	// ExitCode is the simulated exit code.
+	ExitCode int
+}
+
+type MockExecutor struct {
+	Rules []MockRule
+}
+
+func NewMockExecutor(rules []MockRule) *MockExecutor {
+	return &MockExecutor{
+		Rules: rules,
+	}
+}
+
+func (e *MockExecutor) Exec(ctx context.Context, command string) (*CommandResult, error) {
+	slogctx.Info(ctx, "mock executor: executing command", "command", command)
+
+	for _, rule := range e.Rules {
+		if strings.Contains(command, rule.CommandContains) {
+			return &CommandResult{
+				Stdout:   rule.Stdout,
+				Stderr:   rule.Stderr,
+				ExitCode: rule.ExitCode,
+			}, nil
+		}
+	}
+
+	// Default to success if no rule matches.
+	return &CommandResult{
+		Stdout:   "",
+		Stderr:   "",
+		ExitCode: 0,
+	}, nil
 }
 
 type LocalExecutorConfig struct {

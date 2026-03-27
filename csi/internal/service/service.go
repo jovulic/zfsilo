@@ -55,24 +55,23 @@ func (dict Parameters) Sparse() bool {
 	return value == "true"
 }
 
-func (dict Parameters) Transport() zfsilov1.Volume_Transport {
+func (dict Parameters) Transport() (zfsilov1.Volume_Transport, error) {
 	val := dict["transport"]
 	switch strings.ToLower(val) {
 	case "nvmeof", "nvmeof_tcp":
-		return zfsilov1.Volume_TRANSPORT_NVMEOF_TCP
+		return zfsilov1.Volume_TRANSPORT_NVMEOF_TCP, nil
 	case "", "iscsi":
-		return zfsilov1.Volume_TRANSPORT_ISCSI
+		return zfsilov1.Volume_TRANSPORT_ISCSI, nil
 	default:
-		panic(fmt.Sprintf("unsupported volume transport: %s", strings.ToLower(val)))
+		return zfsilov1.Volume_TRANSPORT_ISCSI, status.Errorf(codes.InvalidArgument, "unsupported volume transport: %s", val)
 	}
 }
 
 type CSIServiceConfig struct {
-	Secret              string            `validate:"required"`
-	ZFSiloAddress       string            `validate:"required"`
-	TargetPortalAddress string            `validate:"required"`
-	ClientIDs           map[string]string `validate:"required"`
-	KnownClientIDs      []string          `validate:"required"`
+	Secret        string `validate:"required"`
+	ZFSiloAddress string `validate:"required"`
+	PublishHost   string `validate:"required"`
+	HostID        string `validate:"required"`
 }
 
 // CSIService implements the CSI specification.
@@ -83,11 +82,10 @@ type CSIService struct {
 	csi.UnimplementedControllerServer
 	csi.UnimplementedNodeServer
 
-	secret              string
-	zfsiloAddress       string
-	targetPortalAddress string
-	clientIDs           map[string]string
-	knownClientIDs      []string
+	secret        string
+	zfsiloAddress string
+	publishHost   string
+	hostID        string
 
 	lock          sync.Mutex
 	started       bool
@@ -101,11 +99,10 @@ func NewCSIService(config CSIServiceConfig) *CSIService {
 		panic(message)
 	}
 	return &CSIService{
-		secret:              config.Secret,
-		zfsiloAddress:       config.ZFSiloAddress,
-		targetPortalAddress: config.TargetPortalAddress,
-		clientIDs:           config.ClientIDs,
-		knownClientIDs:      config.KnownClientIDs,
+		secret:        config.Secret,
+		zfsiloAddress: config.ZFSiloAddress,
+		publishHost:   config.PublishHost,
+		hostID:        config.HostID,
 	}
 }
 
@@ -225,6 +222,11 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 		})
 	}
 
+	transport, err := params.Transport()
+	if err != nil {
+		return nil, err
+	}
+
 	resp, err := s.volumeClient.CreateVolume(ctx, connect.NewRequest(&zfsilov1.CreateVolumeRequest{
 		Volume: &zfsilov1.Volume{
 			Id:            id,
@@ -234,7 +236,7 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 			CapacityBytes: capacityBytes,
 			Sparse:        proto.Bool(params.Sparse()),
 			Options:       zfsOptions,
-			Transport:     zfsilov1.Volume_Transport(params.Transport()).Enum(),
+			Transport:     transport.Enum(),
 		},
 	}))
 	if err != nil {
@@ -294,11 +296,6 @@ func (s *CSIService) ControllerPublishVolume(ctx context.Context, req *csi.Contr
 	}
 
 	nodeID := req.GetNodeId()
-	found := slices.Contains(s.knownClientIDs, nodeID)
-	if !found {
-		return nil, status.Errorf(codes.NotFound, "node %s not found", nodeID)
-	}
-
 	id := req.GetVolumeId()
 
 	// Get volume to determine transport.
@@ -313,29 +310,11 @@ func (s *CSIService) ControllerPublishVolume(ctx context.Context, req *csi.Contr
 		transport = *vol.Transport
 	}
 
-	nodeIDs := parseNodeID(nodeID)
-	var clientID string
-	var targetPortalAddress string
-	switch transport {
-	case zfsilov1.Volume_TRANSPORT_NVMEOF_TCP:
-		clientID = nodeIDs["nvmeof"]
-		host, _, _ := strings.Cut(s.targetPortalAddress, ":")
-		targetPortalAddress = host + ":4420"
-	case zfsilov1.Volume_TRANSPORT_ISCSI, zfsilov1.Volume_TRANSPORT_UNSPECIFIED:
-		clientID = nodeIDs["iscsi"]
-		targetPortalAddress = s.targetPortalAddress
-	default:
-		return nil, status.Errorf(codes.InvalidArgument, "unsupported transport: %s", transport)
-	}
-
-	if clientID == "" {
-		return nil, status.Errorf(codes.FailedPrecondition, "node %s does not support transport %s", nodeID, transport)
-	}
-
 	// Publish (make target available).
 	_, err = s.volumeClient.PublishVolume(ctx, connect.NewRequest(&zfsilov1.PublishVolumeRequest{
-		Id:        id,
-		Transport: transport,
+		Id:         id,
+		Transport:  transport,
+		ServerHost: s.publishHost,
 	}))
 	if err != nil {
 		return nil, mapErrorID(err)
@@ -343,18 +322,17 @@ func (s *CSIService) ControllerPublishVolume(ctx context.Context, req *csi.Contr
 
 	// Connect (associate with node and login).
 	connectResp, err := s.volumeClient.ConnectVolume(ctx, connect.NewRequest(&zfsilov1.ConnectVolumeRequest{
-		Id:            id,
-		ClientId:      clientID,
-		TargetAddress: targetPortalAddress,
+		Id:         id,
+		ClientHost: nodeID,
 	}))
 	if err != nil {
 		return nil, mapError(err)
 	}
 
 	// Verify it's connected to the right node ID.
-	actualClientID := connectResp.Msg.Volume.ClientId
-	if actualClientID != nil && *actualClientID != "" && *actualClientID != clientID {
-		return nil, status.Errorf(codes.FailedPrecondition, "volume %s is already connected to another node: %s", id, *actualClientID)
+	actualClientHost := connectResp.Msg.Volume.ClientHost
+	if actualClientHost != nil && *actualClientHost != "" && *actualClientHost != nodeID {
+		return nil, status.Errorf(codes.FailedPrecondition, "volume %s is already connected to another node: %s", id, *actualClientHost)
 	}
 
 	return &csi.ControllerPublishVolumeResponse{}, nil
@@ -381,9 +359,11 @@ func (s *CSIService) ControllerUnpublishVolume(ctx context.Context, req *csi.Con
 
 	// Check node id. If it is published to a different node, it's already
 	// "unpublished".
-	clientID := vol.ClientId
-	if nodeID != "" && clientID != nil && *clientID != "" && *clientID != nodeID {
-		return &csi.ControllerUnpublishVolumeResponse{}, nil
+	connectHost := vol.ClientHost
+	if nodeID != "" && connectHost != nil && *connectHost != "" {
+		if *connectHost != nodeID {
+			return &csi.ControllerUnpublishVolumeResponse{}, nil
+		}
 	}
 
 	// Disconnect if connected.
@@ -466,8 +446,8 @@ func (s *CSIService) ListVolumes(ctx context.Context, req *csi.ListVolumesReques
 	entries := make([]*csi.ListVolumesResponse_Entry, 0, len(resp.Msg.Volumes))
 	for _, vol := range resp.Msg.Volumes {
 		var publishedNodeIds []string
-		if vol.ClientId != nil && *vol.ClientId != "" {
-			publishedNodeIds = []string{findNodeIDByClientID(s.knownClientIDs, *vol.ClientId)}
+		if vol.ClientHost != nil && *vol.ClientHost != "" {
+			publishedNodeIds = []string{*vol.ClientHost}
 		}
 
 		entries = append(entries, &csi.ListVolumesResponse_Entry{
@@ -631,8 +611,8 @@ func (s *CSIService) ControllerGetVolume(ctx context.Context, req *csi.Controlle
 
 	vol := resp.Msg.Volume
 	var publishedNodeIds []string
-	if vol.ClientId != nil && *vol.ClientId != "" {
-		publishedNodeIds = []string{findNodeIDByClientID(s.knownClientIDs, *vol.ClientId)}
+	if vol.ClientHost != nil && *vol.ClientHost != "" {
+		publishedNodeIds = []string{*vol.ClientHost}
 	}
 
 	return &csi.ControllerGetVolumeResponse{
@@ -707,35 +687,11 @@ func (s *CSIService) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolu
 		return nil, status.Errorf(codes.FailedPrecondition, "volume %s is already staged at %s", id, *vol.StagingPath)
 	}
 
-	transport := zfsilov1.Volume_TRANSPORT_ISCSI
-	if vol.Transport != nil {
-		transport = *vol.Transport
-	}
-
-	var clientID string
-	var targetPortalAddress string
-	switch transport {
-	case zfsilov1.Volume_TRANSPORT_NVMEOF_TCP:
-		clientID = s.clientIDs["nvmeof"]
-		host, _, _ := strings.Cut(s.targetPortalAddress, ":")
-		targetPortalAddress = host + ":4420"
-	case zfsilov1.Volume_TRANSPORT_ISCSI, zfsilov1.Volume_TRANSPORT_UNSPECIFIED:
-		clientID = s.clientIDs["iscsi"]
-		targetPortalAddress = s.targetPortalAddress
-	default:
-		return nil, status.Errorf(codes.InvalidArgument, "unsupported transport: %s", transport)
-	}
-
-	if clientID == "" {
-		return nil, status.Errorf(codes.FailedPrecondition, "local node does not support transport %s", transport)
-	}
-
 	// Ensure connected to this node.
-	if vol.Status < zfsilov1.Volume_STATUS_CONNECTED || vol.ClientId == nil || *vol.ClientId != clientID {
+	if vol.Status < zfsilov1.Volume_STATUS_CONNECTED || vol.ClientHost == nil || *vol.ClientHost != s.hostID {
 		_, err := s.volumeClient.ConnectVolume(ctx, connect.NewRequest(&zfsilov1.ConnectVolumeRequest{
-			Id:            id,
-			ClientId:      clientID,
-			TargetAddress: targetPortalAddress,
+			Id:         id,
+			ClientHost: s.hostID,
 		}))
 		if err != nil {
 			return nil, mapError(err)
@@ -781,16 +737,8 @@ func (s *CSIService) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstage
 	}
 
 	// Disconnect if connected to this node.
-	if vol.Status >= zfsilov1.Volume_STATUS_CONNECTED && vol.ClientId != nil {
-		isConnectedToThisNode := false
-		for _, id := range s.clientIDs {
-			if *vol.ClientId == id {
-				isConnectedToThisNode = true
-				break
-			}
-		}
-
-		if isConnectedToThisNode {
+	if vol.Status >= zfsilov1.Volume_STATUS_CONNECTED && vol.ClientHost != nil {
+		if *vol.ClientHost == s.hostID {
 			_, err := s.volumeClient.DisconnectVolume(ctx, connect.NewRequest(&zfsilov1.DisconnectVolumeRequest{Id: id}))
 			if err != nil {
 				return nil, mapError(err)
@@ -935,7 +883,7 @@ func (s *CSIService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCa
 }
 
 func (s *CSIService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	return &csi.NodeGetInfoResponse{NodeId: buildNodeID(s.clientIDs)}, nil
+	return &csi.NodeGetInfoResponse{NodeId: s.hostID}, nil
 }
 
 func (s *CSIService) authInterceptor() connect.Interceptor {

@@ -57,8 +57,8 @@ func (SecretValue) MarshalJSON() ([]byte, error) {
 	return json.Marshal("REDACTED")
 }
 
-type ConfigServiceClientID struct {
-	Type  string `json:"type"  mod:"default=PATH"  validate:"oneof=PATH VALUE"`
+type ConfigHost struct {
+	Type  string `json:"type"  mod:"default=ENV"   validate:"oneof=PATH VALUE ENV"`
 	Value string `json:"value" validate:"required"`
 }
 
@@ -68,13 +68,14 @@ type Config struct {
 		Format string   `json:"format" mod:"default=JSON" validate:"oneof=JSON TEXT"`
 	} `json:"log"`
 	Service struct {
-		BindAddress         string                  `json:"bindAddress"         mod:"default=:9090"`
-		Secret              SecretValue             `json:"secret"              validate:"required"`
-		ZFSiloAddress       string                  `json:"zfsiloAddress"       validate:"required"`
-		TargetPortalAddress string                  `json:"targetPortalAddress" validate:"required"`
-		ClientIDs           []ConfigServiceClientID `json:"clientIds"`
-		KnownClientIDs      []string                `json:"knownClientIds"      validate:"min=1"`
+		BindAddress   string      `json:"bindAddress"   mod:"default=:9090"`
+		Secret        SecretValue `json:"secret"        validate:"required"`
+		ZFSiloAddress string      `json:"zfsiloAddress" validate:"required"`
 	} `json:"service"`
+	Node struct {
+		PublishHost string     `json:"publishHost" validate:"required"`
+		Host        ConfigHost `json:"host"        validate:"required"`
+	} `json:"node"`
 }
 
 func BuildConfig(ctx context.Context, configValue string) (Config, error) {

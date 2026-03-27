@@ -77,11 +77,12 @@ func TestVolumeCRUD(t *testing.T) {
 
 	// UPDATE
 	t.Run("Update", func(t *testing.T) {
-		_, err := gorm.G[database.Volume](db).Where("id = ?", "vol-test-123").Update(ctx, "Name", "UpdatedTestVolume")
+		err := db.WithContext(ctx).Model(&database.Volume{}).Where("id = ?", "vol-test-123").Update("Name", "UpdatedTestVolume").Error
 		assert.NoError(t, err)
 
 		// Verify the update.
-		updatedVolume, err := gorm.G[database.Volume](db).Where("id = ?", "vol-test-123").First(ctx)
+		var updatedVolume database.Volume
+		err = db.First(&updatedVolume, "id = ?", "vol-test-123").Error
 		assert.NoError(t, err)
 		assert.Equal(t, "UpdatedTestVolume", updatedVolume.Name)
 		assert.NotNil(t, updatedVolume.UpdateTime)

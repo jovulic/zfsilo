@@ -24,6 +24,11 @@ func mapError(err error) error {
 	code := connect.CodeOf(err)
 	msg := err.Error()
 
+	// If the error message indicates something was not found, return NotFound.
+	if strings.Contains(strings.ToLower(msg), "not found") || strings.Contains(strings.ToLower(msg), "does not exist") {
+		return status.Error(codes.NotFound, msg)
+	}
+
 	//nolint:exhaustive
 	switch code {
 	case connect.CodeNotFound:

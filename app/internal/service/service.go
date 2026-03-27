@@ -11,35 +11,56 @@ import (
 	"github.com/jovulic/zfsilo/api/gen/go/zfsilo/v1/zfsilov1connect"
 	"github.com/jovulic/zfsilo/app/internal/command"
 	"github.com/jovulic/zfsilo/app/internal/command/zfs"
+	"github.com/jovulic/zfsilo/app/internal/database"
+	"gorm.io/gorm"
 )
 
 type Service struct {
 	zfsilov1connect.UnimplementedServiceHandler
 
-	producer command.ProduceTarget
+	database        *gorm.DB
+	executorFactory *command.ExecutorFactory
 }
 
 func NewService(
-	producer command.ProduceTarget,
+	database *gorm.DB,
+	executorFactory *command.ExecutorFactory,
 ) *Service {
 	return &Service{
-		producer: producer,
+		database:        database,
+		executorFactory: executorFactory,
 	}
 }
 
 func (s *Service) GetCapacity(ctx context.Context, req *connect.Request[zfsilov1.GetCapacityRequest]) (*connect.Response[zfsilov1.GetCapacityResponse], error) {
-	availString, err := zfs.With(s.producer.Executor).GetProperty(ctx, zfs.GetPropertyArguments{
-		Name:        "tank",
-		PropertyKey: "avail",
-	})
+	hosts, err := gorm.G[*database.Host](s.database).Where("role = ?", database.HostRoleSERVER).Find(ctx)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get dataset available capacity: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to find server hosts: %w", err))
 	}
 
-	avail, err := strconv.ParseInt(availString, 10, 64)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse dataset available capacity: %w", err))
+	var totalAvail int64
+
+	for _, host := range hosts {
+		executor, err := s.executorFactory.BuildExecutor(host)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to build executor for host %s: %w", host.ID, err))
+		}
+
+		availString, err := zfs.With(executor).GetProperty(ctx, zfs.GetPropertyArguments{
+			Name:        "tank",
+			PropertyKey: "avail",
+		})
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get dataset available capacity for host %s: %w", host.ID, err))
+		}
+
+		avail, err := strconv.ParseInt(availString, 10, 64)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to parse dataset available capacity for host %s: %w", host.ID, err))
+		}
+
+		totalAvail += avail
 	}
 
-	return connect.NewResponse(&zfsilov1.GetCapacityResponse{AvailableCapacityBytes: avail}), nil
+	return connect.NewResponse(&zfsilov1.GetCapacityResponse{AvailableCapacityBytes: totalAvail}), nil
 }

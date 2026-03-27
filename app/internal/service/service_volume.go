@@ -20,9 +20,15 @@ import (
 	"github.com/jovulic/zfsilo/app/internal/command/zfs"
 	converteriface "github.com/jovulic/zfsilo/app/internal/converter/iface"
 	"github.com/jovulic/zfsilo/app/internal/database"
-	"github.com/jovulic/zfsilo/lib/try"
+	libcommand "github.com/jovulic/zfsilo/lib/command"
 	structpb "google.golang.org/protobuf/types/known/structpb"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
+)
+
+const (
+	listVolumesDefaultPageSize = 25
+	listVolumeMaxPageSize      = 100
 )
 
 // applyVolumeUpdate modifies an existing Volume object with fields from a
@@ -100,34 +106,70 @@ func applyVolumeUpdate(
 	return nil
 }
 
-const (
-	listVolumesDefaultPageSize = 25
-	listVolumeMaxPageSize      = 100
-)
+func getTargetID(host *database.Host, transport database.VolumeTransport, volumeID string) (string, error) {
+	switch transport.Type {
+	case database.VolumeTransportTypeISCSI:
+		return host.VolumeIQN(volumeID)
+	case database.VolumeTransportTypeNVMEOF_TCP:
+		return host.VolumeNQN(volumeID)
+	case database.VolumeTransportTypeUNSPECIFIED:
+		fallthrough
+	default:
+		return "", fmt.Errorf("unsupported transport for target ID: %v", transport.Type)
+	}
+}
+
+func getClientID(host *database.Host, transport database.VolumeTransport) (string, error) {
+	switch transport.Type {
+	case database.VolumeTransportTypeISCSI:
+		return host.IQN()
+	case database.VolumeTransportTypeNVMEOF_TCP:
+		return host.NQN()
+	case database.VolumeTransportTypeUNSPECIFIED:
+		fallthrough
+	default:
+		return "", fmt.Errorf("unsupported transport for client ID: %v", transport.Type)
+	}
+}
+
+func getTargetConnection(host *database.Host) (string, string) {
+	address := ""
+	conn := host.Connection.Data()
+	if conn.Type == database.HostConnectionTypeRemote && conn.Remote != nil {
+		address = conn.Remote.Address
+	}
+	return address, host.Key
+}
+
+func indexOf(slice []string, val string) int {
+	for i, item := range slice {
+		if item == val {
+			return i
+		}
+	}
+	return -1
+}
 
 type VolumeService struct {
 	zfsilov1connect.UnimplementedVolumeServiceHandler
 
-	database       *gorm.DB
-	converter      converteriface.VolumeConverter
-	produceTarget  command.ProduceTarget
-	consumeTargets command.ConsumeTargetMap
-	syncer         *VolumeSyncer
+	database        *gorm.DB
+	converter       converteriface.VolumeConverter
+	executorFactory *command.ExecutorFactory
+	syncer          *VolumeSyncer
 }
 
 func NewVolumeService(
 	database *gorm.DB,
 	converter converteriface.VolumeConverter,
-	produceTarget command.ProduceTarget,
-	consumeTargets command.ConsumeTargetMap,
+	executorFactory *command.ExecutorFactory,
 	syncer *VolumeSyncer,
 ) *VolumeService {
 	return &VolumeService{
-		database:       database,
-		converter:      converter,
-		produceTarget:  produceTarget,
-		consumeTargets: consumeTargets,
-		syncer:         syncer,
+		database:        database,
+		converter:       converter,
+		executorFactory: executorFactory,
+		syncer:          syncer,
 	}
 }
 
@@ -228,38 +270,6 @@ func (s *VolumeService) CreateVolume(ctx context.Context, req *connect.Request[z
 		if err != nil {
 			return err
 		}
-
-		err = try.Do(ctx, func(stack *try.UndoStack) error {
-			// Create ZFS volume.
-			opts := make(map[string]string)
-			for _, option := range req.Msg.Volume.Options {
-				opts[option.Key] = option.Value
-			}
-			err = zfs.With(s.produceTarget.Executor).CreateVolume(ctx, zfs.CreateVolumeArguments{
-				Name:    volumedb.DatasetID,
-				Size:    uint64(volumedb.CapacityBytes),
-				Options: opts,
-				Sparse:  volumedb.Sparse,
-			})
-			if err != nil {
-				return fmt.Errorf("failed to create zfs volume: %w", err)
-			}
-			stack.Push(func(ctx context.Context) error {
-				err := zfs.With(s.produceTarget.Executor).DestroyVolume(ctx, zfs.DestroyVolumeArguments{
-					Name: volumedb.DatasetID,
-				})
-				if err != nil {
-					return fmt.Errorf("failed to destroy zfs volume: %w", err)
-				}
-				return nil
-			})
-
-			return nil
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create the zfs volume: %w", err)
-		}
-
 		return nil
 	})
 	if err != nil {
@@ -269,7 +279,7 @@ func (s *VolumeService) CreateVolume(ctx context.Context, req *connect.Request[z
 		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("volume already exists"))
 		}
-		// For ZFS errors or other DB errors, return internal error.
+		// Return internal error for other DB errors.
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to create volume: %w", err))
 	}
 
@@ -325,47 +335,69 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update volume in database: %w", err))
 	}
 
-	// We update the size of the volume by zfs set.
-	err = zfs.With(s.produceTarget.Executor).SetProperty(ctx, zfs.SetPropertyArguments{
-		Name:          volumedb.DatasetID,
-		PropertyKey:   "volsize",
-		PropertyValue: fmt.Sprintf("%d", volumedb.CapacityBytes),
-	})
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update volume size on producer: %w", err))
-	}
+	// If the volume has a publish host, we update the ZFS properties.
+	if volumedb.ServerHost != "" {
+		executor, _, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get producer executor: %w", err))
+		}
 
-	// We update the options by zfs set.
-	for _, opt := range volumedb.Options.Data() {
-		err = zfs.With(s.produceTarget.Executor).SetProperty(ctx, zfs.SetPropertyArguments{
+		// We update the size of the volume by zfs set.
+		err = zfs.With(executor).SetProperty(ctx, zfs.SetPropertyArguments{
 			Name:          volumedb.DatasetID,
-			PropertyKey:   opt.Key,
-			PropertyValue: opt.Value,
+			PropertyKey:   "volsize",
+			PropertyValue: fmt.Sprintf("%d", volumedb.CapacityBytes),
 		})
 		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update volume property %s on producer: %w", opt.Key, err))
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update volume size on producer: %w", err))
+		}
+
+		// We update the options by zfs set.
+		for _, opt := range volumedb.Options.Data() {
+			err = zfs.With(executor).SetProperty(ctx, zfs.SetPropertyArguments{
+				Name:          volumedb.DatasetID,
+				PropertyKey:   opt.Key,
+				PropertyValue: opt.Value,
+			})
+			if err != nil {
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update volume property %s on producer: %w", opt.Key, err))
+			}
 		}
 	}
 
-	// We check if the volume has been published, and if it has, we need to issue
+	// We check if the volume has been connected, and if it has, we need to issue
 	// a refresh on the consumer.
-	if volumedb.IsPublished() {
-		consumeTarget, ok := s.consumeTargets[volumedb.ClientID]
-		if !ok {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("unknown client: %s", volumedb.ClientID))
+	if volumedb.IsConnected() && volumedb.ClientHost != "" {
+		consumeExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get consumer executor: %w", err))
 		}
 
-		switch volumedb.Transport {
-		case database.VolumeTransportISCSI:
-			err = iscsi.With(consumeTarget.Executor).RescanTarget(ctx, iscsi.RescanTargetArguments{
-				TargetIQN:     iscsi.IQN(volumedb.TargetID),
-				TargetAddress: volumedb.TargetAddress,
+		_, publishHost, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get publish host: %w", err))
+		}
+
+		transport := volumedb.Transport.Data()
+
+		targetID, err := getTargetID(publishHost, transport, volumedb.ID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get target ID: %w", err))
+		}
+
+		targetAddress, _ := getTargetConnection(publishHost)
+
+		switch transport.Type {
+		case database.VolumeTransportTypeISCSI:
+			err = iscsi.With(consumeExecutor).RescanTarget(ctx, iscsi.RescanTargetArguments{
+				TargetIQN:     iscsi.IQN(targetID),
+				TargetAddress: targetAddress,
 			})
-		case database.VolumeTransportNVMEOF_TCP:
-			err = nvmeof.With(consumeTarget.Executor).RescanTarget(ctx, nvmeof.RescanTargetArguments{
-				TargetNQN: nvmeof.NQN(volumedb.TargetID),
+		case database.VolumeTransportTypeNVMEOF_TCP:
+			err = nvmeof.With(consumeExecutor).RescanTarget(ctx, nvmeof.RescanTargetArguments{
+				TargetNQN: nvmeof.NQN(targetID),
 			})
-		case database.VolumeTransportUNSPECIFIED:
+		case database.VolumeTransportTypeUNSPECIFIED:
 			fallthrough
 		default:
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("no transport specified on volume"))
@@ -376,11 +408,11 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 
 		// If the mode is filesystem we also need to resize the filesystem.
 		if volumedb.Mode == database.VolumeModeFILESYSTEM {
-			devicePath, err := volumedb.DevicePathClient()
+			devicePath, err := volumedb.DevicePathClient(targetAddress, targetID)
 			if err != nil {
 				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get device path: %w", err))
 			}
-			err = fs.With(consumeTarget.Executor).Resize(ctx, fs.ResizeArguments{
+			err = fs.With(consumeExecutor).Resize(ctx, fs.ResizeArguments{
 				Device: devicePath,
 			})
 			if err != nil {
@@ -413,12 +445,18 @@ func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[z
 	}
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
-		// Destroy ZFS volume.
-		err = zfs.With(s.produceTarget.Executor).DestroyVolume(ctx, zfs.DestroyVolumeArguments{
-			Name: volumedb.DatasetID,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to destroy zfs volume: %w", err)
+		// Destroy ZFS volume if it was created.
+		if volumedb.ServerHost != "" {
+			executor, _, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
+			if err != nil {
+				return fmt.Errorf("failed to get producer executor: %w", err)
+			}
+			err = zfs.With(executor).DestroyVolume(ctx, zfs.DestroyVolumeArguments{
+				Name: volumedb.DatasetID,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to destroy zfs volume: %w", err)
+			}
 		}
 
 		// Delete from database.
@@ -463,69 +501,95 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is mounted"))
 	}
 
-	if volumedb.IsPublished() {
-		volumeapi, err := s.converter.FromDBToAPI(volumedb)
-		if err != nil {
-			return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
-		}
-		return connect.NewResponse(&zfsilov1.PublishVolumeResponse{Volume: volumeapi}), nil
-	}
-
 	// Use requested transport or default to ISCSI
 	var transport database.VolumeTransport
 	switch req.Msg.Transport {
 	case zfsilov1.Volume_TRANSPORT_ISCSI:
-		transport = database.VolumeTransportISCSI
+		transport.Type = database.VolumeTransportTypeISCSI
 	case zfsilov1.Volume_TRANSPORT_NVMEOF_TCP:
-		transport = database.VolumeTransportNVMEOF_TCP
+		transport.Type = database.VolumeTransportTypeNVMEOF_TCP
 	case zfsilov1.Volume_TRANSPORT_UNSPECIFIED:
 		fallthrough
 	default:
-		transport = database.VolumeTransportISCSI
+		transport.Type = database.VolumeTransportTypeISCSI
 	}
-	volumedb.Transport = transport
-
-	switch volumedb.Transport {
-	case database.VolumeTransportISCSI:
-		targetID, err := s.produceTarget.Host.VolumeIQN(volumedb.ID)
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to generate target ID: %w", err))
-		}
-		volumedb.TargetID = targetID
-	case database.VolumeTransportNVMEOF_TCP:
-		targetID, err := s.produceTarget.Host.VolumeNQN(volumedb.ID)
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to generate target ID: %w", err))
-		}
-		volumedb.TargetID = targetID
-	case database.VolumeTransportUNSPECIFIED:
-		fallthrough
-	default:
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("no transport specified on volume"))
-	}
-
+	volumedb.Transport = datatypes.NewJSONType(transport)
+	volumedb.ServerHost = strings.TrimPrefix(req.Msg.ServerHost, "hosts/")
 	volumedb.Status = database.VolumeStatusPUBLISHED
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
+		executor, host, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
+		if err != nil {
+			return err
+		}
+
+		transport := volumedb.Transport.Data()
+		targetID, err := getTargetID(host, transport, volumedb.ID)
+		if err != nil {
+			return fmt.Errorf("failed to generate target ID: %w", err)
+		}
+
+		targetAddress, targetPassword := getTargetConnection(host)
+		switch transport.Type {
+		case database.VolumeTransportTypeISCSI:
+			transport.ISCSI = &database.VolumeTransportISCSI{
+				TargetAddress:  targetAddress,
+				TargetIQN:      targetID,
+				TargetPassword: targetPassword,
+			}
+		case database.VolumeTransportTypeNVMEOF_TCP:
+			transport.NVMEOF = &database.VolumeTransportNVMEOF{
+				TargetAddress:  targetAddress,
+				TargetNQN:      targetID,
+				TargetPassword: targetPassword,
+			}
+		case database.VolumeTransportTypeUNSPECIFIED:
+			return fmt.Errorf("no transport specified for publish")
+		}
+		volumedb.Transport = datatypes.NewJSONType(transport)
+
 		_, err = gorm.G[*database.Volume](tx).Updates(ctx, volumedb)
 		if err != nil {
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
 
-		switch volumedb.Transport {
-		case database.VolumeTransportISCSI:
-			err = iscsi.With(s.produceTarget.Executor).PublishVolume(ctx, iscsi.PublishVolumeArguments{
+		// Ensure ZFS volume exists.
+		exists, err := zfs.With(executor).VolumeExists(ctx, zfs.VolumeExistsArguments{
+			Name: volumedb.DatasetID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to check zfs volume: %w", err)
+		}
+		if !exists {
+			opts := make(map[string]string)
+			for _, option := range volumedb.Options.Data() {
+				opts[option.Key] = option.Value
+			}
+			err = zfs.With(executor).CreateVolume(ctx, zfs.CreateVolumeArguments{
+				Name:    volumedb.DatasetID,
+				Size:    uint64(volumedb.CapacityBytes),
+				Options: opts,
+				Sparse:  volumedb.Sparse,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create zfs volume: %w", err)
+			}
+		}
+
+		switch transport.Type {
+		case database.VolumeTransportTypeISCSI:
+			err = iscsi.With(executor).PublishVolume(ctx, iscsi.PublishVolumeArguments{
 				VolumeID:   volumedb.ID,
 				DevicePath: fmt.Sprintf("/dev/zvol/%s", volumedb.DatasetID),
-				TargetIQN:  iscsi.IQN(volumedb.TargetID),
+				TargetIQN:  iscsi.IQN(targetID),
 			})
-		case database.VolumeTransportNVMEOF_TCP:
-			err = nvmeof.With(s.produceTarget.Executor).PublishVolume(ctx, nvmeof.PublishVolumeArguments{
+		case database.VolumeTransportTypeNVMEOF_TCP:
+			err = nvmeof.With(executor).PublishVolume(ctx, nvmeof.PublishVolumeArguments{
 				VolumeID:   volumedb.ID,
 				DevicePath: fmt.Sprintf("/dev/zvol/%s", volumedb.DatasetID),
-				TargetNQN:  nvmeof.NQN(volumedb.TargetID),
+				TargetNQN:  nvmeof.NQN(targetID),
 			})
-		case database.VolumeTransportUNSPECIFIED:
+		case database.VolumeTransportTypeUNSPECIFIED:
 			fallthrough
 		default:
 			return fmt.Errorf("no transport specified on volume")
@@ -536,6 +600,12 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 		return nil
 	})
 	if err != nil {
+		if connect.CodeOf(err) == connect.CodeNotFound || strings.Contains(err.Error(), "not found") {
+			if _, ok := err.(*connect.Error); ok {
+				return nil, err
+			}
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to publish volume: %w", err))
 	}
 
@@ -571,10 +641,19 @@ func (s *VolumeService) UnpublishVolume(ctx context.Context, req *connect.Reques
 	}
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
-		previousTargetID := volumedb.TargetID
-		previousTransport := volumedb.Transport
-		volumedb.TargetID = ""
-		volumedb.Transport = database.VolumeTransportUNSPECIFIED
+		executor, host, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
+		if err != nil {
+			return err
+		}
+
+		previousTransport := volumedb.Transport.Data()
+		targetID, err := getTargetID(host, previousTransport, volumedb.ID)
+		if err != nil {
+			return fmt.Errorf("failed to generate target ID: %w", err)
+		}
+
+		volumedb.ServerHost = ""
+		volumedb.Transport = datatypes.NewJSONType(database.VolumeTransport{Type: database.VolumeTransportTypeUNSPECIFIED})
 		volumedb.Status = database.VolumeStatusINITIAL
 
 		_, err = gorm.G[*database.Volume](tx).Updates(ctx, volumedb)
@@ -582,17 +661,17 @@ func (s *VolumeService) UnpublishVolume(ctx context.Context, req *connect.Reques
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
 
-		switch previousTransport {
-		case database.VolumeTransportISCSI:
-			err = iscsi.With(s.produceTarget.Executor).UnpublishVolume(ctx, iscsi.UnpublishVolumeArguments{
+		switch previousTransport.Type {
+		case database.VolumeTransportTypeISCSI:
+			err = iscsi.With(executor).UnpublishVolume(ctx, iscsi.UnpublishVolumeArguments{
 				VolumeID:  volumedb.ID,
-				TargetIQN: iscsi.IQN(previousTargetID),
+				TargetIQN: iscsi.IQN(targetID),
 			})
-		case database.VolumeTransportNVMEOF_TCP:
-			err = nvmeof.With(s.produceTarget.Executor).UnpublishVolume(ctx, nvmeof.UnpublishVolumeArguments{
-				TargetNQN: nvmeof.NQN(previousTargetID),
+		case database.VolumeTransportTypeNVMEOF_TCP:
+			err = nvmeof.With(executor).UnpublishVolume(ctx, nvmeof.UnpublishVolumeArguments{
+				TargetNQN: nvmeof.NQN(targetID),
 			})
-		case database.VolumeTransportUNSPECIFIED:
+		case database.VolumeTransportTypeUNSPECIFIED:
 			fallthrough
 		default:
 			return fmt.Errorf("no transport specified on volume")
@@ -637,8 +716,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is mounted"))
 	}
 
-	volumedb.ClientID = req.Msg.ClientId
-	volumedb.TargetAddress = req.Msg.TargetAddress
+	volumedb.ClientHost = strings.TrimPrefix(req.Msg.ClientHost, "hosts/")
 	volumedb.Status = database.VolumeStatusCONNECTED
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
@@ -647,51 +725,95 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
 
-		consumeTarget, ok := s.consumeTargets[volumedb.ClientID]
-		if !ok {
-			return fmt.Errorf("unable to lookup consume target for %s", volumedb.ClientID)
+		producerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
+		if err != nil {
+			return err
 		}
 
-		switch volumedb.Transport {
-		case database.VolumeTransportISCSI:
+		consumerExecutor, connectHost, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
+		if err != nil {
+			return err
+		}
+
+		transport := volumedb.Transport.Data()
+		var targetID, targetAddress, targetPassword string
+		switch transport.Type {
+		case database.VolumeTransportTypeISCSI:
+			targetID = transport.ISCSI.TargetIQN
+			targetAddress = transport.ISCSI.TargetAddress
+			targetPassword = transport.ISCSI.TargetPassword
+		case database.VolumeTransportTypeNVMEOF_TCP:
+			targetID = transport.NVMEOF.TargetNQN
+			targetAddress = transport.NVMEOF.TargetAddress
+			targetPassword = transport.NVMEOF.TargetPassword
+		case database.VolumeTransportTypeUNSPECIFIED:
+			return fmt.Errorf("no transport specified for volume connection")
+		}
+
+		clientID, err := getClientID(connectHost, transport)
+		if err != nil {
+			return fmt.Errorf("failed to get client ID: %w", err)
+		}
+
+		_, consumerPassword := getTargetConnection(connectHost)
+
+		switch transport.Type {
+		case database.VolumeTransportTypeISCSI:
+			transport.ISCSI.InitiatorIQN = clientID
+			transport.ISCSI.InitiatorPassword = consumerPassword
+		case database.VolumeTransportTypeNVMEOF_TCP:
+			transport.NVMEOF.InitiatorNQN = clientID
+			transport.NVMEOF.InitiatorPassword = consumerPassword
+		case database.VolumeTransportTypeUNSPECIFIED:
+			return fmt.Errorf("no transport specified for initiator connection")
+		}
+		volumedb.Transport = datatypes.NewJSONType(transport)
+
+		_, err = gorm.G[*database.Volume](tx).Updates(ctx, volumedb)
+		if err != nil {
+			return fmt.Errorf("failed to update volume in database: %w", err)
+		}
+
+		switch transport.Type {
+		case database.VolumeTransportTypeISCSI:
 			// Authorize client on the producer side.
-			err = iscsi.With(s.produceTarget.Executor).Authorize(ctx, iscsi.AuthorizeArguments{
-				TargetIQN:         iscsi.IQN(volumedb.TargetID),
-				TargetPassword:    s.produceTarget.Password,
-				InitiatorIQN:      iscsi.IQN(volumedb.ClientID),
-				InitiatorPassword: consumeTarget.Password,
+			err = iscsi.With(producerExecutor).Authorize(ctx, iscsi.AuthorizeArguments{
+				TargetIQN:         iscsi.IQN(targetID),
+				TargetPassword:    targetPassword,
+				InitiatorIQN:      iscsi.IQN(clientID),
+				InitiatorPassword: consumerPassword,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to authorize client: %w", err)
 			}
 
-			err = iscsi.With(consumeTarget.Executor).ConnectTarget(ctx, iscsi.ConnectTargetArguments{
-				TargetAddress:     volumedb.TargetAddress,
-				TargetIQN:         iscsi.IQN(volumedb.TargetID),
-				TargetPassword:    s.produceTarget.Password,
-				InitiatorIQN:      iscsi.IQN(volumedb.ClientID),
-				InitiatorPassword: consumeTarget.Password,
+			err = iscsi.With(consumerExecutor).ConnectTarget(ctx, iscsi.ConnectTargetArguments{
+				TargetAddress:     targetAddress,
+				TargetIQN:         iscsi.IQN(targetID),
+				TargetPassword:    targetPassword,
+				InitiatorIQN:      iscsi.IQN(clientID),
+				InitiatorPassword: consumerPassword,
 			})
-		case database.VolumeTransportNVMEOF_TCP:
+		case database.VolumeTransportTypeNVMEOF_TCP:
 			// Authorize client on the producer side.
-			err = nvmeof.With(s.produceTarget.Executor).Authorize(ctx, nvmeof.AuthorizeArguments{
-				TargetNQN:         nvmeof.NQN(volumedb.TargetID),
-				TargetPassword:    s.produceTarget.Password,
-				InitiatorNQN:      nvmeof.NQN(volumedb.ClientID),
-				InitiatorPassword: consumeTarget.Password,
+			err = nvmeof.With(producerExecutor).Authorize(ctx, nvmeof.AuthorizeArguments{
+				TargetNQN:         nvmeof.NQN(targetID),
+				TargetPassword:    targetPassword,
+				InitiatorNQN:      nvmeof.NQN(clientID),
+				InitiatorPassword: consumerPassword,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to authorize client: %w", err)
 			}
 
-			err = nvmeof.With(consumeTarget.Executor).ConnectTarget(ctx, nvmeof.ConnectTargetArguments{
-				TargetAddress:     volumedb.TargetAddress,
-				TargetNQN:         nvmeof.NQN(volumedb.TargetID),
-				TargetPassword:    s.produceTarget.Password,
-				InitiatorNQN:      nvmeof.NQN(volumedb.ClientID),
-				InitiatorPassword: consumeTarget.Password,
+			err = nvmeof.With(consumerExecutor).ConnectTarget(ctx, nvmeof.ConnectTargetArguments{
+				TargetAddress:     targetAddress,
+				TargetNQN:         nvmeof.NQN(targetID),
+				TargetPassword:    targetPassword,
+				InitiatorNQN:      nvmeof.NQN(clientID),
+				InitiatorPassword: consumerPassword,
 			})
-		case database.VolumeTransportUNSPECIFIED:
+		case database.VolumeTransportTypeUNSPECIFIED:
 			fallthrough
 		default:
 			return fmt.Errorf("no transport specified on volume")
@@ -702,7 +824,13 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 		return nil
 	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to connect volume: %w", err))
+		if connect.CodeOf(err) == connect.CodeNotFound || strings.Contains(err.Error(), "not found") {
+			if _, ok := err.(*connect.Error); ok {
+				return nil, err
+			}
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
@@ -737,10 +865,48 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 	}
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
-		previousTargetAddress := volumedb.TargetAddress
-		clientID := volumedb.ClientID
-		volumedb.ClientID = ""
-		volumedb.TargetAddress = ""
+		producerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
+		if err != nil {
+			return err
+		}
+
+		consumerExecutor, connectHost, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
+		if err != nil {
+			return err
+		}
+
+		transport := volumedb.Transport.Data()
+		var targetID, targetAddress string
+		switch transport.Type {
+		case database.VolumeTransportTypeISCSI:
+			targetID = transport.ISCSI.TargetIQN
+			targetAddress = transport.ISCSI.TargetAddress
+		case database.VolumeTransportTypeNVMEOF_TCP:
+			targetID = transport.NVMEOF.TargetNQN
+			targetAddress = transport.NVMEOF.TargetAddress
+		case database.VolumeTransportTypeUNSPECIFIED:
+			return fmt.Errorf("no transport specified for volume staging")
+		}
+
+		clientID, err := getClientID(connectHost, transport)
+		if err != nil {
+			return fmt.Errorf("failed to get client ID: %w", err)
+		}
+
+		// Clear initiator details
+		switch transport.Type {
+		case database.VolumeTransportTypeISCSI:
+			transport.ISCSI.InitiatorIQN = ""
+			transport.ISCSI.InitiatorPassword = ""
+		case database.VolumeTransportTypeNVMEOF_TCP:
+			transport.NVMEOF.InitiatorNQN = ""
+			transport.NVMEOF.InitiatorPassword = ""
+		case database.VolumeTransportTypeUNSPECIFIED:
+			return fmt.Errorf("no transport specified for initiator detail clearing")
+		}
+		volumedb.Transport = datatypes.NewJSONType(transport)
+
+		volumedb.ClientHost = ""
 		volumedb.Status = database.VolumeStatusPUBLISHED
 
 		_, err = gorm.G[*database.Volume](tx).Updates(ctx, volumedb)
@@ -748,40 +914,35 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
 
-		consumeTarget, ok := s.consumeTargets[clientID]
-		if !ok {
-			return fmt.Errorf("unable to lookup consume target %s", clientID)
-		}
-
-		switch volumedb.Transport {
-		case database.VolumeTransportISCSI:
-			err = iscsi.With(consumeTarget.Executor).DisconnectTarget(ctx, iscsi.DisconnectTargetArguments{
-				TargetIQN:     iscsi.IQN(volumedb.TargetID),
-				TargetAddress: previousTargetAddress,
+		switch transport.Type {
+		case database.VolumeTransportTypeISCSI:
+			err = iscsi.With(consumerExecutor).DisconnectTarget(ctx, iscsi.DisconnectTargetArguments{
+				TargetIQN:     iscsi.IQN(targetID),
+				TargetAddress: targetAddress,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to disconnect volume: %w", err)
 			}
 
 			// Unauthorize client on the producer side.
-			err = iscsi.With(s.produceTarget.Executor).Unauthorize(ctx, iscsi.UnauthorizeArguments{
-				TargetIQN:    iscsi.IQN(volumedb.TargetID),
+			err = iscsi.With(producerExecutor).Unauthorize(ctx, iscsi.UnauthorizeArguments{
+				TargetIQN:    iscsi.IQN(targetID),
 				InitiatorIQN: iscsi.IQN(clientID),
 			})
-		case database.VolumeTransportNVMEOF_TCP:
-			err = nvmeof.With(consumeTarget.Executor).DisconnectTarget(ctx, nvmeof.DisconnectTargetArguments{
-				TargetNQN: nvmeof.NQN(volumedb.TargetID),
+		case database.VolumeTransportTypeNVMEOF_TCP:
+			err = nvmeof.With(consumerExecutor).DisconnectTarget(ctx, nvmeof.DisconnectTargetArguments{
+				TargetNQN: nvmeof.NQN(targetID),
 			})
 			if err != nil {
 				return fmt.Errorf("failed to disconnect volume: %w", err)
 			}
 
 			// Unauthorize client on the producer side.
-			err = nvmeof.With(s.produceTarget.Executor).Unauthorize(ctx, nvmeof.UnauthorizeArguments{
-				TargetNQN:    nvmeof.NQN(volumedb.TargetID),
+			err = nvmeof.With(producerExecutor).Unauthorize(ctx, nvmeof.UnauthorizeArguments{
+				TargetNQN:    nvmeof.NQN(targetID),
 				InitiatorNQN: nvmeof.NQN(clientID),
 			})
-		case database.VolumeTransportUNSPECIFIED:
+		case database.VolumeTransportTypeUNSPECIFIED:
 			fallthrough
 		default:
 			return fmt.Errorf("no transport specified on volume")
@@ -793,7 +954,13 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 		return nil
 	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to disconnect volume: %w", err))
+		if connect.CodeOf(err) == connect.CodeNotFound || strings.Contains(err.Error(), "not found") {
+			if _, ok := err.(*connect.Error); ok {
+				return nil, err
+			}
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
@@ -839,17 +1006,30 @@ func (s *VolumeService) StageVolume(ctx context.Context, req *connect.Request[zf
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
 
-		consumeTarget, ok := s.consumeTargets[volumedb.ClientID]
-		if !ok {
-			return fmt.Errorf("unable to lookup consume target %s", volumedb.ClientID)
+		consumerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
+		if err != nil {
+			return err
+		}
+
+		transport := volumedb.Transport.Data()
+		var targetID, targetAddress string
+		switch transport.Type {
+		case database.VolumeTransportTypeISCSI:
+			targetID = transport.ISCSI.TargetIQN
+			targetAddress = transport.ISCSI.TargetAddress
+		case database.VolumeTransportTypeNVMEOF_TCP:
+			targetID = transport.NVMEOF.TargetNQN
+			targetAddress = transport.NVMEOF.TargetAddress
+		case database.VolumeTransportTypeUNSPECIFIED:
+			return fmt.Errorf("no transport specified for volume staging")
 		}
 
 		// Wait for block device to appear on the client side.
-		devicePath, err := volumedb.DevicePathClient()
+		devicePath, err := volumedb.DevicePathClient(targetAddress, targetID)
 		if err != nil {
 			return fmt.Errorf("failed to get device path: %w", err)
 		}
-		exists, err := fs.With(consumeTarget.Executor).Exists(ctx, fs.ExistsArguments{
+		exists, err := fs.With(consumerExecutor).Exists(ctx, fs.ExistsArguments{
 			Device:  devicePath,
 			Timeout: 30 * time.Second,
 		})
@@ -862,14 +1042,14 @@ func (s *VolumeService) StageVolume(ctx context.Context, req *connect.Request[zf
 
 		if volumedb.Mode == database.VolumeModeFILESYSTEM {
 			// Check if filesystem exists.
-			fsType, err := fs.With(consumeTarget.Executor).GetFSType(ctx, devicePath)
+			fsType, err := fs.With(consumerExecutor).GetFSType(ctx, devicePath)
 			if err != nil {
 				return fmt.Errorf("failed to get filesystem type: %w", err)
 			}
 
 			if fsType == "" {
 				// Format the device.
-				err = fs.With(consumeTarget.Executor).Format(ctx, fs.FormatArguments{
+				err = fs.With(consumerExecutor).Format(ctx, fs.FormatArguments{
 					Device:        devicePath,
 					WaitForDevice: false,
 				})
@@ -880,7 +1060,7 @@ func (s *VolumeService) StageVolume(ctx context.Context, req *connect.Request[zf
 		}
 
 		// Create staging path.
-		_, err = literal.With(consumeTarget.Executor).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", volumedb.StagingPath))
+		_, err = literal.With(consumerExecutor).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", volumedb.StagingPath))
 		if err != nil {
 			return fmt.Errorf("failed to create staging path: %w", err)
 		}
@@ -897,7 +1077,7 @@ func (s *VolumeService) StageVolume(ctx context.Context, req *connect.Request[zf
 			mountArgs.Options = []string{"bind"}
 		}
 
-		err = mount.With(consumeTarget.Executor).Mount(ctx, mountArgs)
+		err = mount.With(consumerExecutor).Mount(ctx, mountArgs)
 		if err != nil {
 			return fmt.Errorf("failed to mount volume to staging path: %w", err)
 		}
@@ -905,7 +1085,13 @@ func (s *VolumeService) StageVolume(ctx context.Context, req *connect.Request[zf
 		return nil
 	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to stage volume: %w", err))
+		if connect.CodeOf(err) == connect.CodeNotFound || strings.Contains(err.Error(), "not found") {
+			if _, ok := err.(*connect.Error); ok {
+				return nil, err
+			}
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
@@ -947,12 +1133,12 @@ func (s *VolumeService) UnstageVolume(ctx context.Context, req *connect.Request[
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
 
-		consumeTarget, ok := s.consumeTargets[volumedb.ClientID]
-		if !ok {
-			return fmt.Errorf("unable to lookup consume target %s", volumedb.ClientID)
+		consumerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
+		if err != nil {
+			return err
 		}
 
-		err = mount.With(consumeTarget.Executor).Umount(ctx, mount.UmountArguments{
+		err = mount.With(consumerExecutor).Umount(ctx, mount.UmountArguments{
 			Path: previousStagingPath,
 		})
 		if err != nil {
@@ -1009,26 +1195,26 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
 
-		consumeTarget, ok := s.consumeTargets[volumedb.ClientID]
-		if !ok {
-			return fmt.Errorf("unable to lookup consume target %s", volumedb.ClientID)
+		consumerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
+		if err != nil {
+			return err
 		}
 
 		// Create mount path.
 		if volumedb.Mode == database.VolumeModeBLOCK {
-			_, err := literal.With(consumeTarget.Executor).Run(ctx, fmt.Sprintf("install -m 0644 /dev/null %s", req.Msg.MountPath))
+			_, err := literal.With(consumerExecutor).Run(ctx, fmt.Sprintf("install -m 0644 /dev/null %s", req.Msg.MountPath))
 			if err != nil {
 				return fmt.Errorf("failed to touch mount path: %w", err)
 			}
 		} else {
-			_, err := literal.With(consumeTarget.Executor).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", req.Msg.MountPath))
+			_, err := literal.With(consumerExecutor).Run(ctx, fmt.Sprintf("mkdir -m 0750 -p %s", req.Msg.MountPath))
 			if err != nil {
 				return fmt.Errorf("failed to touch mount path: %w", err)
 			}
 		}
 
 		// Perform bind mount from staging path to mount path.
-		err = mount.With(consumeTarget.Executor).Mount(ctx, mount.MountArguments{
+		err = mount.With(consumerExecutor).Mount(ctx, mount.MountArguments{
 			SourcePath: volumedb.StagingPath,
 			TargetPath: req.Msg.MountPath,
 			Options:    []string{"bind"},
@@ -1039,7 +1225,7 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 
 		if volumedb.Mode == database.VolumeModeFILESYSTEM {
 			// TODO: I should properly expose the volume to non-root users.
-			_, err = literal.With(consumeTarget.Executor).Run(ctx, fmt.Sprintf("chmod 0777 %s", req.Msg.MountPath))
+			_, err = literal.With(consumerExecutor).Run(ctx, fmt.Sprintf("chmod 0777 %s", req.Msg.MountPath))
 			if err != nil {
 				return fmt.Errorf("failed to chmod mount path: %w", err)
 			}
@@ -1048,7 +1234,13 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 		return nil
 	})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to mount volume: %w", err))
+		if connect.CodeOf(err) == connect.CodeNotFound || strings.Contains(err.Error(), "not found") {
+			if _, ok := err.(*connect.Error); ok {
+				return nil, err
+			}
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	volumeapi, err := s.converter.FromDBToAPI(volumedb)
@@ -1091,12 +1283,12 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 			return fmt.Errorf("failed to update volume in database: %w", err)
 		}
 
-		consumeTarget, ok := s.consumeTargets[volumedb.ClientID]
-		if !ok {
-			return fmt.Errorf("unable to lookup consume target %s", volumedb.ClientID)
+		consumerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
+		if err != nil {
+			return err
 		}
 
-		err = mount.With(consumeTarget.Executor).Umount(ctx, mount.UmountArguments{
+		err = mount.With(consumerExecutor).Umount(ctx, mount.UmountArguments{
 			Path: req.Msg.MountPath,
 		})
 		if err != nil {
@@ -1113,15 +1305,6 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("failed to map volume: %w", err))
 	}
 	return connect.NewResponse(&zfsilov1.UnmountVolumeResponse{Volume: volumeapi}), nil
-}
-
-func indexOf(slice []string, val string) int {
-	for i, item := range slice {
-		if item == val {
-			return i
-		}
-	}
-	return -1
 }
 
 func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zfsilov1.StatsVolumeRequest]) (*connect.Response[zfsilov1.StatsVolumeResponse], error) {
@@ -1144,12 +1327,22 @@ func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zf
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is not staged"))
 	}
 
+	producerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ServerHost)
+	if err != nil {
+		return nil, err
+	}
+
+	consumerExecutor, _, err := s.getExecutorForHost(ctx, volumedb.ClientHost)
+	if err != nil {
+		return nil, err
+	}
+
 	var usage []*zfsilov1.StatsVolumeResponse_Stats_Usage
 	switch volumedb.Mode {
 	case database.VolumeModeBLOCK:
 		var values []int64
 		for _, prop := range []string{"used", "usedds"} {
-			valueString, err := zfs.With(s.produceTarget.Executor).GetProperty(ctx, zfs.GetPropertyArguments{
+			valueString, err := zfs.With(producerExecutor).GetProperty(ctx, zfs.GetPropertyArguments{
 				Name:        volumedb.DatasetID,
 				PropertyKey: prop,
 			})
@@ -1170,15 +1363,10 @@ func (s *VolumeService) StatsVolume(ctx context.Context, req *connect.Request[zf
 			Unit:      zfsilov1.StatsVolumeResponse_Stats_Usage_UNIT_BYTES,
 		})
 	case database.VolumeModeFILESYSTEM:
-		consumeTarget, ok := s.consumeTargets[volumedb.ClientID]
-		if !ok {
-			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to lookup consume target: %s", volumedb.ClientID))
-		}
-
 		// Use staging path for stats.
 		statsPath := volumedb.StagingPath
 
-		valueString, err := literal.With(consumeTarget.Executor).Run(ctx, fmt.Sprintf(
+		valueString, err := literal.With(consumerExecutor).Run(ctx, fmt.Sprintf(
 			"df -BK '%s' --output=size,used,avail,itotal,iused,iavail | sed 1d",
 			statsPath,
 		))
@@ -1277,4 +1465,24 @@ func (s *VolumeService) SyncVolumes(ctx context.Context, _ *connect.Request[zfsi
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to sync volumes: %s", strings.Join(syncErrors, "; ")))
 	}
 	return connect.NewResponse(&zfsilov1.SyncVolumesResponse{}), nil
+}
+
+func (s *VolumeService) getExecutorForHost(ctx context.Context, hostID string) (libcommand.Executor, *database.Host, error) {
+	if hostID == "" {
+		return nil, nil, connect.NewError(connect.CodeInvalidArgument, errors.New("host ID is empty"))
+	}
+	// We search by ID, name, or any of the IDs in the JSON list.
+	// NOTE: We use SQLite specific JSON function here.
+	host, err := gorm.G[*database.Host](s.database).Where("id = ? OR name = ? OR EXISTS (SELECT 1 FROM json_each(identifiers) WHERE value = ?)", hostID, hostID, hostID).First(ctx)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("host %s not found", hostID))
+		}
+		return nil, nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get host %s: %w", hostID, err))
+	}
+	executor, err := s.executorFactory.BuildExecutor(host)
+	if err != nil {
+		return nil, nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to build executor for host %s: %w", hostID, err))
+	}
+	return executor, host, nil
 }
