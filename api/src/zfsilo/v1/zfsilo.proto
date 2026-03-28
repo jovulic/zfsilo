@@ -382,11 +382,7 @@ message PublishVolumeRequest {
     (buf.validate.field).string.pattern = "^vol_[a-zA-Z0-9-_]+$"
   ];
   Volume.Transport transport = 2 [(gnostic.openapi.v3.property) = {description: "The protocol used to expose this volume."}];
-  string server_host = 3 [
-    (gnostic.openapi.v3.property) = {description: "The resource name of the host where the volume will be published."},
-    (buf.validate.field).required = true,
-    (buf.validate.field).string.min_len = 1
-  ];
+  string server_host = 3 [(gnostic.openapi.v3.property) = {description: "The resource name of the host where the volume will be published."}];
 }
 
 message PublishVolumeResponse {

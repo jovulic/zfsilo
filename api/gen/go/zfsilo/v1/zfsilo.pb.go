@@ -3054,11 +3054,11 @@ const file_zfsilo_v1_zfsilo_proto_rawDesc = "" +
 	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"Y\n" +
 	"\x13DeleteVolumeRequest\x12B\n" +
 	"\x02id\x18\x01 \x01(\tB2\xbaG\x11\x92\x02\x0eThe volume id.\xbaH\x1b\xc8\x01\x01r\x162\x14^vol_[a-zA-Z0-9-_]+$R\x02id\"\x16\n" +
-	"\x14DeleteVolumeResponse\"\xd0\x02\n" +
+	"\x14DeleteVolumeResponse\"\xc6\x02\n" +
 	"\x14PublishVolumeRequest\x12Y\n" +
 	"\x02id\x18\x01 \x01(\tBI\xbaG(\x92\x02%The id of the volume to be published.\xbaH\x1b\xc8\x01\x01r\x162\x14^vol_[a-zA-Z0-9-_]+$R\x02id\x12i\n" +
-	"\ttransport\x18\x02 \x01(\x0e2\x1b.zfsilo.v1.Volume.TransportB.\xbaG+\x92\x02(The protocol used to expose this volume.R\ttransport\x12r\n" +
-	"\vserver_host\x18\x03 \x01(\tBQ\xbaGD\x92\x02AThe resource name of the host where the volume will be published.\xbaH\a\xc8\x01\x01r\x02\x10\x01R\n" +
+	"\ttransport\x18\x02 \x01(\x0e2\x1b.zfsilo.v1.Volume.TransportB.\xbaG+\x92\x02(The protocol used to expose this volume.R\ttransport\x12h\n" +
+	"\vserver_host\x18\x03 \x01(\tBG\xbaGD\x92\x02AThe resource name of the host where the volume will be published.R\n" +
 	"serverHost\"B\n" +
 	"\x15PublishVolumeResponse\x12)\n" +
 	"\x06volume\x18\x01 \x01(\v2\x11.zfsilo.v1.VolumeR\x06volume\"u\n" +

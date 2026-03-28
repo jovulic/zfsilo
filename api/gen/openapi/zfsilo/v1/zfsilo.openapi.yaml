@@ -1375,12 +1375,10 @@ components:
         serverHost:
           type: string
           title: server_host
-          minLength: 1
           description: The resource name of the host where the volume will be published.
       title: PublishVolumeRequest
       required:
         - id
-        - serverHost
       additionalProperties: false
     zfsilo.v1.PublishVolumeResponse:
       type: object
