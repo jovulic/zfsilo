@@ -794,13 +794,6 @@ components:
          `Value` type union.
 
          The JSON representation for `NullValue` is JSON `null`.
-    zfsilo.v1.Host.Role:
-      type: string
-      title: Role
-      enum:
-        - ROLE_UNSPECIFIED
-        - ROLE_SERVER
-        - ROLE_CLIENT
     zfsilo.v1.StatsVolumeResponse.Stats.Usage.Unit:
       type: string
       title: Unit
@@ -1259,6 +1252,38 @@ components:
           type: boolean
           title: run_as_root
       title: Remote
+      additionalProperties: false
+    zfsilo.v1.Host.Role:
+      type: object
+      oneOf:
+        - properties:
+            client:
+              title: client
+              $ref: '#/components/schemas/zfsilo.v1.Host.Role.Client'
+          title: client
+          required:
+            - client
+        - properties:
+            server:
+              title: server
+              $ref: '#/components/schemas/zfsilo.v1.Host.Role.Server'
+          title: server
+          required:
+            - server
+      title: Role
+      additionalProperties: false
+    zfsilo.v1.Host.Role.Client:
+      type: object
+      title: Client
+      additionalProperties: false
+    zfsilo.v1.Host.Role.Server:
+      type: object
+      properties:
+        endpoint:
+          type: string
+          title: endpoint
+          description: The data plane address or hostname for storage connections.
+      title: Server
       additionalProperties: false
     zfsilo.v1.ListHostsRequest:
       type: object
