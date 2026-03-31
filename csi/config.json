@@ -9,10 +9,9 @@
     "zfsiloAddress": "http://10.0.0.123:8080"
   },
   "node": {
-    "publishHost": "hst_give",
     "host": {
       "type": "VALUE",
-      "value": "hst_take"
+      "value": "hosts/hst_take"
     }
   }
 }

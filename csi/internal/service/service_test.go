@@ -125,7 +125,7 @@ var _ = Describe("CSIService Sanity", func() {
 
 				nodeID = os.Getenv("ZFSILO_NODE_ID")
 				if nodeID == "" {
-					nodeID = "hst_take"
+					nodeID = "hosts/hst_take"
 				}
 
 				parentDatasetID = os.Getenv("ZFSILO_PARENT_DATASET_ID")
@@ -144,7 +144,6 @@ var _ = Describe("CSIService Sanity", func() {
 				srv = service.NewCSIService(service.CSIServiceConfig{
 					Secret:        secret,
 					ZFSiloAddress: zfsiloAddress,
-					PublishHost:   "hst_give",
 					HostID:        nodeID,
 				})
 
@@ -181,6 +180,7 @@ var _ = Describe("CSIService Sanity", func() {
 					"parent_dataset_id": parentDatasetID,
 					"sparse":            "true",
 					"transport":         transport,
+					"storage_host":      "hosts/hst_give",
 				}
 
 				config.CreateTargetDir = func(path string) (string, error) {

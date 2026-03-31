@@ -14,37 +14,67 @@ func isErrorID(err error) bool {
 	return connect.CodeOf(err) == connect.CodeInvalidArgument && strings.Contains(err.Error(), "id")
 }
 
-// mapError translates backend connect errors into gRPC status errors suitable
-// for the CSI driver.
+// mapError translates backend connect errors and local errors into gRPC status
+// errors suitable for the CSI driver.
 func mapError(err error) error {
 	if err == nil {
 		return nil
 	}
 
-	code := connect.CodeOf(err)
-	msg := err.Error()
-
-	// If the error message indicates something was not found, return NotFound.
-	if strings.Contains(strings.ToLower(msg), "not found") || strings.Contains(strings.ToLower(msg), "does not exist") {
-		return status.Error(codes.NotFound, msg)
+	// If it's already a gRPC status error (e.g., from our local validation),
+	// return it as-is.
+	if _, ok := status.FromError(err); ok {
+		return err
 	}
 
+	// If it's a Connect error from the zfsilo app, map its code.
+	code := connect.CodeOf(err)
+	if code != connect.CodeUnknown {
+		return status.Error(mapConnectCodeToGRPC(code), err.Error())
+	}
+
+	// For all other local errors (e.g., os/exec failures), return Internal.
+	return status.Error(codes.Internal, err.Error())
+}
+
+// mapConnectCodeToGRPC maps a connect.Code to a gRPC codes.Code.
+func mapConnectCodeToGRPC(code connect.Code) codes.Code {
 	//nolint:exhaustive
 	switch code {
-	case connect.CodeNotFound:
-		return status.Error(codes.NotFound, msg)
-	case connect.CodeAlreadyExists:
-		return status.Error(codes.AlreadyExists, msg)
+	case connect.CodeCanceled:
+		return codes.Canceled
+	case connect.CodeUnknown:
+		return codes.Unknown
 	case connect.CodeInvalidArgument:
-		return status.Error(codes.InvalidArgument, msg)
-	case connect.CodeFailedPrecondition:
-		return status.Error(codes.FailedPrecondition, msg)
+		return codes.InvalidArgument
+	case connect.CodeDeadlineExceeded:
+		return codes.DeadlineExceeded
+	case connect.CodeNotFound:
+		return codes.NotFound
+	case connect.CodeAlreadyExists:
+		return codes.AlreadyExists
 	case connect.CodePermissionDenied:
-		return status.Error(codes.PermissionDenied, msg)
+		return codes.PermissionDenied
+	case connect.CodeResourceExhausted:
+		return codes.ResourceExhausted
+	case connect.CodeFailedPrecondition:
+		return codes.FailedPrecondition
+	case connect.CodeAborted:
+		return codes.Aborted
+	case connect.CodeOutOfRange:
+		return codes.OutOfRange
+	case connect.CodeUnimplemented:
+		return codes.Unimplemented
+	case connect.CodeInternal:
+		return codes.Internal
+	case connect.CodeUnavailable:
+		return codes.Unavailable
+	case connect.CodeDataLoss:
+		return codes.DataLoss
 	case connect.CodeUnauthenticated:
-		return status.Error(codes.Unauthenticated, msg)
+		return codes.Unauthenticated
 	default:
-		return status.Error(codes.Internal, msg)
+		return codes.Internal
 	}
 }
 
