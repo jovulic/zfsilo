@@ -35,21 +35,31 @@ type HostConnection struct {
 	Remote *HostConnectionRemote `json:"remote,omitempty"`
 }
 
-//go:generate stringer -type=HostRole -linecomment host.go
-type HostRole int
+type HostRoleType string
 
 const (
-	HostRoleUNSPECIFIED HostRole = iota // UNSPECIFIED
-	HostRoleSERVER                      // SERVER
-	HostRoleCLIENT                      // CLIENT
+	HostRoleTypeServer HostRoleType = "SERVER"
+	HostRoleTypeClient HostRoleType = "CLIENT"
 )
+
+type HostRoleServer struct {
+	Endpoint string `json:"endpoint"`
+}
+
+type HostRoleClient struct{}
+
+type HostRole struct {
+	Type   HostRoleType    `json:"type"`
+	Server *HostRoleServer `json:"server,omitempty"`
+	Client *HostRoleClient `json:"client,omitempty"`
+}
 
 type Host struct {
 	CreateTime  time.Time `gorm:"autoCreateTime"`
 	UpdateTime  time.Time `gorm:"autoUpdateTime"`
 	ID          string    `gorm:"primaryKey"`
 	Name        string
-	Role        HostRole
+	Role        datatypes.JSONType[HostRole]
 	Connection  datatypes.JSONType[HostConnection]
 	Identifiers datatypes.JSONSlice[string]
 	Key         string

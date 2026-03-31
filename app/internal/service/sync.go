@@ -61,9 +61,8 @@ func (s *VolumeSyncer) getExecutorForHost(ctx context.Context, hostID string) (l
 	if hostID == "" {
 		return nil, nil, fmt.Errorf("host ID is empty")
 	}
-	// We search by ID, name, or any of the IDs in the JSON list.
-	// NOTE: We use SQLite specific JSON function here.
-	host, err := gorm.G[*database.Host](s.database).Where("id = ? OR name = ? OR EXISTS (SELECT 1 FROM json_each(identifiers) WHERE value = ?)", hostID, hostID, hostID).First(ctx)
+	// We search by name.
+	host, err := gorm.G[*database.Host](s.database).Where("name = ?", hostID).First(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get host %s: %w", hostID, err)
 	}

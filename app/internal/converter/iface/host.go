@@ -78,28 +78,41 @@ func ConvertHostConnectionFromDBToAPI(source datatypes.JSONType[database.HostCon
 	return dest
 }
 
-func ConvertHostRoleFromAPIToDB(source zfsilov1.Host_Role) database.HostRole {
-	switch source {
-	case zfsilov1.Host_ROLE_SERVER:
-		return database.HostRoleSERVER
-	case zfsilov1.Host_ROLE_CLIENT:
-		return database.HostRoleCLIENT
-	case zfsilov1.Host_ROLE_UNSPECIFIED:
-		return database.HostRoleUNSPECIFIED
-	default:
-		return database.HostRoleUNSPECIFIED
+func ConvertHostRoleFromAPIToDB(source *zfsilov1.Host_Role) datatypes.JSONType[database.HostRole] {
+	if source == nil {
+		return datatypes.NewJSONType(database.HostRole{})
 	}
+	dest := database.HostRole{}
+	if server := source.GetServer(); server != nil {
+		dest.Type = database.HostRoleTypeServer
+		dest.Server = &database.HostRoleServer{
+			Endpoint: server.Endpoint,
+		}
+	} else if client := source.GetClient(); client != nil {
+		dest.Type = database.HostRoleTypeClient
+		dest.Client = &database.HostRoleClient{}
+	}
+	return datatypes.NewJSONType(dest)
 }
 
-func ConvertHostRoleFromDBToAPI(source database.HostRole) zfsilov1.Host_Role {
-	switch source {
-	case database.HostRoleSERVER:
-		return zfsilov1.Host_ROLE_SERVER
-	case database.HostRoleCLIENT:
-		return zfsilov1.Host_ROLE_CLIENT
-	case database.HostRoleUNSPECIFIED:
-		return zfsilov1.Host_ROLE_UNSPECIFIED
-	default:
-		return zfsilov1.Host_ROLE_UNSPECIFIED
+func ConvertHostRoleFromDBToAPI(source datatypes.JSONType[database.HostRole]) *zfsilov1.Host_Role {
+	data := source.Data()
+	dest := &zfsilov1.Host_Role{}
+	switch data.Type {
+	case database.HostRoleTypeServer:
+		if data.Server != nil {
+			dest.Type = &zfsilov1.Host_Role_Server_{
+				Server: &zfsilov1.Host_Role_Server{
+					Endpoint: data.Server.Endpoint,
+				},
+			}
+		}
+	case database.HostRoleTypeClient:
+		if data.Client != nil {
+			dest.Type = &zfsilov1.Host_Role_Client_{
+				Client: &zfsilov1.Host_Role_Client{},
+			}
+		}
 	}
+	return dest
 }

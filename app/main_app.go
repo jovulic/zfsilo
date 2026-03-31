@@ -40,17 +40,18 @@ func SyncHosts(ctx context.Context, db *gorm.DB, conf config.Config) error {
 	configHostIDs := make(map[string]struct{})
 
 	for _, cfgHost := range conf.Hosts {
-		id := "hst_" + cfgHost.ID
+		id := cfgHost.ID
 		configHostIDs[id] = struct{}{}
 
-		var role database.HostRole
-		switch cfgHost.Role {
-		case "SERVER":
-			role = database.HostRoleSERVER
-		case "CLIENT":
-			role = database.HostRoleCLIENT
-		default:
-			role = database.HostRoleUNSPECIFIED
+		role := database.HostRole{
+			Type: database.HostRoleType(cfgHost.Role),
+		}
+		if cfgHost.Role == "SERVER" {
+			role.Server = &database.HostRoleServer{
+				Endpoint: cfgHost.Endpoint,
+			}
+		} else if cfgHost.Role == "CLIENT" {
+			role.Client = &database.HostRoleClient{}
 		}
 
 		host := &database.Host{
@@ -59,7 +60,7 @@ func SyncHosts(ctx context.Context, db *gorm.DB, conf config.Config) error {
 			Identifiers: datatypes.NewJSONSlice(cfgHost.IDs),
 			Key:         string(cfgHost.Key),
 			ByConfig:    true,
-			Role:        role,
+			Role:        datatypes.NewJSONType(role),
 		}
 
 		conn := database.HostConnection{

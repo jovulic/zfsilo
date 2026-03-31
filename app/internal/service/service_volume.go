@@ -132,13 +132,8 @@ func getClientID(host *database.Host, transport database.VolumeTransport) (strin
 	}
 }
 
-func getTargetConnection(host *database.Host) (string, string) {
-	address := ""
-	conn := host.Connection.Data()
-	if conn.Type == database.HostConnectionTypeRemote && conn.Remote != nil {
-		address = conn.Remote.Address
-	}
-	return address, host.Key
+func getServerConnection(host *database.Host) (string, string) {
+	return host.Role.Data().Server.Endpoint, host.Key
 }
 
 func indexOf(slice []string, val string) int {
@@ -385,7 +380,7 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get target ID: %w", err))
 		}
 
-		targetAddress, _ := getTargetConnection(publishHost)
+		targetAddress, _ := getServerConnection(publishHost)
 
 		switch transport.Type {
 		case database.VolumeTransportTypeISCSI:
@@ -468,6 +463,9 @@ func (s *VolumeService) DeleteVolume(ctx context.Context, req *connect.Request[z
 		return nil
 	})
 	if err != nil {
+		if code := connect.CodeOf(err); code != connect.CodeUnknown {
+			return nil, err
+		}
 		if strings.Contains(err.Error(), "dataset is busy") {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("dataset is busy: %w", err))
 		}
@@ -514,7 +512,7 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 		transport.Type = database.VolumeTransportTypeISCSI
 	}
 	volumedb.Transport = datatypes.NewJSONType(transport)
-	volumedb.ServerHost = strings.TrimPrefix(req.Msg.ServerHost, "hosts/")
+	volumedb.ServerHost = req.Msg.ServerHost
 	volumedb.Status = database.VolumeStatusPUBLISHED
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
@@ -529,7 +527,7 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 			return fmt.Errorf("failed to generate target ID: %w", err)
 		}
 
-		targetAddress, targetPassword := getTargetConnection(host)
+		targetAddress, targetPassword := getServerConnection(host)
 		switch transport.Type {
 		case database.VolumeTransportTypeISCSI:
 			transport.ISCSI = &database.VolumeTransportISCSI{
@@ -600,10 +598,10 @@ func (s *VolumeService) PublishVolume(ctx context.Context, req *connect.Request[
 		return nil
 	})
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound || strings.Contains(err.Error(), "not found") {
-			if _, ok := err.(*connect.Error); ok {
-				return nil, err
-			}
+		if code := connect.CodeOf(err); code != connect.CodeUnknown {
+			return nil, err
+		}
+		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(strings.ToLower(err.Error()), "not found") || strings.Contains(strings.ToLower(err.Error()), "does not exist") {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to publish volume: %w", err))
@@ -682,6 +680,9 @@ func (s *VolumeService) UnpublishVolume(ctx context.Context, req *connect.Reques
 		return nil
 	})
 	if err != nil {
+		if code := connect.CodeOf(err); code != connect.CodeUnknown {
+			return nil, err
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to unpublish volume: %w", err))
 	}
 
@@ -716,7 +717,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("volume is mounted"))
 	}
 
-	volumedb.ClientHost = strings.TrimPrefix(req.Msg.ClientHost, "hosts/")
+	volumedb.ClientHost = req.Msg.ClientHost
 	volumedb.Status = database.VolumeStatusCONNECTED
 
 	err = s.database.Transaction(func(tx *gorm.DB) error {
@@ -755,7 +756,7 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 			return fmt.Errorf("failed to get client ID: %w", err)
 		}
 
-		_, consumerPassword := getTargetConnection(connectHost)
+		consumerPassword := connectHost.Key
 
 		switch transport.Type {
 		case database.VolumeTransportTypeISCSI:
@@ -824,10 +825,11 @@ func (s *VolumeService) ConnectVolume(ctx context.Context, req *connect.Request[
 		return nil
 	})
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound || strings.Contains(err.Error(), "not found") {
-			if _, ok := err.(*connect.Error); ok {
-				return nil, err
-			}
+		code := connect.CodeOf(err)
+		if code != connect.CodeUnknown {
+			return nil, err
+		}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -954,10 +956,11 @@ func (s *VolumeService) DisconnectVolume(ctx context.Context, req *connect.Reque
 		return nil
 	})
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound || strings.Contains(err.Error(), "not found") {
-			if _, ok := err.(*connect.Error); ok {
-				return nil, err
-			}
+		code := connect.CodeOf(err)
+		if code != connect.CodeUnknown {
+			return nil, err
+		}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -1085,10 +1088,11 @@ func (s *VolumeService) StageVolume(ctx context.Context, req *connect.Request[zf
 		return nil
 	})
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound || strings.Contains(err.Error(), "not found") {
-			if _, ok := err.(*connect.Error); ok {
-				return nil, err
-			}
+		code := connect.CodeOf(err)
+		if code != connect.CodeUnknown {
+			return nil, err
+		}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -1234,10 +1238,11 @@ func (s *VolumeService) MountVolume(ctx context.Context, req *connect.Request[zf
 		return nil
 	})
 	if err != nil {
-		if connect.CodeOf(err) == connect.CodeNotFound || strings.Contains(err.Error(), "not found") {
-			if _, ok := err.(*connect.Error); ok {
-				return nil, err
-			}
+		code := connect.CodeOf(err)
+		if code != connect.CodeUnknown {
+			return nil, err
+		}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -1297,6 +1302,9 @@ func (s *VolumeService) UnmountVolume(ctx context.Context, req *connect.Request[
 		return nil
 	})
 	if err != nil {
+		if code := connect.CodeOf(err); code != connect.CodeUnknown {
+			return nil, err
+		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to unmount volume: %w", err))
 	}
 
@@ -1469,11 +1477,10 @@ func (s *VolumeService) SyncVolumes(ctx context.Context, _ *connect.Request[zfsi
 
 func (s *VolumeService) getExecutorForHost(ctx context.Context, hostID string) (libcommand.Executor, *database.Host, error) {
 	if hostID == "" {
-		return nil, nil, connect.NewError(connect.CodeInvalidArgument, errors.New("host ID is empty"))
+		return nil, nil, connect.NewError(connect.CodeNotFound, errors.New("host ID is empty"))
 	}
-	// We search by ID, name, or any of the IDs in the JSON list.
-	// NOTE: We use SQLite specific JSON function here.
-	host, err := gorm.G[*database.Host](s.database).Where("id = ? OR name = ? OR EXISTS (SELECT 1 FROM json_each(identifiers) WHERE value = ?)", hostID, hostID, hostID).First(ctx)
+	// We search by name.
+	host, err := gorm.G[*database.Host](s.database).Where("name = ?", hostID).First(ctx)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("host %s not found", hostID))
@@ -1486,3 +1493,4 @@ func (s *VolumeService) getExecutorForHost(ctx context.Context, hostID string) (
 	}
 	return executor, host, nil
 }
+

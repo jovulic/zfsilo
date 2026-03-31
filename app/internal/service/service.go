@@ -33,7 +33,7 @@ func NewService(
 }
 
 func (s *Service) GetCapacity(ctx context.Context, req *connect.Request[zfsilov1.GetCapacityRequest]) (*connect.Response[zfsilov1.GetCapacityResponse], error) {
-	hosts, err := gorm.G[*database.Host](s.database).Where("role = ?", database.HostRoleSERVER).Find(ctx)
+	hosts, err := gorm.G[*database.Host](s.database).Where("json_extract(role, '$.type') = ?", database.HostRoleTypeServer).Find(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to find server hosts: %w", err))
 	}
