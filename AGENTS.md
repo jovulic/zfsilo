@@ -49,7 +49,7 @@ Reproducible development and testing environment using **MicroVMs**.
 
 1.  **CLI Wrapping**: Instead of C bindings, it manages storage by invoking standard tools (`zfs`, `targetcli`).
 2.  **Reversibility**: Uses `lib/try` to maintain consistency across system-level mutations.
-3.  **Volume Lifecycle**: Volumes progress through a state machine: `INITIAL` -> `PUBLISHED` (Target ready) -> `CONNECTED` (Initiator logged in) -> `MOUNTED` (FS available).
+3.  **Volume Lifecycle**: Volumes progress through a state machine: `INITIAL` -> `PUBLISHED` (Target ready) -> `CONNECTED` (Initiator logged in) -> `STAGED` (Storage available on node) -> `MOUNTED` (FS available).
 4.  **ConnectRPC**: Modern, simplified gRPC implementation that works over HTTP/1.1 and HTTP/2.
 5.  **Authentication**: Uses Bearer tokens verified via Unary Interceptors in both `app` and `csi`.
 
@@ -66,6 +66,9 @@ The project uses `just` as a command runner and Nix for the environment.
 ## API Services
 - **`Service`**:
     - `GetCapacity`: Returns free space in the ZFS pool.
+- **`HostService`**:
+    - `GetHost`/`ListHosts`: Query host (storage nodes or clients) metadata.
+    - `CreateHost`/`UpdateHost`/`DeleteHost`: Manage host registrations and secrets.
 - **`VolumeService`**:
     - `GetVolume`/`ListVolumes`: Query volume metadata and status.
     - `CreateVolume`/`UpdateVolume`/`DeleteVolume`: Manage ZFS datasets and persistence.
@@ -74,6 +77,11 @@ The project uses `just` as a command runner and Nix for the environment.
     - `MountVolume`/`UnmountVolume`: Manage local filesystem mounting.
     - `StatsVolume`: Get filesystem usage (total/used/available).
     - `SyncVolume`/`SyncVolumes`: Reconcile actual system state with the database.
+
+## Technical Gotchas & Safety
+- **Host Roles**: Hosts are either `SERVER` or `CLIENT`. Accessing `.Server` or `.Client` fields on the `HostRole` struct without checking the role type can lead to nil pointer panics.
+- **Connection Details**: Use `getServerConnection(host)` in `app/internal/service/service_volume.go` ONLY for hosts with a `SERVER` role to retrieve endpoints. For `CLIENT` roles, access `host.Key` directly as they do not have a server endpoint.
+- **Database Logic**: Uses SQLite with GORM. Be mindful of JSON field handling via `datatypes.JSONType`.
 
 ## Code Style & Conventions
 - **Linting**: Enforced via `golangci-lint` (see `.golangci.yaml`).
