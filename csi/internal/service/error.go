@@ -39,7 +39,6 @@ func mapError(err error) error {
 
 // mapConnectCodeToGRPC maps a connect.Code to a gRPC codes.Code.
 func mapConnectCodeToGRPC(code connect.Code) codes.Code {
-	//nolint:exhaustive
 	switch code {
 	case connect.CodeCanceled:
 		return codes.Canceled

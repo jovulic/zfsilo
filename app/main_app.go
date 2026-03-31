@@ -43,14 +43,15 @@ func SyncHosts(ctx context.Context, db *gorm.DB, conf config.Config) error {
 		id := cfgHost.ID
 		configHostIDs[id] = struct{}{}
 
-		role := database.HostRole{
-			Type: database.HostRoleType(cfgHost.Role),
-		}
-		if cfgHost.Role == "SERVER" {
+		role := database.HostRole{}
+		switch cfgHost.Role {
+		case "SERVER":
+			role.Type = database.HostRoleTypeServer
 			role.Server = &database.HostRoleServer{
 				Endpoint: cfgHost.Endpoint,
 			}
-		} else if cfgHost.Role == "CLIENT" {
+		case "CLIENT":
+			role.Type = database.HostRoleTypeClient
 			role.Client = &database.HostRoleClient{}
 		}
 
