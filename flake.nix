@@ -82,9 +82,9 @@
           packages = {
             api = api.package;
             app = app.packages.binary;
-            appimg = app.packages.image;
+            app-img = app.packages.image;
             csi = csi.packages.binary;
-            csiimg = csi.packages.image;
+            csi-img = csi.packages.image;
           };
           apps =
             let
@@ -125,24 +125,24 @@
                 # shellcheck disable=SC2068
                 nix run .#packages.${system}.app -- $@
               '';
-              appimg = createApp ''
-                podman load < "$(nix build .#packages.${system}.appimg --print-out-paths)"
+              app-img = createApp ''
+                podman load < "$(nix build .#packages.${system}.app-img --print-out-paths)"
                 # shellcheck disable=SC2068
                 podman run --rm --network=host -it "localhost/zfsilo:${version}-${commitHashShort}"
               '';
-              appImageBuild = imageBuild "appimg" "zfsilo";
-              appImagePush = imagePush "zfsilo";
+              app-image-build = imageBuild "app-img" "zfsilo";
+              app-image-push = imagePush "zfsilo";
               csi = createApp ''
                 # shellcheck disable=SC2068
                 nix run .#packages.${system}.csi -- $@
               '';
-              csiimg = createApp ''
-                podman load < "$(nix build .#packages.${system}.csiimg --print-out-paths)"
+              csi-img = createApp ''
+                podman load < "$(nix build .#packages.${system}.csi-img --print-out-paths)"
                 # shellcheck disable=SC2068
                 podman run --rm --network=host -it "localhost/zfsilo-csi:${version}-${commitHashShort}"
               '';
-              csiImageBuild = imageBuild "csiimg" "zfsilo-csi";
-              csiImagePush = imagePush "zfsilo-csi";
+              csi-image-build = imageBuild "csi-img" "zfsilo-csi";
+              csi-image-push = imagePush "zfsilo-csi";
               dev = createApp ''
                 nix run .#nixosConfigurations.dev.host.config.microvm.declaredRunner
               '';
