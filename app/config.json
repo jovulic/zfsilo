@@ -19,7 +19,8 @@
   },
   "hosts": [
     {
-      "id": "give",
+      "id": "hst_give",
+      "role": "SERVER",
       "connection": {
         "type": "REMOTE",
         "remote": {
@@ -34,10 +35,12 @@
         "iqn.2006-01.org.linux-iscsi.give",
         "nqn.2014-08.org.nvmexpress:give"
       ],
-      "key": "mutualpassword"
+      "key": "mutualpassword",
+      "endpoint": "give"
     },
     {
-      "id": "take",
+      "id": "hst_take",
+      "role": "CLIENT",
       "connection": {
         "type": "REMOTE",
         "remote": {
@@ -52,7 +55,8 @@
         "iqn.2006-01.org.linux-iscsi.take",
         "nqn.2014-08.org.nvmexpress:take"
       ],
-      "key": "password"
+      "key": "password",
+      "endpoint": "take"
     }
   ]
 }

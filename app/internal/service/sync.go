@@ -61,9 +61,8 @@ func (s *VolumeSyncer) getExecutorForHost(ctx context.Context, hostID string) (l
 	if hostID == "" {
 		return nil, nil, fmt.Errorf("host ID is empty")
 	}
-	// We search by ID, name, or any of the IDs in the JSON list.
-	// NOTE: We use SQLite specific JSON function here.
-	host, err := gorm.G[*database.Host](s.database).Where("id = ? OR name = ? OR EXISTS (SELECT 1 FROM json_each(identifiers) WHERE value = ?)", hostID, hostID, hostID).First(ctx)
+	// We search by name.
+	host, err := gorm.G[*database.Host](s.database).Where("name = ?", hostID).First(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get host %s: %w", hostID, err)
 	}
@@ -464,9 +463,13 @@ func (s *VolumeSyncer) syncStage(ctx context.Context, volumedb *database.Volume)
 			}
 			targetID := getTargetID(volumedb, publishHost)
 			targetAddress := publishHost.Connection.Data().Remote.Address
-			devicePath, err := volumedb.DevicePathClient(targetAddress, targetID)
+			devicePattern, err := volumedb.DevicePathClient(targetAddress, targetID)
 			if err != nil {
 				return fmt.Errorf("failed to get device path: %w", err)
+			}
+			devicePath, err := fs.With(connectExecutor).ResolveDevice(ctx, devicePattern)
+			if err != nil {
+				return fmt.Errorf("failed to resolve device path: %w", err)
 			}
 
 			if volumedb.Mode == database.VolumeModeFILESYSTEM {
@@ -477,7 +480,7 @@ func (s *VolumeSyncer) syncStage(ctx context.Context, volumedb *database.Volume)
 				if fsType == "" {
 					err = fs.With(connectExecutor).Format(ctx, fs.FormatArguments{
 						Device:        devicePath,
-						WaitForDevice: true,
+						WaitForDevice: false,
 					})
 					if err != nil {
 						return fmt.Errorf("failed to format device: %w", err)

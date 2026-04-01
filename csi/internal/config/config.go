@@ -73,8 +73,7 @@ type Config struct {
 		ZFSiloAddress string      `json:"zfsiloAddress" validate:"required"`
 	} `json:"service"`
 	Node struct {
-		PublishHost string     `json:"publishHost" validate:"required"`
-		Host        ConfigHost `json:"host"        validate:"required"`
+		Host ConfigHost `json:"host" validate:"required"`
 	} `json:"node"`
 }
 

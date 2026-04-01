@@ -232,7 +232,10 @@ func (v *Volume) process(encrypt bool) error {
 }
 
 func BuildDevicePathISCSIClient(address string, iqn string) string {
-	return fmt.Sprintf("/dev/disk/by-path/ip-%s-iscsi-%s-lun-%d", address, iqn, 0)
+	// udev generates iSCSI by-path names using the discovered IP address. To
+	// avoid issues when the provided portal address is a hostname that
+	// resolves differently on the client, we use a shell glob to match the IQN.
+	return fmt.Sprintf("/dev/disk/by-path/*-iscsi-%s-lun-%d", iqn, 0)
 }
 
 func BuildDevicePathISCSIServer(iqn string) string {

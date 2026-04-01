@@ -70,7 +70,6 @@ func (dict Parameters) Transport() (zfsilov1.Volume_Transport, error) {
 type CSIServiceConfig struct {
 	Secret        string `validate:"required"`
 	ZFSiloAddress string `validate:"required"`
-	PublishHost   string `validate:"required"`
 	HostID        string `validate:"required"`
 }
 
@@ -84,7 +83,6 @@ type CSIService struct {
 
 	secret        string
 	zfsiloAddress string
-	publishHost   string
 	hostID        string
 
 	lock          sync.Mutex
@@ -101,7 +99,6 @@ func NewCSIService(config CSIServiceConfig) *CSIService {
 	return &CSIService{
 		secret:        config.Secret,
 		zfsiloAddress: config.ZFSiloAddress,
-		publishHost:   config.PublishHost,
 		hostID:        config.HostID,
 	}
 }
@@ -227,6 +224,11 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 		return nil, err
 	}
 
+	volContext := make(map[string]string)
+	if storageHost := params["storage_host"]; storageHost != "" {
+		volContext["storage_host"] = storageHost
+	}
+
 	resp, err := s.volumeClient.CreateVolume(ctx, connect.NewRequest(&zfsilov1.CreateVolumeRequest{
 		Volume: &zfsilov1.Volume{
 			Id:            id,
@@ -254,6 +256,7 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 					Volume: &csi.Volume{
 						VolumeId:      id,
 						CapacityBytes: vol.CapacityBytes,
+						VolumeContext: volContext,
 					},
 				}, nil
 			}
@@ -266,6 +269,7 @@ func (s *CSIService) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequ
 		Volume: &csi.Volume{
 			VolumeId:      id,
 			CapacityBytes: resp.Msg.Volume.CapacityBytes,
+			VolumeContext: volContext,
 		},
 	}, nil
 }
@@ -314,7 +318,7 @@ func (s *CSIService) ControllerPublishVolume(ctx context.Context, req *csi.Contr
 	_, err = s.volumeClient.PublishVolume(ctx, connect.NewRequest(&zfsilov1.PublishVolumeRequest{
 		Id:         id,
 		Transport:  transport,
-		ServerHost: s.publishHost,
+		ServerHost: req.GetVolumeContext()["storage_host"],
 	}))
 	if err != nil {
 		return nil, mapErrorID(err)

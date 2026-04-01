@@ -1,6 +1,9 @@
 dev:
     nix run .#dev-stack
 
+dev_build:
+    nix build .#nixosConfigurations.dev.host.config.system.build.toplevel
+
 app:
     nix run .#app -- start --config=./app/config.json
 

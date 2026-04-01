@@ -85,6 +85,7 @@ type ConfigHost struct {
 	Connection ConfigHostConnection `json:"connection"`
 	IDs        []string             `json:"ids"        validate:"min=1"` // e.g., IQN, NQN
 	Key        SecretValue          `json:"key"`
+	Endpoint   string               `json:"endpoint"`
 }
 
 type Config struct {

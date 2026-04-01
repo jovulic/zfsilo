@@ -68,7 +68,6 @@ func WireCSIService(
 	service := NewCSIService(CSIServiceConfig{
 		Secret:        string(conf.Service.Secret),
 		ZFSiloAddress: conf.Service.ZFSiloAddress,
-		PublishHost:   conf.Node.PublishHost,
 		HostID:        hostID,
 	})
 	if err := service.Start(ctx); err != nil {
