@@ -72,7 +72,11 @@
 
     boot = {
       supportedFilesystems = [ "zfs" ];
-      kernelModules = [
+      initrd.availableKernelModules = [
+        "nvmet"
+        "nvmet-tcp"
+      ];
+      initrd.kernelModules = [
         "nvmet"
         "nvmet-tcp"
       ];

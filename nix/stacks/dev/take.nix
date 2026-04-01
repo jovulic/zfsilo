@@ -1,4 +1,8 @@
-{ pkgs, lib, ... }:
+{
+  pkgs,
+  lib,
+  ...
+}:
 {
   config = {
     networking.hostName = "take";
@@ -24,7 +28,11 @@
     };
 
     boot = {
-      kernelModules = [
+      initrd.availableKernelModules = [
+        "nvmet"
+        "nvmet-tcp"
+      ];
+      initrd.kernelModules = [
         "nvme-tcp"
         "nvme-fabrics"
       ];
