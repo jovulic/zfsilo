@@ -1,5 +1,110 @@
 # Changelog
 
+## [0.4.0](https://github.com/jovulic/zfsilo/compare/v0.3.1...v0.4.0) (2026-04-01)
+
+
+### Features
+
+* **api:** add host resource and service ([6ad13cf](https://github.com/jovulic/zfsilo/commit/6ad13cf66bdffe41b57802c25c48058b57b04c81))
+* **api:** introduce stage and unstage to volumes ([16b3713](https://github.com/jovulic/zfsilo/commit/16b37136a388acbaca7f596ff7264980e37c48a2))
+* **api:** update zfsilo spec to support a transport option and better naming ([0a99a0d](https://github.com/jovulic/zfsilo/commit/0a99a0d1242e1daf13c1369c97d1cd6fb68bc58c))
+* **app:** change to use ids rather than building off a host object ([682e126](https://github.com/jovulic/zfsilo/commit/682e1261110881a8e4834254b24c612d7458a0cc))
+* **app:** generate DHCHAP keys for nvmeof ([06d0006](https://github.com/jovulic/zfsilo/commit/06d000639cf2f93e2cd8097b960dc3fc3a662519))
+* **app:** implement host service ([aa1f4fc](https://github.com/jovulic/zfsilo/commit/aa1f4fcfe0634e456dd2dfbc1cb97fa653cd8a7c))
+* **app:** implement volume stage and unstage ([8140b74](https://github.com/jovulic/zfsilo/commit/8140b747062428f96edf6673f8e02e86c8e9c7cb))
+* **app:** intorduce nvmeof command package ([b70e080](https://github.com/jovulic/zfsilo/commit/b70e080329f98c297dd1d37ad26ea6e5a2306907))
+* **app:** iscsi to have optional passwords and use host ([8f8482a](https://github.com/jovulic/zfsilo/commit/8f8482aa1099a52b2d29ae87439343f492383892))
+* **app:** update service volume and sync with transport handling and nvmeof support ([ddb675d](https://github.com/jovulic/zfsilo/commit/ddb675d8cd2bf93e17e2ef2457614b5801b9543d))
+* **app:** update volume database schema with transport and new names ([6d86cad](https://github.com/jovulic/zfsilo/commit/6d86cad2623db146981c99d17fc7558fd0519707))
+* **csi:** add transport support to csi and update tests for both transports ([2f74a6d](https://github.com/jovulic/zfsilo/commit/2f74a6da2350a7e2dd6c7536f6fda5d85cfb5a6d))
+* **csi:** implement volume stage and unstage ([d2eb4f5](https://github.com/jovulic/zfsilo/commit/d2eb4f5ea72263994beec3b601f5efa317e7acf5))
+* **csi:** switch from client ids to host ids ([a208989](https://github.com/jovulic/zfsilo/commit/a208989f2a3a9ed1de52f8bf908a499e86466f42))
+* **lib:** create cryptoutil package ([5e21f6c](https://github.com/jovulic/zfsilo/commit/5e21f6c5fedaf1743184801cb3d616d72d3221bd))
+
+
+### Bug Fixes
+
+* **api:** status is not required in the volume ([7377eca](https://github.com/jovulic/zfsilo/commit/7377eca0053f690f520ad583d3d19c842972baf8))
+* **app,csi:** fix linting errors ([824831f](https://github.com/jovulic/zfsilo/commit/824831f371cf118e33fe515d0ae14aa51ab4c4d3))
+* **app:** csi test fixes ([df4c82e](https://github.com/jovulic/zfsilo/commit/df4c82e21e4dc057946e2cf349f33ef3fa02935a))
+* **app:** fix linting errors ([0d07cdf](https://github.com/jovulic/zfsilo/commit/0d07cdfa0ac1fb01d71f72d9c941942c567e0e52))
+* **app:** fix nvmeof tests ([c2f1582](https://github.com/jovulic/zfsilo/commit/c2f15822f86839507569a0c5b8fcb361e08e5e21))
+* **app:** fix string escaping in nvmeof ([2de50e5](https://github.com/jovulic/zfsilo/commit/2de50e5cf5a49a78645ab2f086ff21386403a237))
+* **app:** update converter tests ([8283775](https://github.com/jovulic/zfsilo/commit/82837755ff39abee35d6acf7c54f5c4d42f4935c))
+* **app:** use serial to get a stable device id for nvmeof ([f4843e9](https://github.com/jovulic/zfsilo/commit/f4843e9331078408bff60338086b865d8ac82c4e))
+* **csi:** csi test related fixes ([19e7d81](https://github.com/jovulic/zfsilo/commit/19e7d81f581f804689ddec1020bcc0617270b1de))
+* **csi:** linting errors ([2179d4a](https://github.com/jovulic/zfsilo/commit/2179d4a902ddb9450b4e31eab5537faadfad8ddd))
+
+
+### Documentation
+
+* **app:** add pacakge comment to host package ([fca689d](https://github.com/jovulic/zfsilo/commit/fca689d586da61aaa5bb1af8aca06e0b78c7e16a))
+* update readme to mention both iscsi and nvme-of ([b68bf51](https://github.com/jovulic/zfsilo/commit/b68bf512278640069c4501f156db17f4c28470d9))
+* update repo description in readme ([2a52133](https://github.com/jovulic/zfsilo/commit/2a521335702c4323e5fc9486023c6d2026d40eed))
+
+
+### Styles
+
+* **app:** fix formatting in literal test ([f8efc87](https://github.com/jovulic/zfsilo/commit/f8efc87ca5f9e7f265bc9a22b2db20dbfce9b432))
+* **csi:** run format ([ccbbd98](https://github.com/jovulic/zfsilo/commit/ccbbd989c8a503003c31dbbd8a43803c98fc1241))
+
+
+### Code Refactoring
+
+* **csi:** rename mapper to util ([7027f4f](https://github.com/jovulic/zfsilo/commit/7027f4fffb633c28ec78c77965c73aaebdd882f7))
+
+
+### General Changes
+
+* add dev_build to justfile ([a34e689](https://github.com/jovulic/zfsilo/commit/a34e6898b227f62c02faf98f69c2d6dce2d6d2b0))
+* **api:** add role to host resource ([7713696](https://github.com/jovulic/zfsilo/commit/7713696e59ab0046cbe3f21eed97d48d17de4f89))
+* **api:** convert host role to a tagged union and introduce endpoint ([70b9f04](https://github.com/jovulic/zfsilo/commit/70b9f043a62d439e6c1977aff0b5fedadcfdd332))
+* **api:** make server host optional on volume resource ([7f01209](https://github.com/jovulic/zfsilo/commit/7f0120927b9db6d4e93bf4ec5e6ae5588c0feade))
+* **app,csi:** disable gocyclo and maintidx ([aa85d99](https://github.com/jovulic/zfsilo/commit/aa85d996a2d9c0c258e55c7aaa0722db66ec7050))
+* **app,csi:** fix linting issues ([e3c2483](https://github.com/jovulic/zfsilo/commit/e3c24830644644212424915882559c22bac1c4e5))
+* **app:** add host model ([742b0a3](https://github.com/jovulic/zfsilo/commit/742b0a39aad1f620dab473c946310d3e8a840186))
+* **app:** add role to host model and rename password to key ([f54964b](https://github.com/jovulic/zfsilo/commit/f54964bd9f749a83f0950d737faf30c92efc4e9e))
+* **app:** add sync hosts function to the app ([be1e08c](https://github.com/jovulic/zfsilo/commit/be1e08cd71c602360bdc524d0a149bb03a4249bc))
+* **app:** add system config to database and crypto related utils ([092283c](https://github.com/jovulic/zfsilo/commit/092283c09de9f2ae7a2f66c3eee8d788f9b5cc40))
+* **app:** better host connection config and add role ([407e391](https://github.com/jovulic/zfsilo/commit/407e391fd05a160a79793db5f8c75484af3de546))
+* **app:** change device exist timeout to 30s ([ee4b756](https://github.com/jovulic/zfsilo/commit/ee4b756592365a9698920ff6969c0038234db0c7))
+* **app:** create executor factory and wire it ([db68b66](https://github.com/jovulic/zfsilo/commit/db68b66d20d6eaed7d77411aa934e59b83c4f590))
+* **app:** create lib package in command and introduce host util ([52647c6](https://github.com/jovulic/zfsilo/commit/52647c6cce7d28baabaaac350e596d82cc141805))
+* **app:** fix iscsi and nvmeof command tests ([2381a52](https://github.com/jovulic/zfsilo/commit/2381a52febebc0312e4b1da8ff3e1e4f6105dbdb))
+* **app:** fix linting errors ([4311487](https://github.com/jovulic/zfsilo/commit/4311487d5a46b3b5d99b6d85274c5b801f4fa779))
+* **app:** implement host role related changes ([b97608b](https://github.com/jovulic/zfsilo/commit/b97608bc4ef98a1bd56ab641964b8961740e61cc))
+* **app:** regenerate wire ([3a1dda6](https://github.com/jovulic/zfsilo/commit/3a1dda60385eb58998691aab41f01556d7a731f3))
+* **app:** remove command host lib ([f56e693](https://github.com/jovulic/zfsilo/commit/f56e693eb1121db6d939b1da1fb0c70468785da2))
+* **app:** remove volume transport enum ([e3393b4](https://github.com/jovulic/zfsilo/commit/e3393b4aac075771a60609fffaafbcc3abc458a5))
+* **app:** replace iqn with client id in config and other related updates ([6671a8f](https://github.com/jovulic/zfsilo/commit/6671a8fbfcdcb942d3034445e563e50cace3654d))
+* **app:** specify kb for stats df commands ([fe36acd](https://github.com/jovulic/zfsilo/commit/fe36acd30630648476c677a40e947192cc9d8b78))
+* **app:** split ip from port from address in nvmeof connect ([c416a28](https://github.com/jovulic/zfsilo/commit/c416a28398bea94e9eac3e6dddc1227f3075c5a0))
+* **app:** update config to build off host ([5dd7472](https://github.com/jovulic/zfsilo/commit/5dd74720552f68b2cd4f79bac86be0c92e532d04))
+* **app:** update config.json ([4d0294f](https://github.com/jovulic/zfsilo/commit/4d0294fc849c1361ab438837ce45238c12e7a9f5))
+* **app:** update converter to support prop changes and new transport prop ([7e97649](https://github.com/jovulic/zfsilo/commit/7e97649b2393a1b6a81f5284a7de82b6dc0fcf69))
+* **app:** update converter with host and volume changes ([b35ef60](https://github.com/jovulic/zfsilo/commit/b35ef608692426f6d30a081be028d3d8768cc3cb))
+* **app:** update get capacity to go over all storage hosts ([36316c5](https://github.com/jovulic/zfsilo/commit/36316c5273e2cd614b4405b868d901e6d0afa8f4))
+* **app:** update service sync with host and related changes ([de8c959](https://github.com/jovulic/zfsilo/commit/de8c959e63cd6e7ea034ba87a11af7898dda7c03))
+* **app:** update to resolve the device path by glob to avoid needing to know the ip exactly ([d20cd8d](https://github.com/jovulic/zfsilo/commit/d20cd8d4b3ca20cafd5db68a38f7d22a71162ebf))
+* **app:** update volume model with reference to host and better transport ([9168809](https://github.com/jovulic/zfsilo/commit/91688095006d3a6deb14799392b904dcf6503be5))
+* **app:** update volume service to defer volume creation until host is known and other related changes ([4951741](https://github.com/jovulic/zfsilo/commit/4951741647dedac9add2a8bb36c3301ce6b80914))
+* **app:** wire host and cryto init ([f729bab](https://github.com/jovulic/zfsilo/commit/f729bab73af490b6a7caf667a86ee1f57a925796))
+* **app:** wire in host service ([2b210f1](https://github.com/jovulic/zfsilo/commit/2b210f11a41cf386ec60e65404c91fc1b590a96f))
+* **csi:** add env full for host and fix other wiring ([c32175d](https://github.com/jovulic/zfsilo/commit/c32175d5c314b60b47ff3a74ac89c7bdbef67e20))
+* **csi:** replace loop with contains ([f8d00a5](https://github.com/jovulic/zfsilo/commit/f8d00a59eba194de29381613206bf36ac512ab77))
+* **csi:** simplify and organize csi config ([25bd9a6](https://github.com/jovulic/zfsilo/commit/25bd9a62057df433a19d5eac4634a472e5ff4600))
+* **csi:** simplify csi given app changes and better error mapping ([7ddd206](https://github.com/jovulic/zfsilo/commit/7ddd206df1a12d8903f77ac90bc4e83c3f79772a))
+* **csi:** tidy up service tests a bit ([0832ff4](https://github.com/jovulic/zfsilo/commit/0832ff489fedaee1a31ec3518dfa7bd6b61f71f2))
+* **csi:** trying to fix csi tests when testing different transports ([667987f](https://github.com/jovulic/zfsilo/commit/667987f3f53f962d8c28ec8ae94d4e09f47e672d))
+* **csi:** update csai given id and api changes ([91d51e5](https://github.com/jovulic/zfsilo/commit/91d51e58d34ba4848c82fc344f5fdbd7aed4b1ac))
+* **csi:** update csi config ([7626e54](https://github.com/jovulic/zfsilo/commit/7626e546b67cd558b4f6dcb1257646b426afb68f))
+* **lib:** add mock executor to command library ([9ff7560](https://github.com/jovulic/zfsilo/commit/9ff75607170f25074f8953037a6747f887236409))
+* **nix:** configure give and take with nvme-of setup ([00fc9e4](https://github.com/jovulic/zfsilo/commit/00fc9e43ed76d739a99ac7bdb7f75f80841e91db))
+* **nix:** move kernel modules to initrd to fix their loading in microvm ([43c42ec](https://github.com/jovulic/zfsilo/commit/43c42ec5491c1d73ba098b79203c2c08db883078))
+* rename flake variables with dashes ([ac9018b](https://github.com/jovulic/zfsilo/commit/ac9018b40527eea2d009f97a724707313eae9e78))
+* **srv:** use 127.0.0.1 rather than localhost ([990b02f](https://github.com/jovulic/zfsilo/commit/990b02f047097299d8b7e2497acd946ceddf9715))
+* update AGENTS.md ([0cbb470](https://github.com/jovulic/zfsilo/commit/0cbb470c0d1d70efb6fad35465803e9611ee7aa9))
+
 ## [0.3.1](https://github.com/jovulic/zfsilo/compare/v0.3.0...v0.3.1) (2026-03-05)
 
 
