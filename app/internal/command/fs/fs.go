@@ -5,6 +5,7 @@ package fs
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jovulic/zfsilo/lib/command"
@@ -22,15 +23,17 @@ func With(executor command.Executor) FS {
 	}
 }
 
-// ExistsArguments represents the arguments for checking if a device exists.
-type ExistsArguments struct {
+// WaitForDeviceArguments represents the arguments for waiting for a device.
+type WaitForDeviceArguments struct {
 	Device       string
 	Timeout      time.Duration
 	PollInterval time.Duration
 }
 
-// Exists checks if a block device exists, polling until a timeout is reached.
-func (m FS) Exists(ctx context.Context, args ExistsArguments) (bool, error) {
+// WaitForDevice waits for a block device matching the pattern to exist,
+// polling until a timeout is reached. It returns the absolute path of the
+// first discovered device.
+func (m FS) WaitForDevice(ctx context.Context, args WaitForDeviceArguments) (string, error) {
 	timeout := args.Timeout
 	if timeout == 0 {
 		timeout = 10 * time.Second // default timeout
@@ -47,16 +50,32 @@ func (m FS) Exists(ctx context.Context, args ExistsArguments) (bool, error) {
 	for {
 		select {
 		case <-ctx.Done():
-			return false, fmt.Errorf("timed out waiting for device %s to exist: %w", args.Device, ctx.Err())
+			return "", fmt.Errorf("timed out waiting for device %s to exist: %w", args.Device, ctx.Err())
 		default:
-			// Use stat to check for the device file.
-			_, err := m.executor.Exec(ctx, fmt.Sprintf("stat %s", args.Device))
+			// Use ls to find the device file.
+			result, err := m.executor.Exec(ctx, fmt.Sprintf("ls -1 %s 2>/dev/null | head -n 1", args.Device))
 			if err == nil {
-				return true, nil // device found
+				path := strings.TrimSpace(result.Stdout)
+				if path != "" {
+					return path, nil // device found
+				}
 			}
 			time.Sleep(pollInterval)
 		}
 	}
+}
+
+// ResolveDevice finds the exact path of a device given a shell glob pattern.
+func (m FS) ResolveDevice(ctx context.Context, pattern string) (string, error) {
+	result, err := m.executor.Exec(ctx, fmt.Sprintf("ls -1 %s 2>/dev/null | head -n 1", pattern))
+	if err != nil {
+		return "", fmt.Errorf("failed to list device: %w", err)
+	}
+	path := strings.TrimSpace(result.Stdout)
+	if path == "" {
+		return "", fmt.Errorf("device not found matching %s", pattern)
+	}
+	return path, nil
 }
 
 // FormatArguments represents the arguments for formatting a device.
@@ -69,25 +88,23 @@ type FormatArguments struct {
 // The -F option forces overwrite of any existing filesystem.
 // The -m 0 option reserves 0% of the blocks for the super-user.
 func (m FS) Format(ctx context.Context, args FormatArguments) error {
+	device := args.Device
 	if args.WaitForDevice {
-		exists, err := m.Exists(ctx, ExistsArguments{Device: args.Device})
+		resolved, err := m.WaitForDevice(ctx, WaitForDeviceArguments{Device: args.Device})
 		if err != nil {
 			return fmt.Errorf("error while waiting for device %s: %w", args.Device, err)
 		}
-		if !exists {
-			// This path should not be reached if Exists returns an error on timeout.
-			return fmt.Errorf("device %s not found after waiting", args.Device)
-		}
+		device = resolved
 	}
 
-	cmd := fmt.Sprintf("mkfs.ext4 -F -m0 '%s'", args.Device)
+	cmd := fmt.Sprintf("mkfs.ext4 -F -m0 '%s'", device)
 	result, err := m.executor.Exec(ctx, cmd)
 	if err != nil {
 		stderr := ""
 		if result != nil {
 			stderr = result.Stderr
 		}
-		return fmt.Errorf("failed to format device '%s': %w, stderr: %s", args.Device, err, stderr)
+		return fmt.Errorf("failed to format device '%s': %w, stderr: %s", device, err, stderr)
 	}
 	return nil
 }

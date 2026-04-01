@@ -463,9 +463,13 @@ func (s *VolumeSyncer) syncStage(ctx context.Context, volumedb *database.Volume)
 			}
 			targetID := getTargetID(volumedb, publishHost)
 			targetAddress := publishHost.Connection.Data().Remote.Address
-			devicePath, err := volumedb.DevicePathClient(targetAddress, targetID)
+			devicePattern, err := volumedb.DevicePathClient(targetAddress, targetID)
 			if err != nil {
 				return fmt.Errorf("failed to get device path: %w", err)
+			}
+			devicePath, err := fs.With(connectExecutor).ResolveDevice(ctx, devicePattern)
+			if err != nil {
+				return fmt.Errorf("failed to resolve device path: %w", err)
 			}
 
 			if volumedb.Mode == database.VolumeModeFILESYSTEM {
@@ -476,7 +480,7 @@ func (s *VolumeSyncer) syncStage(ctx context.Context, volumedb *database.Volume)
 				if fsType == "" {
 					err = fs.With(connectExecutor).Format(ctx, fs.FormatArguments{
 						Device:        devicePath,
-						WaitForDevice: true,
+						WaitForDevice: false,
 					})
 					if err != nil {
 						return fmt.Errorf("failed to format device: %w", err)

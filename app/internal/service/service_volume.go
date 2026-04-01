@@ -403,9 +403,13 @@ func (s *VolumeService) UpdateVolume(ctx context.Context, req *connect.Request[z
 
 		// If the mode is filesystem we also need to resize the filesystem.
 		if volumedb.Mode == database.VolumeModeFILESYSTEM {
-			devicePath, err := volumedb.DevicePathClient(targetAddress, targetID)
+			devicePattern, err := volumedb.DevicePathClient(targetAddress, targetID)
 			if err != nil {
 				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get device path: %w", err))
+			}
+			devicePath, err := fs.With(consumeExecutor).ResolveDevice(ctx, devicePattern)
+			if err != nil {
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to resolve device path %s: %w", devicePattern, err))
 			}
 			err = fs.With(consumeExecutor).Resize(ctx, fs.ResizeArguments{
 				Device: devicePath,
@@ -1028,19 +1032,16 @@ func (s *VolumeService) StageVolume(ctx context.Context, req *connect.Request[zf
 		}
 
 		// Wait for block device to appear on the client side.
-		devicePath, err := volumedb.DevicePathClient(targetAddress, targetID)
+		devicePattern, err := volumedb.DevicePathClient(targetAddress, targetID)
 		if err != nil {
-			return fmt.Errorf("failed to get device path: %w", err)
+			return fmt.Errorf("failed to get device path pattern: %w", err)
 		}
-		exists, err := fs.With(consumerExecutor).Exists(ctx, fs.ExistsArguments{
-			Device:  devicePath,
+		devicePath, err := fs.With(consumerExecutor).WaitForDevice(ctx, fs.WaitForDeviceArguments{
+			Device:  devicePattern,
 			Timeout: 30 * time.Second,
 		})
 		if err != nil {
-			return fmt.Errorf("failed to check for block device %s: %w", devicePath, err)
-		}
-		if !exists {
-			return fmt.Errorf("block device %s not found on client", devicePath)
+			return fmt.Errorf("failed to wait for block device %s: %w", devicePattern, err)
 		}
 
 		if volumedb.Mode == database.VolumeModeFILESYSTEM {
