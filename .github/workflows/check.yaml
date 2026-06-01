@@ -2,7 +2,7 @@ name: check
 on: [push]
 jobs:
   check:
-    name: Check ${{ matrix.workdir }}
+    name: check ${{ matrix.workdir }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
