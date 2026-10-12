@@ -4,7 +4,7 @@
 
 _A ZFS-based network storage layer over TCP with CSI integration._
 
-## 📌 Description
+## Description
 
 ZFSilo is a high-performance control plane for managing ZFS datasets and exporting them as block devices or filesystems via iSCSI/NVME-oF (NVMe/TCP). Designed primarily for Kubernetes environments, it provides a robust and reversible storage layer that bridges the gap between ZFS's advanced data management and network-accessible storage.
 
@@ -15,7 +15,7 @@ The project is split into two primary components:
 
 Built with [Go](https://go.dev/) and [ConnectRPC](https://connectrpc.com/) and leveraging [Nix](https://nixos.org/) for a fully reproducible development and testing environment, including a MicroVM-based dev stack that mirrors production storage configurations.
 
-## 🚀 Usage
+## Usage
 
 ZFSilo requires both the storage agent (`app`) and the CSI driver (`csi`) to be configured and running.
 
@@ -51,7 +51,7 @@ just csi
 
 Both components use JSON configuration files to define service addresses, authentication tokens, and storage parameters. See the example `config.json` files in the `app/` and `csi/` directories for details on available options.
 
-## 🛠️ Build
+## Build
 
 ZFSilo uses [Nix](https://nixos.org/) for dependency management and [just](https://github.com/casey/just) as a command runner.
 
