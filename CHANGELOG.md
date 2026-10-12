@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/jovulic/zfsilo/compare/v0.4.0...v0.4.1) (2026-10-12)
+
+
+### Documentation
+
+* remove emojis ([9b459ed](https://github.com/jovulic/zfsilo/commit/9b459ed90b4fdfea19517da58778dc2d85cdfae8))
+
 ## [0.4.0](https://github.com/jovulic/zfsilo/compare/v0.3.1...v0.4.0) (2026-06-01)
 
 
